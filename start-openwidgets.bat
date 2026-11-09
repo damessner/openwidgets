@@ -43,6 +43,8 @@ if not defined LAN_IP set "LAN_IP=127.0.0.1"
 
 REM ---- Erststart: Admin-Konto anlegen ---------------------------------------
 if "%FIRST_START%"=="nein" goto :print_banner
+REM Im Demo-Modus sind Konto und Inhalte bereits vorkonfiguriert.
+if "%OW_DEMO_MODE%"=="1" goto :print_banner
 echo.
 echo ==============================================================
 echo   Erststart: Admin-Konto fuer diese Test-Instanz anlegen
@@ -66,6 +68,9 @@ echo.
 echo ==============================================================
 echo   OpenWidgets laeuft gleich - Testbetrieb auf diesem Laptop
 echo ==============================================================
+if "%OW_DEMO_MODE%"=="1" echo   *** DEMO-MODUS: Login "admin" / Passwort "admin" ***
+if "%OW_DEMO_MODE%"=="1" echo   *** Schwaches Testpasswort - keine echten Daten! ***
+if "%OW_DEMO_MODE%"=="1" echo.
 echo   Lehrkraft-Login:  http://localhost:%PORT%/login
 if defined ADMIN_EMAIL echo   Admin-Konto:      %ADMIN_EMAIL%
 echo.
@@ -74,7 +79,8 @@ echo                     http://%LAN_IP%:%PORT%/
 echo   (Aufgaben-Code von der Lehrkraft eintippen)
 echo.
 echo   Daten:            %DATA_DIR%
-echo   Demo-Inhalte:     in zweitem Fenster seed-demo.bat starten
+if "%OW_DEMO_MODE%"=="1" echo   Demo-Inhalte:     4 fertige Aktivitaeten sind bereits geladen
+if not "%OW_DEMO_MODE%"=="1" echo   Demo-Inhalte:     in zweitem Fenster seed-demo.bat starten
 echo   Beenden:          Strg+C oder dieses Fenster schliessen
 echo ==============================================================
 echo.
@@ -112,6 +118,7 @@ echo PORT=%PORT%
 echo HOST=%HOST%
 echo DATA_DIR=%DATA_DIR%
 echo FIRST_START=%FIRST_START%
+echo DEMO_MODE=%OW_DEMO_MODE%
 exit /b 0
 
 :node_missing

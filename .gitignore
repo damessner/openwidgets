@@ -3,6 +3,7 @@ node_modules/
 data/
 data-smoke*/
 tools/.win-test-data/
+tools/.demo-test-data/
 fresh-boot-check.mjs
 *.log
 .env

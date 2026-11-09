@@ -49,13 +49,15 @@ Data (SQLite database + uploaded images/audio) lives in `./data` by default. Cha
 
 ### Windows laptop (double-click, no terminal needed)
 
-For trying it out on a Windows laptop before deploying:
+**Fastest way to try it:** double-click **`start-demo.bat`** — it starts a clearly-flagged demo instance with login **`admin` / `admin`** and four ready-made activities, each with a join code:
+- Plattentektonik worksheet (image markers, fill-in-the-blanks, matching, ordering, long answer)
+- Plattentektonik quiz (one question per screen)
+- Mathematik — Brüche und Prozente
+- Deutsch — Rechtschreibung und Grammatik
 
-1. Double-click **`start-openwidgets.bat`** — on first run it asks for an admin account, then starts the server and opens the browser.
-2. Optional: double-click **`seed-demo.bat`** in a second window to load a demo worksheet + quiz with join codes.
-3. Pupils on the same network open the LAN URL printed in the launcher window and enter the teacher's code.
+`start-demo.bat --reset` starts the demo from scratch. For a normal test instance with your own admin account, double-click **`start-openwidgets.bat`** instead (first run asks for email/name/password; `seed-demo.bat` optionally loads two more demo activities).
 
-The launcher keeps its data in `%LOCALAPPDATA%\OpenWidgets\data` (deliberately outside OneDrive), detects the local Node.js, and prints the network address. Firewall notes, limits and troubleshooting: [docs/RUN-ON-WINDOWS.md](docs/RUN-ON-WINDOWS.md). Use this for testing and the teacher workflow; use the LXC for actual classroom pilots (HTTPS, backups, 24/7).
+Both launchers keep their data under `%LOCALAPPDATA%\OpenWidgets\...` (deliberately outside OneDrive), detect the local Node.js and print the LAN URL for pupils. Firewall notes, limits and troubleshooting: [docs/RUN-ON-WINDOWS.md](docs/RUN-ON-WINDOWS.md). Use this for testing and the teacher workflow; use the LXC for actual classroom pilots (HTTPS, backups, 24/7).
 
 ### Demo content
 

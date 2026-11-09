@@ -47,8 +47,10 @@ export function register(router) {
     assertNotThrottled(ip);
 
     const body = await readJson(req, 16 * 1024);
-    const email = String(body.email || '').trim();
+    let email = String(body.email || '').trim();
     const password = String(body.password || '');
+    // Demo mode: the pre-configured account may be entered as bare "admin".
+    if (config.demoMode && email && !email.includes('@')) email = `${email}@schule.local`;
     if (!email || !password) throw badRequest('missing_credentials', 'Email and password are required');
 
     const row = one('SELECT * FROM users WHERE email = ?', email);

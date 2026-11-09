@@ -10,6 +10,9 @@ registerMessages({
     'login.selfhosted_note':
       'Diese Instanz wird selbst gehostet. Passwort vergessen? Bitte an die Administration wenden.',
     'login.redirecting': 'Anmeldung erfolgreich — weiter …',
+    'login.demo_title': 'Demo-Modus — nur zum Ausprobieren',
+    'login.demo_hint':
+      'Login: admin / admin. Fertige Demo-Arbeitsblätter sind vorhanden. Schwaches Passwort, keine echten Schüler:innen-Daten verwenden.',
   },
   en: {
     'login.title': 'Sign in',
@@ -17,6 +20,9 @@ registerMessages({
     'login.selfhosted_note':
       'This instance is self-hosted. Forgot your password? Please contact your administrator.',
     'login.redirecting': 'Signed in — continuing …',
+    'login.demo_title': 'Demo mode — for trying things out only',
+    'login.demo_hint':
+      'Login: admin / admin. Demo worksheets are preloaded. Weak password — do not use real student data.',
   },
 });
 
@@ -48,6 +54,31 @@ function safeNext() {
     if (data.ok) window.location.replace(safeNext());
   } catch {
     /* stay on the login page */
+  }
+})();
+
+// Demo instances advertise themselves: show the throwaway credentials.
+(async () => {
+  try {
+    const response = await fetch('/api/capabilities', { credentials: 'same-origin' });
+    if (!response.ok) return;
+    const capabilities = await response.json();
+    if (!capabilities || !capabilities.demoMode) return;
+    const box = qs('#demo-hint');
+    if (!box) return;
+    const title = document.createElement('strong');
+    title.textContent = t('login.demo_title');
+    const hint = document.createElement('div');
+    hint.textContent = t('login.demo_hint');
+    box.replaceChildren(title, hint);
+    box.hidden = false;
+    const emailInput = qs('#email');
+    if (emailInput && !emailInput.value) {
+      emailInput.value = 'admin';
+      qs('#password').focus();
+    }
+  } catch {
+    /* non-fatal */
   }
 })();
 

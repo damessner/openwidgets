@@ -5,14 +5,35 @@ dann mit 2–3 Geräten im selben WLAN. **Nicht** für echte Schularbeiten oder 
 Schülerdaten gedacht (siehe „Grenzen" unten).
 
 ## Voraussetzungen
-
 - Windows 10/11.
 - Node.js ≥ 22.5. Das Startskript findet Node automatisch (`PATH`, `Program Files\nodejs`,
   der mit dem DSH ausgelieferte Node). Falls nicht vorhanden: LTS von <https://nodejs.org>
   installieren.
 - Kein `npm install` nötig – OpenWidgets hat **keine** Laufzeit-Abhängigkeiten.
 
-## Starten
+## Demo-Modus: ein Doppelklick, fertige Arbeitsblätter, Login admin/admin
+
+Zum schnellen Ausprobieren (ohne Konto-Einrichtung):
+
+1. **`start-demo.bat` doppelklicken.**
+2. Login: Benutzer **`admin`**, Passwort **`admin`** (alternativ `admin@schule.local`).
+3. Es sind **4 Aktivitäten** vorbereitet, jeweils mit Beitrittscode:
+   - Biologie/Geografie: „Plattentektonik“-Arbeitsblatt mit Bild-Markierung, Lückentext, Zuordnung, Reihenfolge und Freitext
+   - „Plattentektonik“-Quiz (eine Frage pro Seite)
+   - Mathematik: „Brüche und Prozente“
+   - Deutsch: „Rechtschreibung und Grammatik“
+4. Einfach im Dashboard öffnen, das Live-Dashboard ausprobieren (Code an eine zweite Person/Tablet geben) oder den Druck-Layout testen.
+5. **Neu anfangen:** `start-demo.bat --reset` — löscht nur den Demo-Datenordner
+   `%LOCALAPPDATA%\OpenWidgets\demo-data`.
+
+Der Demo-Modus ist bewusst als Test gekennzeichnet: Banner im Login und im Lehrkräfte-Bereich,
+schwaches Passwort, **keine echten Schüler:innen-Daten**. Die normale Instanz über
+`start-openwidgets.bat` bleibt getrennt, verlangt ein starkes Passwort und nutzt einen eigenen
+Datenordner.
+
+## Starten (normale Test-Instanz)
+
+Ziel: openwidgets mit eigenem Admin-Konto testen (starkes Passwort).
 
 1. **`start-openwidgets.bat` doppelklicken.**
 2. Beim **ersten Start** fragt das Fenster nach einem Admin-Konto:

@@ -241,6 +241,249 @@ export function demoQuiz({ imageAsset } = {}) {
   return definition;
 }
 
+/** Demo worksheet: Mathematics — fractions and percentages (German). */
+export function demoMathWorksheet() {
+  const definition = createDefinition({
+    template: 'worksheet',
+    locale: 'de',
+    title: 'Mathematik — Brüche und Prozente (Demo)',
+  });
+  definition.description =
+    'Demo-Arbeitsblatt Mathematik: Brüche vergleichen, Prozente berechnen und einen Rechenweg erklären.';
+  definition.settings = { ...definition.settings, instantFeedback: true, showResults: true, allowReview: true };
+
+  const items = [];
+  items.push(
+    buildItem(
+      'text',
+      {
+        text: '**Brüche und Prozente.** Ein Bruch beschreibt einen Teil eines Ganzen: Der Zähler steht über dem Bruchstrich, der Nenner darunter. Prozente sind Brüche mit dem Nenner 100.',
+      },
+      { stem: '', points: 0 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'multiple_choice',
+      {
+        multi: false,
+        choices: [
+          { id: 'c1', text: '1/4', correct: true },
+          { id: 'c2', text: '1/2', correct: false },
+          { id: 'c3', text: '2/5', correct: false },
+          { id: 'c4', text: '1/5', correct: false },
+        ],
+        shuffle: true,
+      },
+      { stem: 'Welcher Bruch entspricht 0,25?', points: 2 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'multiple_choice',
+      {
+        multi: true,
+        choices: [
+          { id: 'c1', text: '3/4', correct: true },
+          { id: 'c2', text: '2/3', correct: true },
+          { id: 'c3', text: '2/5', correct: false },
+          { id: 'c4', text: '1/3', correct: false },
+        ],
+        shuffle: true,
+        partialCredit: true,
+      },
+      { stem: 'Welche Brüche sind größer als 1/2? (Mehrfachauswahl)', points: 3 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'short_answer',
+      {
+        accepted: ['drei viertel', 'drei-viertel', 'dreiviertel'],
+        caseSensitive: false,
+        trim: true,
+        collapseSpaces: true,
+        ignorePunctuation: true,
+      },
+      { stem: 'Wie liest man den Bruch 3/4 in Worten?', points: 2, help: 'Schreibe die Wörter mit Leerzeichen oder Bindestrich.' },
+    ),
+  );
+  items.push(
+    buildItem(
+      'numeric',
+      { answer: 30, tolerance: 0, toleranceType: 'absolute' },
+      { stem: 'Berechne 20 % von 150.', points: 2 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'numeric',
+      { answer: 60, tolerance: 0, toleranceType: 'absolute' },
+      { stem: 'Wie viel sind 3/4 von 80?', points: 2 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'fill_blanks',
+      {
+        text: 'Ein Bruch besteht aus {{1}} und {{2}}. Der {{1}} steht über dem Bruchstrich, der {{2}} darunter.',
+        blanks: { 1: { accepted: ['zähler', 'zaehler'] }, 2: { accepted: ['nenner'] } },
+        caseSensitive: false,
+      },
+      { stem: 'Ergänze die Fachbegriffe.', points: 3 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'long_answer',
+      {
+        hints: [
+          { text: 'nenner', alternatives: [], points: 1 },
+          { text: 'zähler', alternatives: ['zaehler'], points: 2 },
+          { text: 'gleichnamig', alternatives: [], points: 1 },
+        ],
+        rubric: [
+          {
+            criterion: 'Rechenweg und Fachsprache',
+            levels: [
+              { label: 'Nicht ausreichend', points: 0 },
+              { label: 'Grundlegend', points: 2 },
+              { label: 'Vollständig', points: 4 },
+            ],
+          },
+        ],
+        minWords: 20,
+        maxWords: 2000,
+      },
+      { stem: 'Erkläre in eigenen Worten, wie man zwei Brüche mit gleichem Nenner addiert.', points: 4 },
+    ),
+  );
+  definition.items = items;
+  return definition;
+}
+
+/** Demo worksheet: German — spelling and grammar (German). */
+export function demoDeutschWorksheet() {
+  const definition = createDefinition({
+    template: 'worksheet',
+    locale: 'de',
+    title: 'Deutsch — Rechtschreibung und Grammatik (Demo)',
+  });
+  definition.description =
+    'Demo-Arbeitsblatt Deutsch: Wortarten, Großschreibung, Lückentext, Satzbau und ein kurzer Schreibauftrag.';
+  definition.settings = { ...definition.settings, instantFeedback: true, showResults: true, allowReview: true };
+
+  const items = [];
+  items.push(
+    buildItem(
+      'text',
+      {
+        text: '**Wortarten und Rechtschreibung.** Nomen (Substantive) schreibt man groß, Verben und Adjektive klein — außer am Satzanfang.',
+      },
+      { stem: '', points: 0 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'multiple_choice',
+      {
+        multi: false,
+        choices: [
+          { id: 'c1', text: 'Freundschaft', correct: true },
+          { id: 'c2', text: 'freundlich', correct: false },
+          { id: 'c3', text: 'freuen', correct: false },
+          { id: 'c4', text: 'befreunden', correct: false },
+        ],
+        shuffle: true,
+      },
+      { stem: 'Welches Wort ist ein Nomen?', points: 2 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'multiple_choice',
+      {
+        multi: true,
+        choices: [
+          { id: 'c1', text: 'Schule', correct: true },
+          { id: 'c2', text: 'laufen', correct: false },
+          { id: 'c3', text: 'Freude', correct: true },
+          { id: 'c4', text: 'schnell', correct: false },
+        ],
+        shuffle: true,
+        partialCredit: true,
+      },
+      { stem: 'Welche Wörter werden großgeschrieben? (Mehrfachauswahl)', points: 3 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'fill_blanks',
+      {
+        text: 'Präsens von „gehen“: Ich gehe. Du {{1}}. Er {{2}}.',
+        blanks: { 1: { accepted: ['gehst'] }, 2: { accepted: ['geht'] } },
+        caseSensitive: false,
+      },
+      { stem: 'Setze die richtigen Verbformen ein.', points: 2 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'short_answer',
+      {
+        accepted: ['dunkel', 'dunkelheit'],
+        caseSensitive: false,
+        trim: true,
+        collapseSpaces: true,
+        ignorePunctuation: true,
+      },
+      { stem: 'Wie heißt das Gegenteil von „hell“?', points: 1 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'ordering',
+      {
+        mode: 'positions',
+        items: [
+          { id: 'i1', text: 'Der' },
+          { id: 'i2', text: 'Schüler' },
+          { id: 'i3', text: 'liest' },
+          { id: 'i4', text: 'ein' },
+          { id: 'i5', text: 'Buch' },
+        ],
+      },
+      { stem: 'Bringe die Wörter in die richtige Satzreihenfolge.', points: 3 },
+    ),
+  );
+  items.push(
+    buildItem(
+      'long_answer',
+      {
+        hints: [
+          { text: 'schule', alternatives: [], points: 1 },
+          { text: 'freundlich', alternatives: ['schön', 'gross', 'groß'], points: 1 },
+        ],
+        rubric: [
+          {
+            criterion: 'Satzbau und Adjektiv',
+            levels: [
+              { label: 'Nicht ausreichend', points: 0 },
+              { label: 'Grundlegend', points: 2 },
+              { label: 'Vollständig', points: 3 },
+            ],
+          },
+        ],
+        minWords: 8,
+        maxWords: 500,
+      },
+      { stem: 'Schreibe einen kurzen Satz über deine Schule und verwende dabei ein Adjektiv.', points: 3 },
+    ),
+  );
+  definition.items = items;
+  return definition;
+}
+
 // ---------------------------------------------------------------------------
 // Minimal PNG generator (truecolor, no alpha) — avoids any image dependency.
 // ---------------------------------------------------------------------------

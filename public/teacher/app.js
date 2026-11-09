@@ -354,9 +354,29 @@ async function loadCapabilitiesVersion() {
     bootVersion = (capabilities && capabilities.version) || '';
     const slot = qs('#footer-version');
     if (slot && bootVersion) slot.textContent = `v${bootVersion}`;
+    if (capabilities && capabilities.demoMode) renderDemoModeBanner();
   } catch {
     /* non-fatal */
   }
+}
+
+/** Visible, non-dismissible warning on demo instances (weak password, test data only). */
+function renderDemoModeBanner() {
+  if (qs('#demo-mode-banner')) return;
+  const view = qs('#view');
+  const host = view && view.parentElement;
+  if (!host) return;
+  const english = getLocale() === 'en';
+  const banner = h(
+    'div.demo-mode-banner',
+    { id: 'demo-mode-banner', role: 'status' },
+    h('strong', english ? 'Demo mode' : 'Demo-Modus'),
+    ' — ',
+    english
+      ? 'test instance with the weak password "admin". Do not use real pupil data.'
+      : 'Testinstanz mit dem schwachen Passwort „admin“. Keine echten Schüler:innen-Daten verwenden.',
+  );
+  host.insertBefore(banner, view);
 }
 
 async function boot() {

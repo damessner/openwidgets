@@ -7,6 +7,7 @@ import { initDb, one } from './db.js';
 import { cleanupSessions, seedAdmin } from './lib/auth.js';
 import { closeAll, startHeartbeat } from './lib/events.js';
 import { HttpError, Router, json, safeJoin, securityHeaders, serveFile } from './lib/http.js';
+import { seedDemoContent } from './demo-seed.js';
 
 import { register as registerAuth } from './api/auth.js';
 import { register as registerAdmin } from './api/admin.js';
@@ -19,6 +20,23 @@ import { register as registerParticipant } from './api/participant.js';
 initDb();
 const adminSeeded = seedAdmin();
 cleanupSessions();
+
+// Demo mode (start-demo.bat): seed a handful of ready-to-use activities and
+// assignments on first boot. Never enabled unless OW_DEMO_MODE=1 explicitly.
+if (config.demoMode && process.env.OW_SEED_DEMO === '1') {
+  try {
+    const demoSeed = seedDemoContent();
+    if (demoSeed.seeded) {
+      log(
+        `Demo mode: seeded ${demoSeed.activities} activities — join codes: ${demoSeed.codes.join(', ')}`,
+      );
+    } else {
+      log(`Demo mode: demo content not seeded (${demoSeed.reason})`);
+    }
+  } catch (error) {
+    logError('Demo mode: seeding failed:', error);
+  }
+}
 
 const router = new Router();
 registerAuth(router);
@@ -59,6 +77,7 @@ router.get('/api/capabilities', async (req, res) => {
   json(res, 200, {
     version: config.version,
     baseUrl: config.baseUrl,
+    demoMode: config.demoMode,
     itemTypes,
     maxUploadMb: Math.round(config.maxUploadBytes / (1024 * 1024)),
     features: {

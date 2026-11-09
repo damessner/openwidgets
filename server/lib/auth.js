@@ -132,13 +132,18 @@ export function findUserByEmail(email) {
   return one('SELECT * FROM users WHERE email = ?', String(email || '').trim());
 }
 
+/** Minimum password length — relaxed only for throwaway demo instances. */
+export function minPasswordLength() {
+  return config.demoMode ? 3 : 10;
+}
+
 export function createUser({ email, name, role = 'teacher', password, locale = 'de' }) {
   const cleanEmail = String(email || '').trim();
   const cleanName = String(name || '').trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) throw new Error('invalid_email');
   if (cleanName.length < 2) throw new Error('invalid_name');
   if (!['admin', 'teacher'].includes(role)) throw new Error('invalid_role');
-  if (String(password || '').length < 10) throw new Error('weak_password');
+  if (String(password || '').length < minPasswordLength()) throw new Error('weak_password');
   if (findUserByEmail(cleanEmail)) throw new Error('email_exists');
   const id = uid();
   run(
@@ -172,8 +177,10 @@ export function seedAdmin() {
     );
     return false;
   }
-  if (config.adminPassword.length < 10) {
-    console.warn('[openwidgets] ADMIN_PASSWORD is shorter than 10 characters — admin not created.');
+  if (config.adminPassword.length < minPasswordLength()) {
+    console.warn(
+      `[openwidgets] ADMIN_PASSWORD is shorter than ${minPasswordLength()} characters — admin not created.`,
+    );
     return false;
   }
   try {

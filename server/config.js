@@ -25,6 +25,10 @@ export const config = {
   host: process.env.HOST || '0.0.0.0',
   baseUrl: (process.env.BASE_URL || '').replace(/\/+$/, ''),
   trustProxy: process.env.TRUST_PROXY === '1',
+  // Demo mode is OFF unless explicitly requested. It allows the throwaway
+  // "admin"/"admin" account and a login with a bare username, and is surfaced
+  // in the UI so nobody mistakes it for a real instance.
+  demoMode: process.env.OW_DEMO_MODE === '1',
   adminEmail: (process.env.ADMIN_EMAIL || '').trim(),
   adminPassword: process.env.ADMIN_PASSWORD || '',
   adminName: process.env.ADMIN_NAME || 'Administrator',

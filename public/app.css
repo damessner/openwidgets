@@ -649,6 +649,19 @@ fieldset.fieldset > legend {
 }
 .error-page .card { max-width: 460px; width: 100%; text-align: center; }
 
+/* Demo instance warning (weak password, test data only) */
+.demo-mode-banner {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border: 1px solid rgb(165 90 0 / 25%);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin: 12px auto;
+  max-width: var(--content-max);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 /* ------------------------------------------------------------------ modal & toast */
 
 dialog.modal {
