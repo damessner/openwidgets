@@ -162,9 +162,9 @@ Node 24 single process
 ## Testing
 
 ```bash
-npm test                     # 62 unit + API integration tests (node:test, zero deps)
-node tools/e2e/api-check.mjs # end-to-end API check incl. answer-leak assertions
-npm run e2e                  # Playwright browser suite (teacher/student flows)
+npm test                     # 63 unit + API integration tests (node:test, zero deps)
+node tools/e2e/api-check.mjs # 50 end-to-end API assertions incl. answer-leak checks
+npm run e2e                  # 14 Playwright browser specs (teacher/student/live/grade/admin/print/security)
 ```
 
 Browser tooling is dev-only under `tools/e2e` (Playwright + Edge/Chromium); the application

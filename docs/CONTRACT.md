@@ -367,3 +367,19 @@ Uploads in authoring (pins image): `POST /api/assets?filename=...` raw body via 
 - Never log passwords/tokens. Log errors with request id only when `NODE_ENV !== 'test'`.
 - If a route is not listed in this contract, ask the Lead before adding it — the client pages already assume the listed shapes.
 - When you finish your area: run `npm test`, boot the server, hit your pages, then report to the Lead with (a) files, (b) what works, (c) known gaps/risks.
+
+---
+
+## Appendix A — Implementation notes (v0.1 as built)
+
+This appendix records where the shipped code deliberately extends or pins down the contract above. Treat it as part of the contract.
+
+1. **Teacher routes are concrete paths:** `/teacher/dashboard`, `/teacher/edit?id=`, `/teacher/assignment?id=`, `/teacher/grade?assignment=&participant=`, `/teacher/admin`, `/teacher/print?activity=` (or `?assignment=&participant=`). The server serves `public/teacher/index.html` for extensionless `/teacher/*`; anything with a file extension (`app.js`, `teacher.css`, …) is served as a static file.
+2. **Endpoints added during implementation:** `POST /api/admin/purge {olderThanDays, dryRun}` (DSGVO retention, admin-only); asset GET is `GET /assets/:id/:filename` where the filename segment is cosmetic (assets are served by id, immutable cache); `POST /api/activities/:id/publish` also accepts `dueAt`.
+3. **Student result payload:** per-item `answerText: string[]`, plus canonical `answer` and — for pins — `answerZones:[{id,label,x,y,r}]`, all gated by effective `showAnswers = settings.showAnswers && settings.allowReview`. Student payloads never contain: correct flags, accepted-answer arrays, numeric answer/tolerance, blanks answers, hints/rubric, item feedback, pin zone coordinates (zones arrive as `{id,label}`), or teacher-only data. Pins `image.url` is enriched from the assets table.
+4. **Rate limits and caps (in-memory):** login 10 failures/15 min/IP; student join 30/min/IP; response saves 120/min/participant token; submit 5/min/token; 500 participants per assignment (409 `participant_limit_reached`). Participants never store IP or user-agent (data minimisation) — those columns stay NULL.
+5. **Database migrations:** `server/db.js` reads `PRAGMA user_version` and applies the `MIGRATIONS` ladder (currently schema v1). The app refuses to start against a newer schema; add a migration step for every schema change.
+6. **Time limit:** server-authoritative `started_at + timeLimitMinutes` with a 60 s grace; the client renders a countdown and handles the resulting 409 `time_expired` by fetching the result.
+7. **Verification shipped with the code:** `node --test` (63 unit/integration tests), `node tools/e2e/api-check.mjs` (50 API assertions incl. answer-leak checks), `node tools/e2e/screenshots.mjs` (browser render + console-error check, writes `docs/screenshots/`), and the Playwright suite `npm run e2e` (14 specs: login, authoring/publish, student flow, live dashboard, grading, admin, print, security).
+8. **Known contract-level limitation:** the `match` item's canonical response uses one id namespace, so pair ids are observable in the student payload; presentation is shuffled and grading compares mappings. Documented in `docs/CRITICAL-EVALUATION.md`.
+9. **New internal module:** `server/api/_helpers.js` centralises shared API logic for the route modules; `server/index.js` only mounts `register(router)` exports.
