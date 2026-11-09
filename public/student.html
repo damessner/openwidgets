@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>OpenWidgets — Aufgabe</title>
+  <meta name="robots" content="noindex">
+  <meta name="description" content="Aufgabe in OpenWidgets bearbeiten">
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/render/render.css">
+  <link rel="stylesheet" href="/student.css">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body class="page student-page">
+  <a class="student-skip sr-only" href="#app" data-i18n="student.skip">Zum Inhalt springen</a>
+
+  <header class="app-header student-header no-print">
+    <div class="container student-header-inner">
+      <a class="brand student-brand" href="/">
+        <span class="brand-mark" aria-hidden="true">OW</span>
+        <span class="student-brand-text">OpenWidgets</span>
+      </a>
+      <h1 class="student-activity-title" id="activity-title" hidden></h1>
+      <div class="student-header-tools">
+        <span class="student-countdown badge badge-warning" id="countdown" role="timer" hidden></span>
+        <span class="student-save-status" id="save-status" role="status" aria-live="polite" hidden></span>
+        <div class="student-a11y" id="a11y-bar"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="student-offline" id="offline-banner" role="status" aria-live="polite" hidden></div>
+
+  <main class="container student-main" id="app" tabindex="-1">
+    <div class="loading-block">
+      <span class="spinner" aria-hidden="true"></span>
+      <span data-i18n="common.loading">Lädt …</span>
+    </div>
+  </main>
+
+  <footer class="container student-footer no-print">
+    <span data-i18n="student.footer">OpenWidgets — selbst gehostet</span>
+  </footer>
+
+  <div class="sr-only" id="announcer" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/student.js"></script>
+</body>
+</html>

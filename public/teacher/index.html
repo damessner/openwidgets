@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenWidgets — Lehrkräfte</title>
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/render/render.css">
+  <link rel="stylesheet" href="/teacher/teacher.css">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body class="page teacher-page">
+  <a class="skip-link" href="#view" data-i18n="teacher.skip_to_content">Zum Inhalt springen</a>
+
+  <header class="app-header no-print" id="app-header">
+    <div class="container">
+      <a class="brand" href="/teacher/dashboard" data-nav>
+        <span class="brand-mark" aria-hidden="true">OW</span>
+        <span>OpenWidgets</span>
+      </a>
+      <nav class="app-nav" id="app-nav" aria-label="Hauptnavigation"></nav>
+      <div class="row gap-2 ml-auto" id="header-actions"></div>
+    </div>
+  </header>
+
+  <main id="view" class="container teacher-main" tabindex="-1">
+    <div class="loading-block" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <span data-i18n="common.loading">Lädt …</span>
+    </div>
+  </main>
+
+  <footer class="page-footer no-print">
+    <div class="container row between wrap">
+      <span class="tiny">OpenWidgets — <span data-i18n="teacher.selfhosted">selbst gehostet</span></span>
+      <span class="tiny" id="footer-version"></span>
+    </div>
+  </footer>
+
+  <script type="module" src="/teacher/app.js"></script>
+</body>
+</html>

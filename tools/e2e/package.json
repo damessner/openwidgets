@@ -1,0 +1,19 @@
+{
+  "name": "openwidgets-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end and screenshot tests for OpenWidgets (dev-only dependencies; the main app has zero runtime deps).",
+  "scripts": {
+    "install-browser": "playwright install chromium",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report",
+    "screenshots": "node screenshots.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "playwright": "^1.65.0",
+    "playwright-core": "^1.65.0"
+  }
+}

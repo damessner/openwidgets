@@ -1,0 +1,24 @@
+{
+  "name": "openwidgets",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenWidgets - self-hosted, open-source alternative to BookWidgets for schools",
+  "license": "AGPL-3.0-or-later",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test",
+    "test:watch": "node --test --watch",
+    "admin:create": "node scripts/create-admin.mjs",
+    "demo:seed": "node scripts/seed-demo.mjs",
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs",
+    "prune": "node scripts/prune.mjs",
+    "check": "node --check server/index.js",
+    "e2e": "node tools/e2e/run.mjs"
+  }
+}

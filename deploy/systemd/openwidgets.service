@@ -1,0 +1,60 @@
+# deploy/systemd/openwidgets.service
+# Installed by deploy/provision.sh to /etc/systemd/system/openwidgets.service
+#
+# Native (recommended) deployment path. The app is a single Node process with
+# zero runtime npm dependencies; it serves the API and the static UI itself.
+#
+# Node path: /usr/bin/node is what the NodeSource package installs.
+# If you install Node from an official tarball instead, provision.sh creates a
+# /usr/bin/node symlink; adjust ExecStart if you keep it elsewhere.
+
+[Unit]
+Description=OpenWidgets — self-hosted interactive worksheets (BookWidgets alternative)
+Documentation=file:///opt/openwidgets/docs/DEPLOY-LXC.md
+After=network-online.target
+Wants=network-online.target
+# Do not start before the data directory exists (provision.sh creates it).
+ConditionPathIsDirectory=/var/lib/openwidgets
+
+[Service]
+Type=simple
+User=openwidgets
+Group=openwidgets
+WorkingDirectory=/opt/openwidgets
+EnvironmentFile=/etc/openwidgets/openwidgets.env
+ExecStart=/usr/bin/node server/index.js
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=20
+KillMode=mixed
+UMask=0077
+
+# --- process hardening (deliberately conservative: restict by path, not by
+# --- syscall lists, and never set MemoryDenyWriteExecute — V8 JIT needs W^X).
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+LimitNOFILE=65536
+
+# The ONLY writable path for the app (DATA_DIR in /etc/openwidgets/openwidgets.env
+# must match this).
+StateDirectory=openwidgets
+StateDirectoryMode=0750
+ReadWritePaths=/var/lib/openwidgets
+
+# Optional guard rails (uncomment after observing real usage):
+# MemoryMax=1500M
+# CPUQuota=150%
+
+[Install]
+WantedBy=multi-user.target

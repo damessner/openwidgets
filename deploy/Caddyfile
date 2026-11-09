@@ -1,0 +1,50 @@
+# deploy/Caddyfile — TEMPLATE. deploy/provision.sh installs it to /etc/caddy/Caddyfile.
+#
+# The domain comes from /etc/caddy/caddy.env, which provision.sh writes with
+#   OW_DOMAIN=widgets.<school-domain>
+#
+# TLS, choose ONE (provision.sh --tls repoints the `tls` line automatically):
+#   A) internal CA (default, offline):   tls internal
+#   B) existing school certificate:      tls /etc/openwidgets/tls/fullchain.pem /etc/openwidgets/tls/privkey.pem
+#   C) public Let's Encrypt (HTTP-01/TLS-ALPN; domain must be publicly reachable):
+#                                        tls admin@example.org
+#   D) Let's Encrypt DNS-01: needs a Caddy build with the DNS provider plugin
+#      (stock packages do not include DNS plugins) — see docs/DEPLOY-LXC.md §6.2.
+#
+# IMPORTANT: do not add `encode`/compression to this site. Middleware that
+# buffers responses can break the SSE live dashboard. `flush_interval -1` below
+# is what makes the live dashboard update immediately.
+
+{$OW_DOMAIN:widgets.school.local} {
+	tls internal
+
+	# App + static UI (single process, single origin).
+	reverse_proxy 127.0.0.1:3000 {
+		flush_interval -1
+	}
+
+	# Keep this slightly above MAX_UPLOAD_MB (10) so the app, not Caddy,
+	# returns the proper JSON 413 payload_too_large error.
+	request_body {
+		max_size 12MB
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		# SAMEORIGIN is safe now; if you later embed the app in an LMS iframe
+		# (LTI), replace this with a CSP frame-ancestors policy instead.
+		X-Frame-Options SAMEORIGIN
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		-Server
+		# Enable HSTS only after TLS is stable and every managed device trusts
+		# the certificate (HSTS + a later cert change locks browsers out):
+		# Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+
+	# Logs go to stderr -> journald (`journalctl -u caddy`). No files to rotate.
+	log {
+		output stderr
+		format console
+	}
+}

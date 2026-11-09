@@ -1,0 +1,79 @@
+# deploy/docker-compose.yml — Docker Compose path (inside a Proxmox LXC).
+#
+# The LXC must have nesting=1 and keyctl=1 (see docs/DEPLOY-LXC.md §5.1 and
+# deploy/lxc-create.sh --mode docker). Caddy runs NATIVELY in the LXC and
+# proxies to 127.0.0.1:3000; it is intentionally not part of this compose file.
+#
+# Usage (from the repository root):
+#   docker compose -f deploy/docker-compose.yml up -d --build
+#   docker compose -f deploy/docker-compose.yml logs -f --tail=100
+#   docker compose -f deploy/docker-compose.yml down      # keeps data (bind mount)
+#
+# NEVER run `down -v` on a school server: with a bind mount it is harmless, but
+# the habit is dangerous.
+#
+# do not add `npm install`: the app has zero runtime dependencies
+# (docs/CONTRACT.md §0).
+
+name: openwidgets
+
+services:
+  openwidgets:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: openwidgets:latest
+    container_name: openwidgets
+    restart: unless-stopped
+    init: true
+
+    # Secrets/config are written by deploy/provision.sh (mode 0600).
+    # The explicit `environment:` block below overrides the values that are
+    # correct for the NATIVE path (HOST=127.0.0.1) but wrong inside a container.
+    env_file:
+      - /etc/openwidgets/openwidgets.env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0          # reachable from Caddy via the published port
+      PORT: "3000"
+      DATA_DIR: /data        # container path; host side is /var/lib/openwidgets
+
+    # Loopback-only publication: never expose 3000 to the LAN.
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    # Bind mount (not a named volume) so host-side backup/restore scripts and
+    # Proxmox vzdump see the data at the documented location.
+    volumes:
+      - /var/lib/openwidgets:/data
+
+    # Writable scratch space for the app's temp files (the rest of the FS can
+    # stay read-only if you tighten the container later).
+    tmpfs:
+      - /tmp
+
+    # Optional hardening: set read_only: true if you never need the app to
+    # write outside /data and /tmp. Left off by default so a school operator
+    # does not get EROFS during a lesson. Keep no-new-privileges + cap_drop.
+    read_only: false
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
