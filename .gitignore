@@ -2,6 +2,8 @@ node_modules/
 .pnpm-store/
 data/
 data-smoke*/
+tools/.win-test-data/
+fresh-boot-check.mjs
 *.log
 .env
 .env.*
