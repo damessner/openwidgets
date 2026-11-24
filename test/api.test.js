@@ -1085,7 +1085,8 @@ test('admin: user management, ownership checks, stats', async () => {
   assert.ok(stats.activities >= 3);
   assert.ok(stats.assignments >= 2);
   assert.ok(stats.dbBytes > 0);
-  assert.equal(stats.version, '0.1.0');
+  const { config } = await import('../server/config.js');
+  assert.equal(stats.version, config.version);
 
   const cannotDeleteSelf = await admin.delete(`/api/admin/users/${created.user.id === admin.id ? admin.id : 'nope'}`);
   assert.ok(cannotDeleteSelf.status === 404 || cannotDeleteSelf.status === 409);
