@@ -14,12 +14,16 @@ import * as assignmentView from './views/assignment.js';
 import * as gradeView from './views/grade.js';
 import * as adminView from './views/admin.js';
 import * as printView from './views/print.js';
+import * as classesView from './views/classes.js';
+import * as classEditView from './views/class-edit.js';
 
 const ROUTES = [
   { name: 'dashboard', pattern: /^\/teacher\/dashboard\/?$/, view: dashboardView },
   { name: 'edit', pattern: /^\/teacher\/edit\/?$/, view: editorView },
   { name: 'assignment', pattern: /^\/teacher\/assignment\/?$/, view: assignmentView },
   { name: 'grade', pattern: /^\/teacher\/grade\/?$/, view: gradeView },
+  { name: 'classes', pattern: /^\/teacher\/classes\/?$/, view: classesView },
+  { name: 'class-edit', pattern: /^\/teacher\/class\/?$/, view: classEditView },
   { name: 'admin', pattern: /^\/teacher\/admin\/?$/, view: adminView, adminOnly: true },
   { name: 'print', pattern: /^\/teacher\/print\/?$/, view: printView, chrome: false },
 ];
@@ -48,6 +52,7 @@ function initialLetters(name) {
 
 const NAV_ITEMS = [
   { route: 'dashboard', href: '/teacher/dashboard', key: 'teacher.nav_dashboard', icon: 'grid' },
+  { route: 'classes', href: '/teacher/classes', key: 'teacher.nav_classes', icon: 'list' },
   { route: 'admin', href: '/teacher/admin', key: 'teacher.nav_admin', icon: 'settings', adminOnly: true },
 ];
 

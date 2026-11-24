@@ -33,6 +33,7 @@ import {
   settingsFor,
   timeLimitInfo,
 } from './_helpers.js';
+import { classLinkForParticipant, enforceClassUnlock, sequenceClassesForAssignment } from './classes.js';
 
 const MAX_PARTICIPANTS_PER_ASSIGNMENT = 500;
 const JOIN_LIMIT_PER_IP = 30;
@@ -94,6 +95,7 @@ function touchLastSeen(participantRow, assignmentRow, activityRow) {
 function joinAssignmentInfo(assignmentRow, activityRow) {
   const definition = definitionFromRow(activityRow);
   const settings = settingsFor(assignmentRow, definition);
+  const seqClasses = sequenceClassesForAssignment(assignmentRow.id);
   return {
     assignment: {
       code: assignmentRow.code,
@@ -102,6 +104,9 @@ function joinAssignmentInfo(assignmentRow, activityRow) {
       locale: activityRow.locale,
       status: assignmentRow.status,
       requireName: settings.requireName !== false,
+      // When the assignment is gated by a sequence class, direct joins are
+      // rejected — tell the client where to go instead.
+      classCode: seqClasses.length > 0 ? seqClasses[0].code : null,
     },
     activity: { title: definition.title, description: definition.description },
   };
@@ -154,6 +159,10 @@ export function register(router) {
     }
     if (name.length > 80) throw badRequest('invalid_name', 'Name must be at most 80 characters');
 
+    // Sequence-class gate: assignments bundled in a published sequence class
+    // may only be joined through the class, and only when unlocked there.
+    const classParticipant = enforceClassUnlock(assignment, body.classToken);
+
     const rawToken = newParticipantToken();
     const id = uid();
     const timestamp = now();
@@ -161,9 +170,10 @@ export function register(router) {
     // Data minimisation: participant IP / user agent are intentionally NOT
     // stored (minors, DSGVO). The columns stay NULL for a future opt-in.
     run(
-      'INSERT INTO participants (id, assignment_id, name, token_hash, status, started_at, submitted_at, last_seen_at, score, max_score, flags, ip, user_agent) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      'INSERT INTO participants (id, assignment_id, class_participant_id, name, token_hash, status, started_at, submitted_at, last_seen_at, score, max_score, flags, ip, user_agent) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       id,
       assignment.id,
+      classParticipant ? classParticipant.id : null,
       name,
       tokenHash(rawToken),
       'in_progress',
@@ -199,6 +209,7 @@ export function register(router) {
       },
       responses: [],
       flags: [],
+      class: classLinkForParticipant(one('SELECT * FROM participants WHERE id = ?', id)),
     });
   });
 
@@ -248,6 +259,7 @@ export function register(router) {
       },
       responses: responsesFor(current.id),
       flags: participantFlags(current),
+      class: classLinkForParticipant(current),
     });
   });
 

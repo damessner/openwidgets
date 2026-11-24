@@ -7,6 +7,12 @@
   <link rel="stylesheet" href="/app.css">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
+    body {
+      background-image:
+        radial-gradient(900px 480px at 85% -10%, rgb(124 58 237 / 16%), transparent 62%),
+        radial-gradient(760px 420px at -10% 110%, rgb(79 70 229 / 18%), transparent 58%),
+        radial-gradient(500px 320px at 70% 115%, rgb(147 51 234 / 12%), transparent 60%);
+    }
     .login-shell {
       min-height: 100vh;
       display: flex;
@@ -14,9 +20,36 @@
       align-items: center;
       justify-content: center;
       padding: 24px;
+      position: relative;
     }
-    .login-card { width: min(420px, 100%); }
-    .login-brand { justify-content: center; margin-bottom: 24px; }
+    .login-blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(70px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .login-blob-a {
+      width: 340px; height: 340px;
+      top: -90px; right: -70px;
+      background: rgb(124 58 237 / 28%);
+    }
+    .login-blob-b {
+      width: 300px; height: 300px;
+      bottom: -110px; left: -60px;
+      background: rgb(79 70 229 / 30%);
+    }
+    .login-card {
+      width: min(430px, 100%);
+      position: relative;
+      z-index: 1;
+      padding: 32px;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+    }
+    .login-brand { justify-content: center; margin-bottom: 20px; font-size: 1.15rem; }
+    .login-brand .brand-mark { width: 40px; height: 40px; border-radius: 12px; font-size: 1.05rem; }
+    .login-title { font-size: 1.5rem; margin-bottom: 6px; }
     .login-footer { margin-top: 20px; display: flex; justify-content: center; }
     .demo-hint {
       background: var(--warning-soft);
@@ -33,12 +66,14 @@
 </head>
 <body>
   <main class="login-shell">
+    <div class="login-blob login-blob-a" aria-hidden="true"></div>
+    <div class="login-blob login-blob-b" aria-hidden="true"></div>
     <div class="login-card card">
       <a class="brand login-brand" href="/">
         <span class="brand-mark" aria-hidden="true">OW</span>
         OpenWidgets
       </a>
-      <h1 class="center" style="font-size:1.5rem;margin-bottom:6px" data-i18n="login.title">Anmelden</h1>
+      <h1 class="center login-title" data-i18n="login.title">Anmelden</h1>
       <p class="small muted center mb-4" data-i18n="login.subtitle">
         Für Lehrkräfte dieser Instanz. Schüler:innen treten über den Aufgaben-Link bei.
       </p>

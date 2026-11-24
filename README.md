@@ -80,6 +80,7 @@ join codes. Safe to run repeatedly; it only creates new activities.
 - **Authoring editor** — declarative block editor with live preview, per-type forms generated from item metadata, autosave, and optimistic-concurrency conflict detection.
 - **10 item types** with deterministic auto-grading (see table below).
 - **Publish** — creates an assignment with a 6-character join code and URL (printable, copyable, iframe-embeddable).
+- **Classes (Lernpfade)** — bundle assignments into a class with its own join link (`/c/<CODE>`). Choose **free order** (everything open) or **fixed sequence** where each worksheet unlocks the next once the previous one is submitted — optionally requiring a minimum score percent. Students join the class with just a name and see a lobby with locked/open/done states.
 - **Live dashboard** (SSE) — presence per student, live score, per-item state grid, per-item class heatmap, anonymize mode for projecting, force-submit / reset / remove participants.
 - **Grading** — manual scoring and feedback for free-text items; totals recompute automatically; teacher sees the full student response.
 - **Print** — worksheet (with optional answer key) and student result sheets, print-to-PDF via the browser.
@@ -89,6 +90,7 @@ join codes. Safe to run repeatedly; it only creates new activities.
 ### Student side
 
 - Join by short code or link — **no student account, no email, no password**.
+- Class lobby (`/c/<CODE>`) — join a class bundle by name, see all worksheets with locked/open/done badges, open the next one from the lobby.
 - Worksheet (single scroll) or Quiz (one question per screen) layouts.
 - Responsive, touch-friendly, keyboard-operable — tablets, Chromebooks, phones, desktops.
 - Autosave per answer + offline retry queue (answers survive a dropped Wi-Fi connection and are re-sent when it returns; grading happens on the server).

@@ -6,6 +6,7 @@
   <title>OpenWidgets — interaktive Arbeitsblätter</title>
   <meta name="description" content="Selbst gehostete, quelloffene Alternative zu BookWidgets für Schulen.">
   <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/landing.css">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 <body class="page">
@@ -23,26 +24,87 @@
     </div>
   </header>
 
-  <main class="container" style="padding-top:56px;padding-bottom:40px;max-width:980px">
-    <section class="center">
-      <h1 data-i18n="landing.title" style="font-size:2.4rem">Interaktive Arbeitsblätter, selbst gehostet.</h1>
-      <p class="muted" style="max-width:640px;margin:16px auto 28px" data-i18n="landing.subtitle">
-        OpenWidgets ist eine quelloffene, datenschutzfreundliche Alternative zu BookWidgets. Lehrkräfte erstellen
-        Quizze und Arbeitsblätter, Schüler:innen bearbeiten sie im Browser, die Auswertung passiert automatisch —
-        alles auf dem eigenen Schulserver.
-      </p>
-      <div class="row gap-3" style="justify-content:center;flex-wrap:wrap">
-        <a class="btn btn-primary btn-lg" href="/login" data-i18n="landing.cta_teacher">Lehrkräfte-Login</a>
-        <a class="btn btn-secondary btn-lg" href="#join" data-i18n="landing.cta_student">Aufgabe beitreten</a>
+  <main class="container landing-main">
+    <section class="landing-hero">
+      <div class="landing-hero-text">
+        <span class="badge badge-primary landing-eyebrow">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z"/></svg>
+          <span data-i18n="landing.eyebrow">Open Source · Für Schulen</span>
+        </span>
+        <h1 class="landing-title">
+          <span data-i18n="landing.title_a">Interaktive Arbeitsblätter,</span><br>
+          <span class="grad-text" data-i18n="landing.title_b">selbst gehostet.</span>
+        </h1>
+        <p class="landing-subtitle" data-i18n="landing.subtitle">
+          OpenWidgets ist eine quelloffene, datenschutzfreundliche Alternative zu BookWidgets. Lehrkräfte erstellen
+          Quizze und Arbeitsblätter, Schüler:innen bearbeiten sie im Browser, die Auswertung passiert automatisch —
+          alles auf dem eigenen Schulserver.
+        </p>
+        <div class="landing-cta">
+          <a class="btn btn-primary btn-lg" href="/login" data-i18n="landing.cta_teacher">Lehrkräfte-Login</a>
+          <a class="btn btn-secondary btn-lg" href="#join" data-i18n="landing.cta_student">Aufgabe beitreten</a>
+        </div>
+        <p class="small faint landing-note" data-i18n="landing.selfhosted_note">
+          Läuft komplett auf Ihrer eigenen Infrastruktur. Keine Cloud, keine Abos, keine Schülerdaten bei Dritten.
+        </p>
+        <ul class="landing-stats">
+          <li class="landing-stat">
+            <span class="landing-stat-value" data-i18n="landing.stat_types_value">10+</span>
+            <span class="landing-stat-label" data-i18n="landing.stat_types_label">Aufgabentypen</span>
+          </li>
+          <li class="landing-stat">
+            <span class="landing-stat-value" data-i18n="landing.stat_hosting_value">100 %</span>
+            <span class="landing-stat-label" data-i18n="landing.stat_hosting_label">auf Ihrem Server</span>
+          </li>
+          <li class="landing-stat">
+            <span class="landing-stat-value" data-i18n="landing.stat_license_value">AGPL-3.0</span>
+            <span class="landing-stat-label" data-i18n="landing.stat_license_label">quelloffen</span>
+          </li>
+        </ul>
       </div>
-      <p class="small faint mt-3" data-i18n="landing.selfhosted_note">
-        Läuft komplett auf Ihrer eigenen Infrastruktur. Keine Cloud, keine Abos, keine Schülerdaten bei Dritten.
-      </p>
+
+      <div class="landing-visual" aria-hidden="true">
+        <div class="card landing-mock">
+          <div class="landing-mock-bar">
+            <span class="landing-mock-dot"></span>
+            <span class="landing-mock-line w-40"></span>
+          </div>
+          <div class="landing-mock-stem"></div>
+          <div class="landing-mock-line w-80"></div>
+          <div class="landing-mock-choice">
+            <span class="landing-mock-radio"></span>
+            <span class="landing-mock-line w-65"></span>
+          </div>
+          <div class="landing-mock-choice is-picked">
+            <span class="landing-mock-radio"></span>
+            <span class="landing-mock-line w-55"></span>
+          </div>
+          <div class="landing-mock-choice">
+            <span class="landing-mock-radio"></span>
+            <span class="landing-mock-line w-40"></span>
+          </div>
+          <div class="progress"><span style="width: 62%"></span></div>
+          <div class="landing-mock-btn"><span class="landing-mock-line"></span></div>
+        </div>
+        <span class="landing-chip landing-chip-live">
+          <span class="dot dot-online"></span>
+          <span>Live</span>
+        </span>
+        <span class="landing-chip landing-chip-points">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
+          <span>+1</span>
+        </span>
+      </div>
     </section>
 
-    <section id="join" class="card mt-5" style="max-width:560px;margin-left:auto;margin-right:auto">
-      <h2 class="card-title" data-i18n="landing.join_title">Einer Aufgabe beitreten</h2>
-      <p class="small muted mb-3" data-i18n="landing.join_hint">
+    <section id="join" class="card landing-join">
+      <div class="landing-join-head">
+        <span class="icon-tile">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+        </span>
+        <h2 class="landing-join-title" data-i18n="landing.join_title">Einer Aufgabe beitreten</h2>
+      </div>
+      <p class="small muted landing-join-hint" data-i18n="landing.join_hint">
         Geben Sie den Code ein, den Ihre Lehrkraft bereitgestellt hat.
       </p>
       <form id="join-form" novalidate>
@@ -60,7 +122,7 @@
             maxlength="12"
             placeholder="z. B. K7M2QP"
             data-i18n-placeholder="landing.code_placeholder"
-            style="text-transform:uppercase;letter-spacing:0.12em;font-weight:600"
+            style="text-transform:uppercase;letter-spacing:0.14em;font-weight:700"
           >
           <button class="btn btn-primary" type="submit" data-i18n="landing.join_button">Beitreten</button>
         </div>
@@ -68,21 +130,30 @@
       </form>
     </section>
 
-    <section id="features" class="grid grid-3 mt-5">
-      <article class="card compact">
+    <section id="features" class="grid grid-3 landing-features">
+      <article class="card landing-feature">
+        <span class="icon-tile">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
+        </span>
         <h3 class="card-title" data-i18n="landing.feature1_title">Schnelles Erstellen</h3>
         <p class="small muted" data-i18n="landing.feature1_text">
           Zehn Aufgabentypen, automatische Punktevergabe, Vorschau in Echtzeit und Import/Export als JSON.
         </p>
       </article>
-      <article class="card compact">
+      <article class="card landing-feature">
+        <span class="icon-tile icon-tile-success">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+        </span>
         <h3 class="card-title" data-i18n="landing.feature2_title">Live-Dashboard</h3>
         <p class="small muted" data-i18n="landing.feature2_text">
           Sehen Sie beim Bearbeiten zu: Anwesenheit, Punktestand und jede einzelne Antwort — ohne die Klasse
           in Echtzeit zu unterbrechen.
         </p>
       </article>
-      <article class="card compact">
+      <article class="card landing-feature">
+        <span class="icon-tile icon-tile-info">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
         <h3 class="card-title" data-i18n="landing.feature3_title">Faire Bewertung</h3>
         <p class="small muted" data-i18n="landing.feature3_text">
           Lösungsschlüssel bleiben am Server, Freitext wird manuell bewertet. Rückmeldung und Ergebnisansicht
@@ -91,14 +162,19 @@
       </article>
     </section>
 
-    <section class="mt-5">
-      <div class="card compact">
+    <section class="landing-status">
+      <div class="card">
         <div class="row between wrap">
-          <div>
-            <h3 class="card-title" data-i18n="landing.status_title">Systemstatus</h3>
-            <p class="small muted mb-2" data-i18n="landing.status_text">
-              Diese Instanz läuft auf einem eigenen Server. Version und verfügbare Aufgabentypen:
-            </p>
+          <div class="landing-status-head">
+            <span class="icon-tile icon-tile-info">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            </span>
+            <div>
+              <h3 class="card-title" data-i18n="landing.status_title">Systemstatus</h3>
+              <p class="small muted mb-0" data-i18n="landing.status_text">
+                Diese Instanz läuft auf einem eigenen Server. Version und verfügbare Aufgabentypen:
+              </p>
+            </div>
           </div>
           <div class="row gap-2" id="capabilities"></div>
         </div>

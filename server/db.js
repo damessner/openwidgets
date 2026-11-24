@@ -113,6 +113,38 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 
+-- v2: classes (bundles of assignments) --------------------------------------
+CREATE TABLE IF NOT EXISTS classes (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  code TEXT UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  order_mode TEXT NOT NULL DEFAULT 'free' CHECK (order_mode IN ('free','sequence')),
+  unlock_min_percent REAL NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published')),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS class_items (
+  id TEXT PRIMARY KEY,
+  class_id TEXT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  assignment_id TEXT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  UNIQUE (class_id, assignment_id),
+  UNIQUE (class_id, position)
+);
+
+CREATE TABLE IF NOT EXISTS class_participants (
+  id TEXT PRIMARY KEY,
+  class_id TEXT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  last_seen_at TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_activities_owner ON activities(owner_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_assignments_owner ON assignments(owner_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_assignments_activity ON assignments(activity_id);
@@ -122,18 +154,37 @@ CREATE INDEX IF NOT EXISTS idx_events_assignment ON events(assignment_id, id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
 CREATE INDEX IF NOT EXISTS idx_assets_owner ON assets(owner_id);
+CREATE INDEX IF NOT EXISTS idx_classes_owner ON classes(owner_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_class_items_class ON class_items(class_id, position);
+CREATE INDEX IF NOT EXISTS idx_class_participants_class ON class_participants(class_id);
 `;
 
 export const db = new DatabaseSync(config.dbPath);
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 /**
  * Migration ladder. When the schema changes in v0.2+, append
- * `{ version: 2, up() { db.exec('ALTER TABLE ...'); } }`. Every migration runs
+ * `{ version: 3, up() { db.exec('ALTER TABLE ...'); } }`. Every migration runs
  * exactly once inside a transaction; `user_version` is the bookkeeping.
  */
-const MIGRATIONS = [];
+const MIGRATIONS = [
+  {
+    version: 2,
+    up() {
+      // Link assignment participants to a class participant when they joined
+      // through a class (unlock tracking). Guarded so fresh installs (where the
+      // column may already exist) do not fail on a duplicate column.
+      const cols = db.prepare('PRAGMA table_info(participants)').all().map((col) => col.name);
+      if (!cols.includes('class_participant_id')) {
+        db.exec(
+          'ALTER TABLE participants ADD COLUMN class_participant_id TEXT REFERENCES class_participants(id) ON DELETE SET NULL',
+        );
+      }
+      db.exec('CREATE INDEX IF NOT EXISTS idx_participants_class_participant ON participants(class_participant_id)');
+    },
+  },
+];
 
 let initialized = false;
 

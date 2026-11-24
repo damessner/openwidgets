@@ -88,7 +88,10 @@ IDs are UUID v4 strings (`crypto.randomUUID()`). Timestamps are ISO-8601 UTC str
 - `sessions(token_hash PK, user_id, created_at, expires_at, ip, user_agent)`
 - `activities(id, owner_id, title, description, template 'quiz'|'worksheet', locale, definition TEXT JSON, status 'draft'|'published', revision INT, created_at, updated_at)`
 - `assignments(id, activity_id, owner_id, code UNIQUE, title, settings TEXT JSON snapshot, status 'open'|'closed', due_at, created_at)`
-- `participants(id, assignment_id, name, token_hash UNIQUE, status 'in_progress'|'submitted'|'graded', started_at, submitted_at, last_seen_at, score, max_score, flags TEXT JSON (starred item ids), ip, user_agent)`
+- `participants(id, assignment_id, class_participant_id NULL, name, token_hash UNIQUE, status 'in_progress'|'submitted'|'graded', started_at, submitted_at, last_seen_at, score, max_score, flags TEXT JSON (starred item ids), ip, user_agent)` — `class_participant_id` (schema v2) links a participant to a class participant when joined via a class bundle
+- `classes(id, owner_id, code UNIQUE NULL, name, description, order_mode 'free'|'sequence', unlock_min_percent REAL 0–100, status 'draft'|'published', created_at, updated_at)` (schema v2; `code` is set on publish)
+- `class_items(id, class_id, assignment_id, position INT, UNIQUE(class_id,assignment_id), UNIQUE(class_id,position))`
+- `class_participants(id, class_id, name, token_hash UNIQUE, created_at, last_seen_at)`
 - `responses(id, participant_id, item_id, response TEXT JSON, auto_score REAL, max_score REAL, correct INT, needs_manual INT, feedback TEXT, manual_score REAL, updated_at, UNIQUE(participant_id,item_id))`
 - `events(id INTEGER PK AUTOINCREMENT, assignment_id, participant_id, kind, payload TEXT JSON, created_at)`
 - `assets(id, owner_id, filename, mime, size, sha256, created_at)`
@@ -247,9 +250,9 @@ Base path `/api`. JSON in/out (`Content-Type: application/json`), UTF-8. Errors 
 ### 5.4 Participants / student (server-dev)
 | Method | Path | Body | Response |
 | --- | --- | --- | --- |
-| GET | `/api/join/:code` | — | `{assignment:{code,title,template,locale,status,requireName}, activity:{title,description}}`; 404 `invalid_code` |
-| POST | `/api/join` | `{code, name}` | `{participantToken, participant:{id,name}, assignment:{code,title,template,locale,settings}, activity:{title,description,settings,items:[sanitized items]}, responses:[], flags:[]}`; errors: `invalid_code`, `assignment_closed`, `name_required` |
-| GET | `/api/participant` | token header | `{participant:{id,name,status,score,maxScore,startedAt,submittedAt}, assignment:{...}, activity:{sanitized}, responses:[{itemId,response,result:{correct,autoScore,maxScore,needsManual}}], flags:[]}` |
+| GET | `/api/join/:code` | — | `{assignment:{code,title,template,locale,status,requireName,classCode|null}, activity:{title,description}}`; 404 `invalid_code`. `classCode` is set when the assignment is gated by a published sequence class |
+| POST | `/api/join` | `{code, name, classToken?}` | `{participantToken, participant:{id,name}, assignment:{...}, activity:{...}, responses:[], flags:[], class:{id,code,name,orderMode}|null}`; errors: `invalid_code`, `assignment_closed`, `name_required`, **403 `class_required` {details:{classCode}}**, **409 `item_locked` {details:{position,blockingPosition,classCode}}** (assignment is in a published sequence class and not unlocked for this class token) |
+| GET | `/api/participant` | token header | same as before + `class:{id,code,name,orderMode}|null` |
 | PUT | `/api/participant/responses/:itemId` | `{response}` | `{saved:true, result:{correct,autoScore,maxScore,needsManual}, score, maxScore}`; 409 `attempt_submitted` / `time_expired` (server auto-submits on deadline); 400 `invalid_response` |
 | POST | `/api/participant/heartbeat` | — | `{ok:true}`; updates `last_seen_at`; publishes SSE presence at most every 15 s per participant |
 | POST | `/api/participant/flags` | `{flags:[itemId...]}` | `{flags}`; publishes SSE `flags` event |
@@ -277,7 +280,27 @@ Time limit: `started_at + timeLimitMinutes`; a 60 s grace applies on save. Past 
 
 Asset allowlist: `image/png`, `image/jpeg`, `image/webp`, `image/gif`, `audio/mpeg`, `audio/mp4`, `audio/ogg`, `audio/wav`, `audio/webm`. **No SVG** (XSS). Filenames sanitized to `[A-Za-z0-9._-]`; stored filename is the asset id; original name kept in DB.
 
-### 5.6 SSE (teacher live dashboard)
+### 5.6 Classes — bundles of assignments ("Klassen"/Lernpfade, schema v2)
+
+A class bundles assignments in an order. `order_mode='free'`: all items open immediately. `order_mode='sequence'`: an item unlocks only when every previous item is submitted/graded and (if `unlock_min_percent>0`) reached that score percentage (`maxScore<=0` counts as passed). Unlock logic is pure in `shared/classes.js` (`computeItemStates`, `firstBlockingPosition`); enforcement for direct assignment joins lives in `server/api/classes.js` (`enforceClassUnlock`, called from `POST /api/join`).
+
+| Method | Path | Body | Response |
+| --- | --- | --- | --- |
+| GET | `/api/classes` | — | `{classes:[{id,code,name,description,orderMode,unlockMinPercent,status,itemCount,participantCount,createdAt,updatedAt}]}` (teacher: own; admin: all) |
+| POST | `/api/classes` | `{name, description?, orderMode, unlockMinPercent}` | 201 `{class}` (draft, `code=null`); 400 `invalid_class` with details |
+| GET | `/api/classes/:id` | — | `{class:{...listItem, items:[{id,position,assignmentId,code,title,activityTitle,template,status,participantCount}]}}` (owner/admin) |
+| PUT | `/api/classes/:id` | `{name?, description?, orderMode?, unlockMinPercent?}` | `{class}` (full detail) |
+| DELETE | `/api/classes/:id` | — | 204; detaches `participants.class_participant_id` |
+| PUT | `/api/classes/:id/items` | `{assignmentIds:[...]}` (≤50, unique, owned) | `{class}` with reordered items; 400 `duplicate_items`/`too_many_items`, 404 `assignment_not_found` |
+| POST | `/api/classes/:id/publish` | — | `{class, url:"/c/<CODE>"}`; generates 6-char code; 409 `class_empty` without items |
+| POST | `/api/classes/:id/unpublish` | — | `{class}` (status back to `draft`; code kept but lobby 404s) |
+| GET | `/api/classes/join/:code` | — | public `{class:{code,name,description,orderMode,unlockMinPercent,itemCount}}`; 404 `invalid_code` when unknown/unpublished |
+| POST | `/api/classes/join` | `{code, name}` | `{classToken, class:{...lobby payload}, participant:{id,name}}`; 400 `name_required`/`invalid_name`; rate-limited 30/min/IP |
+| GET | `/api/classes/:code/participant` | `X-Class-Token` header | `{class:{...lobby payload}, participant:{id,name}}`; 401 `invalid_class_token`. Lobby items: `{position,assignmentId,title,template,state:'done'|'open'|'locked',status,score,maxScore,blockedBy,code}` — **`code` is null while locked** (no enumeration of gated assignments) |
+
+Pages: `GET /c/:code` → `public/student.html` (class join → lobby → `/a/<code>?c=<classCode>` per item; the `?c=` param sends the class token on `POST /api/join`, redirects to `/c/<code>` on `class_required`, shows the lock error on `item_locked`).
+
+### 5.7 SSE (teacher live dashboard)
 
 `GET /api/assignments/:id/stream` — teacher cookie. Headers: `Content-Type: text/event-stream`, `Cache-Control: no-cache`, `Connection: keep-alive`, `X-Accel-Buffering: no`. Every message: `data: <json>\n\n` (no named events), JSON has `type`. Keepalive comment `:ping\n\n` every 25 s. Client must reconnect with `EventSource` (auto).
 
@@ -293,10 +316,10 @@ Live-player shape (single source of truth, used by `/live`, SSE and results):
 `{id, name, status, score, maxScore, lastSeenAt, online, items:{ [itemId]: "unanswered"|"correct"|"partial"|"incorrect"|"manual" }, flags:[itemId], submittedAt}`.
 `state` derivation: no response ⇒ `unanswered`; `needs_manual` ⇒ `manual`; `auto_score >= max_score-ε` ⇒ `correct`; `<= ε` ⇒ `incorrect`; else `partial`.
 
-### 5.7 System (Lead)
+### 5.8 System (Lead)
 - `GET /api/health` → `{status:"ok", version, uptime, db:"ok"}` 200; 503 if DB probe fails.
-- `GET /api/capabilities` → `{version, itemTypes:[{type,label,scoreable}], features:{sse:true,print:true,importExport:true,timeLimit:true}, maxUploadMb}`.
-- `GET /` → `public/index.html`; `GET /login` → `public/login.html`; `GET /teacher`, `/teacher/*` → `public/teacher/index.html`; `GET /a/:code` → `public/student.html`. Unknown non-API paths: static file from `public/`, else 404 page (`/404.html` if present).
+- `GET /api/capabilities` → `{version, itemTypes:[{type,label,scoreable}], features:{sse:true,print:true,importExport:true,timeLimit:true,classes:true}, maxUploadMb}`.
+- `GET /` → `public/index.html`; `GET /login` → `public/login.html`; `GET /teacher`, `/teacher/*` → `public/teacher/index.html`; `GET /a/:code` and `GET /c/:code` → `public/student.html`. Unknown non-API paths: static file from `public/`, else 404 page (`/404.html` if present).
 
 ## 6. Client architecture
 

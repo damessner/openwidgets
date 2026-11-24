@@ -37,6 +37,12 @@ import {
   setParticipantToken,
   clearParticipantToken,
   participantHeaders,
+  getClassToken,
+  setClassToken,
+  clearClassToken,
+  getClassName,
+  setClassName,
+  classHeaders,
 } from './lib/api.js';
 import { icon } from './lib/icons.js';
 import { mountItem, getRenderer } from './render/index.js';
@@ -51,6 +57,23 @@ registerMessages({
     'student.skip': 'Zum Inhalt springen',
     'student.footer': 'OpenWidgets — selbst gehostet',
     'student.join_eyebrow': 'Aufgabe',
+    'student.class_eyebrow': 'Klasse',
+    'student.class_join_hint': 'Geben Sie Ihren Namen ein, um der Klasse beizutreten.',
+    'student.class_join_button': 'Klasse beitreten',
+    'student.class_progress': '{done} von {total} erledigt',
+    'student.class_mode_free': 'Freie Reihenfolge',
+    'student.class_mode_sequence': 'Feste Reihenfolge',
+    'student.class_item_locked': 'Gesperrt — zuerst Nr. {position} erledigen',
+    'student.class_item_open': 'Öffnen',
+    'student.class_item_review': 'Ansehen',
+    'student.class_item_done': 'Erledigt',
+    'student.class_score': '{score} / {maxScore} P.',
+    'student.class_back': 'Zur Klasse',
+    'student.class_via_link': 'Diese Aufgabe gehört zu einer Klasse. Treten Sie über den Klassen-Link bei:',
+    'student.class_open_link': 'Zur Klasse',
+    'student.class_invalid_code_title': 'Klassen-Code ungültig',
+    'student.class_invalid_code_text': 'Zu diesem Link gibt es keine Klasse. Bitte prüfen Sie den Code oder den Link.',
+    'student.class_empty': 'In dieser Klasse sind noch keine Aufgaben.',
     'student.name_label': 'Ihr Name',
     'student.name_label_optional': 'Ihr Name (optional)',
     'student.name_placeholder': 'Vor- und Nachname',
@@ -129,6 +152,23 @@ registerMessages({
     'student.skip': 'Skip to content',
     'student.footer': 'OpenWidgets — self-hosted',
     'student.join_eyebrow': 'Assignment',
+    'student.class_eyebrow': 'Class',
+    'student.class_join_hint': 'Enter your name to join the class.',
+    'student.class_join_button': 'Join class',
+    'student.class_progress': '{done} of {total} done',
+    'student.class_mode_free': 'Free order',
+    'student.class_mode_sequence': 'Fixed sequence',
+    'student.class_item_locked': 'Locked — finish no. {position} first',
+    'student.class_item_open': 'Open',
+    'student.class_item_review': 'Review',
+    'student.class_item_done': 'Done',
+    'student.class_score': '{score} / {maxScore} pts',
+    'student.class_back': 'Back to class',
+    'student.class_via_link': 'This assignment belongs to a class. Join via the class link:',
+    'student.class_open_link': 'Open class',
+    'student.class_invalid_code_title': 'Invalid class code',
+    'student.class_invalid_code_text': 'There is no class for this link. Please check the code or link.',
+    'student.class_empty': 'This class has no assignments yet.',
     'student.name_label': 'Your name',
     'student.name_label_optional': 'Your name (optional)',
     'student.name_placeholder': 'First and last name',
@@ -216,17 +256,28 @@ const QUEUE_PREFIX = 'ow_queue_';
 const FONT_KEY = 'ow_font_scale';
 const VALID_CODE_RE = /^[A-Z0-9]{4,12}$/;
 
-function readCode() {
-  const match = window.location.pathname.match(/\/a\/([^/]+)\/?$/i);
-  if (!match) return '';
+function readPath() {
+  const match = window.location.pathname.match(/^\/([ac])\/([^/]+)\/?$/i);
+  if (!match) return { mode: '', code: '' };
+  let code = '';
   try {
-    return decodeURIComponent(match[1]).trim().toUpperCase().replace(/\s+/g, '');
+    code = decodeURIComponent(match[2]).trim().toUpperCase().replace(/\s+/g, '');
   } catch {
-    return '';
+    code = '';
   }
+  return { mode: String(match[1]).toLowerCase(), code };
 }
 
-const CODE = readCode();
+const PATH = readPath();
+// 'a' = single assignment (/a/CODE), 'c' = class bundle (/c/CODE)
+const MODE = PATH.mode;
+const CODE = PATH.code;
+// When an assignment is opened from a class lobby, the class code rides along.
+function readClassParam() {
+  const raw = new URLSearchParams(window.location.search).get('c') || '';
+  return raw.trim().toUpperCase().replace(/\s+/g, '');
+}
+const CLASS_PARAM = MODE === 'a' ? readClassParam() : '';
 
 const app = qs('#app');
 const activityTitleEl = qs('#activity-title');
@@ -239,8 +290,13 @@ const announcer = qs('#announcer');
 const state = {
   screen: 'loading',
   code: CODE,
-  token: getParticipantToken(CODE),
+  mode: MODE,
+  token: MODE === 'c' ? null : getParticipantToken(CODE),
+  classToken: MODE === 'c' ? getClassToken(CODE) : null,
   joinInfo: null,
+  classJoinInfo: null,
+  classPayload: null,
+  classInfo: null,
   participant: null,
   assignment: null,
   activity: null,
@@ -470,6 +526,9 @@ function setActivityTitle(title) {
 }
 
 function currentActivityTitle() {
+  if (MODE === 'c') {
+    return (state.classPayload && state.classPayload.name) || (state.classJoinInfo && state.classJoinInfo.name) || '';
+  }
   return (
     (state.assignment && state.assignment.title) ||
     (state.activity && state.activity.title) ||
@@ -597,7 +656,8 @@ function renderChrome() {
   buildA11yBar();
   if (state.screen === 'player' && deadline) countdownEl.hidden = false;
   else countdownEl.hidden = true;
-  updateSaveStatus();
+  if (MODE === 'c') saveStatusEl.hidden = true;
+  else updateSaveStatus();
   updateOfflineUI();
 }
 
@@ -898,6 +958,7 @@ function applyPayload(data) {
   state.result = null;
   state.error = null;
   state.assignmentClosed = false;
+  state.classInfo = (payload.class && typeof payload.class === 'object' ? payload.class : null) || state.classInfo || null;
 
   resetResponseMaps();
   const responses = Array.isArray(payload.responses) ? payload.responses : [];
@@ -1453,6 +1514,12 @@ function renderScreen() {
     case 'join':
       app.appendChild(buildJoinScreen());
       break;
+    case 'class-join':
+      app.appendChild(buildClassJoinScreen());
+      break;
+    case 'class-lobby':
+      app.appendChild(buildClassLobby());
+      break;
     case 'player':
       app.appendChild(buildPlayerScreen());
       break;
@@ -1506,6 +1573,18 @@ function buildJoinScreen() {
   }
   card.appendChild(meta);
 
+  // Assignment belongs to a class bundle: point to the class lobby unless the
+  // student already carries a class token for it.
+  const classCode = assignment.classCode || (CLASS_PARAM && CLASS_PARAM) || '';
+  if (classCode && !getClassToken(classCode)) {
+    const hint = h('p.student-join-hint.class-hint');
+    hint.appendChild(h('span', { text: `${t('student.class_via_link')} ` }));
+    hint.appendChild(
+      h('a', { href: `/c/${encodeURIComponent(classCode)}` }, h('strong', { text: t('student.class_open_link') })),
+    );
+    card.appendChild(hint);
+  }
+
   const form = h('form.student-join-form', { novalidate: true });
   form.appendChild(h('p.student-join-hint', { text: t('student.join_hint') }));
 
@@ -1523,7 +1602,7 @@ function buildJoinScreen() {
     autocomplete: 'name',
     maxlength: 120,
     placeholder: t('student.name_placeholder'),
-    value: state.pendingName || '',
+    value: state.pendingName || (CLASS_PARAM ? getClassName(CLASS_PARAM) : '') || '',
   });
   if (!requireName) input.setAttribute('aria-describedby', 'join-name-hint');
   field.appendChild(input);
@@ -1554,7 +1633,12 @@ function buildJoinScreen() {
     submitBtn.disabled = true;
     submitBtn.textContent = t('common.loading');
     try {
-      const data = await post('/api/join', { code: state.code, name });
+      const body = { code: state.code, name };
+      if (CLASS_PARAM) {
+        const classToken = getClassToken(CLASS_PARAM);
+        if (classToken) body.classToken = classToken;
+      }
+      const data = await post('/api/join', body);
       const token = data && data.participantToken;
       if (token) {
         setParticipantToken(CODE, token);
@@ -1575,6 +1659,11 @@ function buildJoinScreen() {
           title: t('student.assignment_closed_title'),
           message: t('student.assignment_closed_text'),
         });
+        return;
+      }
+      if (error && error.code === 'class_required') {
+        const target = error.details && error.details.classCode ? `/c/${encodeURIComponent(error.details.classCode)}` : '/';
+        window.location.assign(target);
         return;
       }
       if (error && error.code === 'name_required') {
@@ -1816,7 +1905,10 @@ function buildResultScreen() {
     fill.style.width = `${percent.toFixed(2)}%`;
     bar.appendChild(fill);
     hero.appendChild(bar);
+    hero.style.setProperty('--ow-score-percent', `${percent.toFixed(1)}%`);
+    if (percent >= 75) celebrate();
   } else {
+    hero.style.setProperty('--ow-score-percent', '100%');
     hero.appendChild(h('p.student-result-subtitle', { text: t('student.result_hidden') }));
   }
 
@@ -1825,6 +1917,16 @@ function buildResultScreen() {
   }
 
   const actions = h('div.student-result-actions');
+  if (state.classInfo && state.classInfo.code) {
+    actions.appendChild(
+      h(
+        'a.btn.btn-secondary',
+        { href: `/c/${encodeURIComponent(state.classInfo.code)}` },
+        h('span', { html: icon('arrow-left', { size: 18 }) }),
+        h('span', { text: t('student.class_back') }),
+      ),
+    );
+  }
   if (state.settings.allowReview !== false) {
     const reviewBtn = h(
       'button.btn.btn-secondary',
@@ -1846,6 +1948,39 @@ function buildResultScreen() {
   wrap.appendChild(hero);
   if (showResults) wrap.appendChild(buildBreakdownCard());
   return wrap;
+}
+
+// Lightweight confetti burst for strong results (skipped for reduced motion).
+function celebrate() {
+  if (prefersReducedMotion()) return;
+  const layer = h('div.ow-confetti', { 'aria-hidden': 'true' });
+  const colors = ['#4f46e5', '#9333ea', '#22a06b', '#f59e0b', '#38bdf8', '#ec4899'];
+  for (let i = 0; i < 90; i += 1) {
+    const piece = h('span.ow-confetti-piece');
+    const size = 6 + Math.random() * 7;
+    piece.style.width = `${size}px`;
+    piece.style.height = `${Math.max(3, size * (Math.random() > 0.5 ? 1 : 0.45))}px`;
+    piece.style.background = colors[i % colors.length];
+    piece.style.left = `${Math.random() * 100}vw`;
+    layer.appendChild(piece);
+    const drift = (Math.random() - 0.5) * 240;
+    const spin = (Math.random() - 0.5) * 900;
+    const animation = piece.animate(
+      [
+        { transform: 'translate3d(0, -12vh, 0) rotate(0deg)', opacity: 1 },
+        { transform: `translate3d(${drift}px, ${window.innerHeight + 140}px, 0) rotate(${spin}deg)`, opacity: 0.85 },
+      ],
+      {
+        duration: 2200 + Math.random() * 1800,
+        delay: Math.random() * 450,
+        easing: 'cubic-bezier(0.2, 0.6, 0.35, 1)',
+        fill: 'forwards',
+      },
+    );
+    if (animation && typeof animation.onfinish !== 'undefined') animation.onfinish = () => piece.remove();
+  }
+  document.body.appendChild(layer);
+  window.setTimeout(() => layer.remove(), 5000);
 }
 
 function participantNumber(key, fallback) {
@@ -2133,6 +2268,234 @@ function updateSubmitButtons() {
 }
 
 // ---------------------------------------------------------------------------
+// Class flow (/c/CODE): join a class bundle, see the lobby with lock states,
+// open unlocked assignments via /a/<code>?c=<classCode>.
+// ---------------------------------------------------------------------------
+
+function applyClassPayload(data) {
+  const payload = data && typeof data === 'object' ? data : {};
+  state.classPayload = payload.class || null;
+  if (payload.participant && payload.participant.name) {
+    state.classParticipantName = payload.participant.name;
+    setClassName(CODE, payload.participant.name);
+  }
+}
+
+async function initClassFlow() {
+  state.screen = 'loading';
+  renderScreen();
+  if (state.classToken) {
+    try {
+      const data = await get(`/api/classes/${encodeURIComponent(CODE)}/participant`, {
+        headers: classHeaders(state.classToken),
+      });
+      applyClassPayload(data);
+      state.screen = 'class-lobby';
+      renderScreen();
+      return;
+    } catch (error) {
+      if (error && (error.code === 'invalid_class_token' || error.status === 401)) {
+        clearClassToken(CODE);
+        state.classToken = null;
+      } else if (error && error.code === 'invalid_code') {
+        showFatalError({ title: t('student.class_invalid_code_title'), message: t('student.class_invalid_code_text') });
+        return;
+      } else {
+        toast(errorMessage(error), 'error');
+        showFatalError({ title: t('student.error_title'), message: errorMessage(error), retry: () => initClassFlow() });
+        return;
+      }
+    }
+  }
+  try {
+    const info = await get(`/api/classes/join/${encodeURIComponent(CODE)}`);
+    state.classJoinInfo = (info && info.class) || null;
+    state.screen = 'class-join';
+    renderScreen();
+  } catch (error) {
+    if (error && error.code === 'invalid_code') {
+      showFatalError({ title: t('student.class_invalid_code_title'), message: t('student.class_invalid_code_text') });
+      return;
+    }
+    toast(errorMessage(error), 'error');
+    showFatalError({ title: t('student.error_title'), message: errorMessage(error), retry: () => initClassFlow() });
+  }
+}
+
+function buildClassJoinScreen() {
+  const info = state.classJoinInfo || {};
+  const card = h('div.card.student-join');
+  card.appendChild(h('p.student-join-eyebrow', { text: t('student.class_eyebrow') }));
+  card.appendChild(h('h2.student-join-title', { text: String(info.name || t('student.class_eyebrow')) }));
+  if (info.description) {
+    const description = h('div.student-join-desc');
+    renderRichText(description, String(info.description));
+    card.appendChild(description);
+  }
+  const meta = h('div.student-join-meta');
+  meta.appendChild(
+    h('span.badge.badge-info', {
+      text: t(info.orderMode === 'sequence' ? 'student.class_mode_sequence' : 'student.class_mode_free'),
+    }),
+  );
+  meta.appendChild(h('span.badge', { text: `${t('student.code_label')}: ${CODE}` }));
+  card.appendChild(meta);
+
+  const form = h('form.student-join-form', { novalidate: true });
+  form.appendChild(h('p.student-join-hint', { text: t('student.class_join_hint') }));
+  const field = h('div.field');
+  field.appendChild(h('label.label', { htmlFor: 'join-name' }, h('span', { text: t('student.name_label') })));
+  const input = h('input.input', {
+    id: 'join-name',
+    type: 'text',
+    name: 'name',
+    autocomplete: 'name',
+    maxlength: 120,
+    placeholder: t('student.name_placeholder'),
+    value: state.pendingName || '',
+  });
+  field.appendChild(input);
+  form.appendChild(field);
+  const errorText = h('p.student-error-text', { id: 'join-error', role: 'alert', hidden: true });
+  form.appendChild(errorText);
+  const submitBtn = h('button.btn.btn-primary.btn-lg.btn-block', { type: 'submit' }, t('student.class_join_button'));
+  form.appendChild(submitBtn);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    errorText.hidden = true;
+    const name = input.value.trim();
+    state.pendingName = input.value;
+    if (!name) {
+      errorText.textContent = t('student.name_required');
+      errorText.hidden = false;
+      input.setAttribute('aria-invalid', 'true');
+      input.focus();
+      return;
+    }
+    input.removeAttribute('aria-invalid');
+    submitBtn.disabled = true;
+    submitBtn.textContent = t('common.loading');
+    try {
+      const data = await post('/api/classes/join', { code: CODE, name });
+      if (data && data.classToken) {
+        setClassToken(CODE, data.classToken);
+        state.classToken = data.classToken;
+      }
+      applyClassPayload(data);
+      state.screen = 'class-lobby';
+      renderScreen();
+      setAnnouncement(t('student.class_eyebrow'));
+    } catch (error) {
+      const message = errorMessage(error);
+      errorText.textContent = message;
+      errorText.hidden = false;
+      toast(message, 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = t('student.class_join_button');
+    }
+  });
+
+  card.appendChild(form);
+  window.setTimeout(() => {
+    const firstField = qs('#join-name');
+    if (firstField && document.activeElement !== firstField) firstField.focus();
+  }, 50);
+  return card;
+}
+
+function classItemStateBadge(item) {
+  if (item.state === 'done') return h('span.badge.badge-success', { text: t('student.class_item_done') });
+  if (item.state === 'locked') return h('span.badge.badge-danger', { text: t('student.class_item_locked', { position: formatNumber(item.blockedBy || item.position) }) });
+  return h('span.badge.badge-primary', { text: t('student.class_item_open') });
+}
+
+function buildClassLobby() {
+  const payload = state.classPayload || {};
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  const done = items.filter((item) => item.state === 'done').length;
+
+  const wrap = h('div.student-class');
+  const card = h('div.card.student-join');
+  card.appendChild(h('p.student-join-eyebrow', { text: t('student.class_eyebrow') }));
+  card.appendChild(h('h2.student-join-title', { text: String(payload.name || t('student.class_eyebrow')) }));
+  if (payload.description) {
+    const description = h('div.student-join-desc');
+    renderRichText(description, String(payload.description));
+    card.appendChild(description);
+  }
+  const meta = h('div.student-join-meta');
+  meta.appendChild(
+    h('span.badge.badge-info', {
+      text: t(payload.orderMode === 'sequence' ? 'student.class_mode_sequence' : 'student.class_mode_free'),
+    }),
+  );
+  meta.appendChild(h('span.badge', { text: t('student.class_progress', { done: formatNumber(done), total: formatNumber(items.length) }) }));
+  card.appendChild(meta);
+  wrap.appendChild(card);
+
+  if (items.length === 0) {
+    wrap.appendChild(h('div.card.compact.center.muted', { text: t('student.class_empty') }));
+  } else {
+    const list = h('ul.student-class-items');
+    for (const item of items) {
+      const li = h('li.student-class-item');
+      li.appendChild(h('span.student-class-item-number', { 'aria-hidden': 'true', text: String(item.position) }));
+      const main = h('div.student-class-item-main');
+      main.appendChild(h('div.strong', { text: String(item.title || `#${item.position}`) }));
+      const sub = h('div.row.gap-2.small.muted');
+      sub.appendChild(h('span.badge', { text: t(item.template === 'quiz' ? 'student.template_quiz' : 'student.template_worksheet') }));
+      if (item.state === 'done' && Number(item.maxScore) > 0) {
+        sub.appendChild(h('span', { text: t('student.class_score', { score: fmtScore(item.score), maxScore: fmtScore(item.maxScore) }) }));
+      }
+      main.appendChild(sub);
+      li.appendChild(main);
+      const side = h('div.student-class-item-side');
+      side.appendChild(classItemStateBadge(item));
+      if (item.state === 'locked' || !item.code) {
+        side.appendChild(h('button.btn.btn-secondary', { type: 'button', disabled: true }, t('student.class_item_open')));
+      } else {
+        side.appendChild(
+          h(
+            'a.btn.btn-primary',
+            { href: `/a/${encodeURIComponent(item.code)}?c=${encodeURIComponent(CODE)}` },
+            h('span', { text: item.state === 'done' ? t('student.class_item_review') : t('student.class_item_open') }),
+          ),
+        );
+      }
+      li.appendChild(side);
+      list.appendChild(li);
+    }
+    wrap.appendChild(list);
+  }
+
+  const actions = h('div.student-class-actions');
+  actions.appendChild(switchClassPersonButton());
+  wrap.appendChild(actions);
+  return wrap;
+}
+
+function switchClassPerson() {
+  clearClassToken(CODE);
+  state.classToken = null;
+  state.classPayload = null;
+  const target = `/c/${encodeURIComponent(CODE)}`;
+  try {
+    window.location.assign(target);
+  } catch {
+    window.location.href = target;
+  }
+}
+
+function switchClassPersonButton() {
+  const button = h('button.btn.btn-ghost.btn-sm', { type: 'button' });
+  button.appendChild(h('span', { html: icon('logout', { size: 16 }) }));
+  button.appendChild(h('span', { text: t('student.switch_person') }));
+  button.addEventListener('click', switchClassPerson);
+  return button;
+}
+
+// ---------------------------------------------------------------------------
 // Startup / API loading
 // ---------------------------------------------------------------------------
 
@@ -2252,6 +2615,11 @@ async function init() {
     return;
   }
 
+  if (MODE === 'c') {
+    await initClassFlow();
+    return;
+  }
+
   if (state.token) {
     try {
       const resumed = await loadParticipant();
@@ -2310,7 +2678,7 @@ function setupGlobalListeners() {
   });
 
   onLocaleChange(() => {
-    if (state.screen === 'join') {
+    if (state.screen === 'join' || state.screen === 'class-join') {
       const nameInput = qs('#join-name');
       if (nameInput) state.pendingName = nameInput.value;
     }

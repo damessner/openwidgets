@@ -5,7 +5,15 @@ import { get } from './lib/api.js';
 
 registerMessages({
   de: {
-    'landing.title': 'Interaktive Arbeitsblätter, selbst gehostet.',
+    'landing.eyebrow': 'Open Source · Für Schulen',
+    'landing.title_a': 'Interaktive Arbeitsblätter,',
+    'landing.title_b': 'selbst gehostet.',
+    'landing.stat_types_value': '10+',
+    'landing.stat_types_label': 'Aufgabentypen',
+    'landing.stat_hosting_value': '100 %',
+    'landing.stat_hosting_label': 'auf Ihrem Server',
+    'landing.stat_license_value': 'AGPL-3.0',
+    'landing.stat_license_label': 'quelloffen',
     'landing.subtitle':
       'OpenWidgets ist eine quelloffene, datenschutzfreundliche Alternative zu BookWidgets. Lehrkräfte erstellen Quizze und Arbeitsblätter, Schüler:innen bearbeiten sie im Browser, die Auswertung passiert automatisch — alles auf dem eigenen Schulserver.',
     'landing.nav_features': 'Funktionen',
@@ -38,7 +46,15 @@ registerMessages({
     'landing.unreachable': 'Server nicht erreichbar',
   },
   en: {
-    'landing.title': 'Interactive worksheets, self-hosted.',
+    'landing.eyebrow': 'Open source · Built for schools',
+    'landing.title_a': 'Interactive worksheets,',
+    'landing.title_b': 'self-hosted.',
+    'landing.stat_types_value': '10+',
+    'landing.stat_types_label': 'question types',
+    'landing.stat_hosting_value': '100%',
+    'landing.stat_hosting_label': 'on your server',
+    'landing.stat_license_value': 'AGPL-3.0',
+    'landing.stat_license_label': 'open source',
     'landing.subtitle':
       'OpenWidgets is an open-source, privacy-friendly alternative to BookWidgets. Teachers author quizzes and worksheets, students complete them in the browser, grading is automatic — all on your own school server.',
     'landing.nav_features': 'Features',

@@ -81,6 +81,13 @@ registerMessages({
     'errors.bad_origin': 'Sicherheitsprüfung fehlgeschlagen. Bitte Seite neu laden.',
     'errors.upload_failed': 'Der Upload ist fehlgeschlagen.',
     'errors.unknown': 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
+    'errors.name_required': 'Bitte geben Sie Ihren Namen ein.',
+    'errors.invalid_name': 'Der Name ist ungültig.',
+    'errors.class_required': 'Diese Aufgabe gehört zu einer Klasse — bitte über den Klassen-Link beitreten.',
+    'errors.item_locked': 'Bitte zuerst die vorherigen Aufgaben abgeben.',
+    'errors.invalid_class_token': 'Ihre Klassen-Sitzung ist abgelaufen. Bitte neu beitreten.',
+    'errors.class_empty': 'Diese Klasse hat noch keine Aufgaben.',
+    'errors.not_in_class': 'Diese Aufgabe gehört nicht zu dieser Klasse.',
   },
   en: {
     'common.save': 'Save',
@@ -158,6 +165,13 @@ registerMessages({
     'errors.bad_origin': 'Security check failed. Please reload the page.',
     'errors.upload_failed': 'The upload failed.',
     'errors.unknown': 'Something went wrong. Please try again.',
+    'errors.name_required': 'Please enter your name.',
+    'errors.invalid_name': 'The name is invalid.',
+    'errors.class_required': 'This assignment belongs to a class — please join via the class link.',
+    'errors.item_locked': 'Please submit the previous assignments first.',
+    'errors.invalid_class_token': 'Your class session expired. Please join again.',
+    'errors.class_empty': 'This class has no assignments yet.',
+    'errors.not_in_class': 'This assignment is not part of this class.',
   },
 });
 

@@ -122,6 +122,58 @@ export function participantHeaders(token) {
 }
 
 // ---------------------------------------------------------------------------
+// Class (bundle) token — per class code, survives reloads/devices.
+// ---------------------------------------------------------------------------
+
+const CLASS_TOKEN_PREFIX = 'ow_ct_';
+const CLASS_NAME_PREFIX = 'ow_cn_';
+
+export function getClassToken(code) {
+  try {
+    return localStorage.getItem(CLASS_TOKEN_PREFIX + normalizeCode(code));
+  } catch {
+    return null;
+  }
+}
+
+export function setClassToken(code, token) {
+  try {
+    localStorage.setItem(CLASS_TOKEN_PREFIX + normalizeCode(code), token);
+  } catch {
+    /* private mode / quota — token stays in memory only for this page */
+  }
+}
+
+export function clearClassToken(code) {
+  try {
+    localStorage.removeItem(CLASS_TOKEN_PREFIX + normalizeCode(code));
+    localStorage.removeItem(CLASS_NAME_PREFIX + normalizeCode(code));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getClassName(code) {
+  try {
+    return localStorage.getItem(CLASS_NAME_PREFIX + normalizeCode(code));
+  } catch {
+    return null;
+  }
+}
+
+export function setClassName(code, name) {
+  try {
+    localStorage.setItem(CLASS_NAME_PREFIX + normalizeCode(code), String(name || ''));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function classHeaders(token) {
+  return token ? { 'X-Class-Token': token } : {};
+}
+
+// ---------------------------------------------------------------------------
 // Misc helpers
 // ---------------------------------------------------------------------------
 
@@ -164,6 +216,13 @@ const ERROR_MESSAGE_KEYS = {
   time_expired: 'errors.time_expired',
   bad_origin: 'errors.bad_origin',
   upload_failed: 'errors.upload_failed',
+  name_required: 'errors.name_required',
+  invalid_name: 'errors.invalid_name',
+  class_required: 'errors.class_required',
+  item_locked: 'errors.item_locked',
+  invalid_class_token: 'errors.invalid_class_token',
+  class_empty: 'errors.class_empty',
+  not_in_class: 'errors.not_in_class',
 };
 
 /** Localized human message for an ApiError (falls back to a generic message). */

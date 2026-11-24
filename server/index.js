@@ -14,6 +14,7 @@ import { register as registerAdmin } from './api/admin.js';
 import { register as registerActivities } from './api/activities.js';
 import { register as registerAssets } from './api/assets.js';
 import { register as registerAssignments } from './api/assignments.js';
+import { register as registerClasses } from './api/classes.js';
 import { register as registerGrading } from './api/grading.js';
 import { register as registerParticipant } from './api/participant.js';
 
@@ -42,6 +43,7 @@ const router = new Router();
 registerAuth(router);
 registerActivities(router);
 registerAssignments(router);
+registerClasses(router);
 registerParticipant(router);
 registerGrading(router);
 registerAdmin(router);
@@ -87,6 +89,7 @@ router.get('/api/capabilities', async (req, res) => {
       timeLimit: true,
       accessibility: true,
       partialCredit: true,
+      classes: true,
     },
   });
 });
@@ -115,6 +118,7 @@ router.get('/login', pageHandler('login.html'));
 router.get('/teacher', pageHandler('teacher/index.html'));
 router.get('/teacher/*', pageHandler('teacher/index.html'));
 router.get('/a/:code', pageHandler('student.html'));
+router.get('/c/:code', pageHandler('student.html'));
 
 // ---------------------------------------------------------------------------
 // Request handling
