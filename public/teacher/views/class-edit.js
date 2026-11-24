@@ -1,10 +1,11 @@
 // Teacher view: edit one class — settings (name/order mode/unlock threshold),
 // ordered assignment items, publish (join code + link).
-import { get, post, put, errorMessage } from '/lib/api.js';
-import { h, qs, clear, toast, copyText } from '/lib/dom.js';
+import { get, post, put, del, errorMessage } from '/lib/api.js';
+import { h, qs, clear, toast, copyText, modal } from '/lib/dom.js';
 import { t } from '/lib/i18n.js';
 import { icon } from '/lib/icons.js';
 import { navigate, statusBadge, templateLabel } from '../lib/core.js';
+import { qrSvg } from '/lib/qr.js';
 
 function classUrl(code) {
   return `${window.location.origin}/c/${encodeURIComponent(String(code || '').toUpperCase())}`;
@@ -26,19 +27,22 @@ export async function mount(root, ctx) {
 
   let cls = null;
   let assignments = [];
+  let roster = [];
   // Local working copy of ordered assignment ids (persisted via PUT items).
   let itemIds = [];
 
   ctx.onLocaleChange(() => { if (!disposed) renderAll(); });
 
   async function load() {
-    const [classData, assignmentsData] = await Promise.all([
+    const [classData, assignmentsData, rosterData] = await Promise.all([
       get(`/api/classes/${encodeURIComponent(classId)}`, { signal: ctx.signal }),
       get('/api/assignments', { signal: ctx.signal }),
+      get(`/api/classes/${encodeURIComponent(classId)}/students`, { signal: ctx.signal }).catch(() => ({ students: [] })),
     ]);
     if (disposed) return;
     cls = classData.class;
     assignments = Array.isArray(assignmentsData.assignments) ? assignmentsData.assignments : [];
+    roster = Array.isArray(rosterData.students) ? rosterData.students : [];
     itemIds = (cls.items || []).map((item) => item.assignmentId);
     ctx.setTitle(cls.name || t('teacher.edit_class'));
     renderAll();
@@ -131,6 +135,7 @@ export async function mount(root, ctx) {
                 h('a.mono.small', { href: url, target: '_blank', rel: 'noopener', text: url }),
               ),
             ),
+            h('div.qr-wrap', qrSvg(url, { size: 116, title: url })),
             h('button.btn.btn-secondary.btn-sm', { type: 'button', on: { click: async () => {
               const ok = await copyText(url);
               toast(ok ? t('common.copied') : t('teacher.copy_manual'), ok ? 'success' : 'warning');
@@ -212,6 +217,115 @@ export async function mount(root, ctx) {
       ),
     );
     host.appendChild(itemsCard);
+
+    // --- roster card (student accounts) --------------------------------------
+    host.appendChild(renderRosterCard());
+  }
+
+  function credentialsCsv(credentials) {
+    const header = 'name;username;password';
+    const rows = credentials.map((c) => [c.name, c.username, c.password].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';'));
+    return ['﻿' + header, ...rows].join('\r\n');
+  }
+
+  function showCredentialsDialog(credentials) {
+    const table = h('table.roster-cred-table',
+      h('thead', h('tr', h('th', t('teacher.roster_name')), h('th', t('teacher.roster_username')), h('th', t('teacher.roster_password')))),
+      h('tbody', ...credentials.map((c) => h('tr',
+        h('td', { text: c.name }),
+        h('td', h('span.mono', { text: c.username })),
+        h('td', h('span.mono.strong', { text: c.password })),
+      ))),
+    );
+    const note = h('p.small.muted', t('teacher.roster_credentials_note'));
+    modal({
+      title: t('teacher.roster_credentials_title'),
+      size: 'lg',
+      body: h('div', note, table),
+      actions: [
+        {
+          label: t('teacher.roster_copy_csv'),
+          kind: 'secondary',
+          onClick: async () => {
+            const ok = await copyText(credentialsCsv(credentials));
+            toast(ok ? t('common.copied') : t('teacher.copy_manual'), ok ? 'success' : 'warning');
+            return false; // keep the dialog open so the list can be copied/printed twice
+          },
+        },
+        { label: t('common.close'), kind: 'primary' },
+      ],
+    });
+  }
+
+  async function addStudents(namesText) {
+    const names = namesText.split('\n').map((line) => line.trim()).filter(Boolean);
+    if (names.length === 0) return;
+    try {
+      const data = await post(`/api/classes/${encodeURIComponent(classId)}/students`, { names });
+      if (Array.isArray(data.credentials) && data.credentials.length > 0) showCredentialsDialog(data.credentials);
+      else toast(t('teacher.roster_added_existing'), 'success');
+      await load();
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    }
+  }
+
+  async function resetPassword(student) {
+    try {
+      const data = await post(`/api/classes/${encodeURIComponent(classId)}/students/${encodeURIComponent(student.id)}/reset`);
+      showCredentialsDialog([{ name: student.name, username: data.username, password: data.password }]);
+      await load();
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    }
+  }
+
+  async function removeStudent(student) {
+    try {
+      await del(`/api/classes/${encodeURIComponent(classId)}/students/${encodeURIComponent(student.id)}`);
+      toast(t('teacher.roster_removed'), 'success');
+      await load();
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    }
+  }
+
+  function renderRosterCard() {
+    const card = h('div.card.mt-4');
+    card.appendChild(h('h2.card-title', t('teacher.roster_title')));
+    card.appendChild(h('p.card-subtitle', t('teacher.roster_hint')));
+
+    const list = h('ul.item-order-list.roster-list');
+    for (const student of roster) {
+      const row = h('li.item-order-row',
+        h('div.grow.min-w-0',
+          h('div.strong.truncate', { text: student.name }),
+          h('div.small.muted.row.gap-2',
+            student.username ? h('span.mono', { text: student.username }) : h('span', { text: t('teacher.roster_no_account') }),
+            student.lastLoginAt ? h('span', { text: t('teacher.roster_last_login', { date: new Date(student.lastLoginAt).toLocaleString() }) }) : null,
+          ),
+        ),
+        h('div.item-order-controls',
+          student.hasAccount
+            ? h('button.btn.btn-ghost.btn-sm', { type: 'button', title: t('teacher.roster_reset_pw'), on: { click: () => resetPassword(student) } }, t('teacher.roster_reset_pw'))
+            : null,
+          h('button.btn.btn-soft-danger.btn-icon.btn-sm.item-order-btn', { type: 'button', title: t('teacher.roster_remove'), 'aria-label': t('teacher.roster_remove'), on: { click: () => removeStudent(student) } }, h('span', { html: icon('trash', { size: 15 }) })),
+        ),
+      );
+      list.appendChild(row);
+    }
+    if (roster.length === 0) list.appendChild(h('li.empty-inline.small.muted', { text: t('teacher.roster_empty') }));
+    card.appendChild(list);
+
+    const namesInput = h('textarea.textarea#roster-names', { rows: 4, placeholder: t('teacher.roster_names_placeholder') });
+    const addBtn = h('button.btn.btn-secondary', { type: 'button', on: { click: () => addStudents(namesInput.value) } },
+      h('span', { html: icon('plus', { size: 15 }) }), ' ', t('teacher.roster_add_button'));
+    card.appendChild(h('div.field.mt-3',
+      h('label.label', { for: 'roster-names' }, t('teacher.roster_add_names')),
+      namesInput,
+    ));
+    card.appendChild(h('div.row.gap-2.mt-2', addBtn));
+    return card;
   }
 
   try {

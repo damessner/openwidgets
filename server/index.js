@@ -4,7 +4,8 @@ import http from 'node:http';
 import path from 'node:path';
 import { config, log, logError } from './config.js';
 import { initDb, one } from './db.js';
-import { cleanupSessions, seedAdmin } from './lib/auth.js';
+import { cleanupSessions, getSessionUser, seedAdmin } from './lib/auth.js';
+import { cleanupStudentSessions } from './lib/students.js';
 import { closeAll, startHeartbeat } from './lib/events.js';
 import { HttpError, Router, json, safeJoin, securityHeaders, serveFile } from './lib/http.js';
 import { seedDemoContent } from './demo-seed.js';
@@ -21,6 +22,7 @@ import { register as registerParticipant } from './api/participant.js';
 initDb();
 const adminSeeded = seedAdmin();
 cleanupSessions();
+cleanupStudentSessions();
 
 // Demo mode (start-demo.bat): seed a handful of ready-to-use activities and
 // assignments on first boot. Never enabled unless OW_DEMO_MODE=1 explicitly.
@@ -69,18 +71,12 @@ router.get('/api/health', async (req, res) => {
 });
 
 router.get('/api/capabilities', async (req, res) => {
-  let itemTypes = [];
-  try {
-    const mod = await import('../shared/items/index.js');
-    if (typeof mod.itemTypeMeta === 'function') itemTypes = mod.itemTypeMeta();
-  } catch {
-    /* shared item registry not written yet — server still boots */
-  }
-  json(res, 200, {
-    version: config.version,
-    baseUrl: config.baseUrl,
+  // Anonymous callers get only non-sensitive feature flags. Version, base URL
+  // and the item-type list require a teacher session (the public landing page
+  // must not disclose the exact attack surface).
+  const user = getSessionUser(req);
+  const base = {
     demoMode: config.demoMode,
-    itemTypes,
     maxUploadMb: Math.round(config.maxUploadBytes / (1024 * 1024)),
     features: {
       sse: true,
@@ -90,8 +86,21 @@ router.get('/api/capabilities', async (req, res) => {
       accessibility: true,
       partialCredit: true,
       classes: true,
+      studentAccounts: true,
     },
-  });
+  };
+  if (!user) {
+    json(res, 200, base);
+    return;
+  }
+  let itemTypes = [];
+  try {
+    const mod = await import('../shared/items/index.js');
+    if (typeof mod.itemTypeMeta === 'function') itemTypes = mod.itemTypeMeta();
+  } catch {
+    /* shared item registry not written yet — server still boots */
+  }
+  json(res, 200, { ...base, version: config.version, baseUrl: config.baseUrl, itemTypes });
 });
 
 // ---------------------------------------------------------------------------

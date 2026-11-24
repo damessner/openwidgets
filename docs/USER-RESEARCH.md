@@ -2,11 +2,11 @@
 
 > Archived from the user's initial request so the critique can cite exact claims. This is NOT our engineering contract and NOT endorsed by the team. It is the material under review.
 
-## Architectural Deconstruction of BookWidgets and Engineering Blueprint for an Open-Source, Self-Hosted Alternative
+## Architectural Deconstruction of das proprietäre Originalprodukt and Engineering Blueprint for an Open-Source, Self-Hosted Alternative
 
-### Architectural Foundations, Capabilities, and Pedagogical Applications of BookWidgets
+### Architectural Foundations, Capabilities, and Pedagogical Applications of das proprietäre Originalprodukt
 
-BookWidgets functions as a proprietary digital learning platform designed to streamline the authoring, delivery, and real-time evaluation of interactive educational exercises. Operating primarily as a software-as-a-service application, it enables educational institutions to transition from static, paper-based workflows into interactive, media-rich, and automatically graded digital activities. The platform's underlying premise relies on modular, configurable activity templates—designated as widgets—that encapsulate specialized instructional logic and presentation behaviors, allowing teachers to build exercises without software development expertise.
+das proprietäre Originalprodukt functions as a proprietary digital learning platform designed to streamline the authoring, delivery, and real-time evaluation of interactive educational exercises. Operating primarily as a software-as-a-service application, it enables educational institutions to transition from static, paper-based workflows into interactive, media-rich, and automatically graded digital activities. The platform's underlying premise relies on modular, configurable activity templates—designated as widgets—that encapsulate specialized instructional logic and presentation behaviors, allowing teachers to build exercises without software development expertise.
 
 The platform organizes its library of over forty templates across six core functional domains, each aligned with distinct cognitive goals and instructional formats.
 
@@ -69,7 +69,7 @@ The Split Worksheet and Split Whiteboard expand this model by implementing a dua
 
 The teacher-side authoring interface relies on a top-down, form-driven design rather than an unconstrained visual canvas. Authoring proceeds through structured configuration panels: "About" metadata (titles, descriptions, internal version tracking), "Questions" or "Items", and "General" environmental settings. Within the assessment templates, educators can organize exercises into structured, multi-page sections using "Question Pages". This feature groups related questions together and pins specific multimedia resources to those sub-pages, keeping prompts and contextual media aligned throughout complex exams.
 
-To speed up content generation, BookWidgets includes a document ingestion tool that parses uploaded PDF or Microsoft Word documents, using heuristic text extraction to transform static text blocks into interactive questions. An integrated AI Assistant supports generative drafting, producing full question blocks, distractor options, and rubrics based on user prompts or source text. To maintain instructional control, the platform enforces a human-in-the-loop validation step: AI-generated suggestions are never committed directly to the widget configuration without explicit teacher preview, modification, and approval.
+To speed up content generation, das proprietäre Originalprodukt includes a document ingestion tool that parses uploaded PDF or Microsoft Word documents, using heuristic text extraction to transform static text blocks into interactive questions. An integrated AI Assistant supports generative drafting, producing full question blocks, distractor options, and rubrics based on user prompts or source text. To maintain instructional control, the platform enforces a human-in-the-loop validation step: AI-generated suggestions are never committed directly to the widget configuration without explicit teacher preview, modification, and approval.
 
 Teacher Authoring Form Pipeline:
 1. Activity Metadata Configuration (Title, descriptions, version tags)
@@ -97,9 +97,9 @@ Evaluation & Feedback Hierarchy:
 3. Inline Response Level (Highlighter annotations, direct text commentary)
 4. Student Return Gate (Selective release of scores, corrections, and model answers)
 
-For subjective assignments, BookWidgets provides a centralized Grading Dashboard with a three-tier feedback hierarchy: assignment-level summary comments, item-specific feedback blocks, and inline text annotations or highlighting across student responses. Teachers can define and insert reusable "evaluation codes" (standardized rubrics or shorthand correction keys) to speed up marking workflows. The review interface allows filtering by question (grading an item across all students sequentially) or by student. When returning work, teachers can selectively configure what students see: releasing raw scores, suppressing grades while retaining qualitative feedback, or selectively revealing model answer keys.
+For subjective assignments, das proprietäre Originalprodukt provides a centralized Grading Dashboard with a three-tier feedback hierarchy: assignment-level summary comments, item-specific feedback blocks, and inline text annotations or highlighting across student responses. Teachers can define and insert reusable "evaluation codes" (standardized rubrics or shorthand correction keys) to speed up marking workflows. The review interface allows filtering by question (grading an item across all students sequentially) or by student. When returning work, teachers can selectively configure what students see: releasing raw scores, suppressing grades while retaining qualitative feedback, or selectively revealing model answer keys.
 
-BookWidgets supports three primary assignment distribution channels: direct URL and QR-code routing, embedded Learning Management System (LMS) placement, and community spaces. Teachers collaborate via "Teacher Groups" organized by subject, grade level, or institutional department. Any widget shared to a group can be duplicated, modified, and redistributed by other members without altering the author's original asset.
+das proprietäre Originalprodukt supports three primary assignment distribution channels: direct URL and QR-code routing, embedded Learning Management System (LMS) placement, and community spaces. Teachers collaborate via "Teacher Groups" organized by subject, grade level, or institutional department. Any widget shared to a group can be duplicated, modified, and redistributed by other members without altering the author's original asset.
 
 The platform connects to LMS environments—including Google Classroom, Microsoft Teams, Canvas, Moodle, Schoology, itslearning, and D2L Brightspace—using native integrations and the IMS Global/1EdTech Learning Tools Interoperability (LTI) standard. This allows assignments to be embedded directly into course modules, while scores synchronize automatically with the host LMS gradebook without requiring manual CSV exports.
 
@@ -109,7 +109,7 @@ On the pupil side, widgets run as responsive web applications delivered through 
 
 Student access models can operate with or without authentication. In standalone deployments, students access activities via short URLs, alpha-numeric session codes, or QR codes, submitting work under manually entered identifying names. In managed deployments, the widget launches through an LMS iframe or single-sign-on (SSO) gateway (such as Google OAuth, Microsoft Entra ID, Clever, or ClassLink), which automatically captures and binds verified learner identities to their submission states.
 
-To accommodate diverse student needs and maintain Universal Design for Learning (UDL) principles, BookWidgets includes integrated client-side accessibility mechanisms.
+To accommodate diverse student needs and maintain Universal Design for Learning (UDL) principles, das proprietäre Originalprodukt includes integrated client-side accessibility mechanisms.
 
 | Accessibility / Support Feature | Functional Mechanism | Targeted Pedagogical Need |
 | --- | --- | --- |
@@ -122,18 +122,18 @@ To accommodate diverse student needs and maintain Universal Design for Learning 
 
 For high-stakes summative testing, the student client can be locked down to prevent unauthorized browsing and digital communication. The platform integrates with Safe Exam Browser (SEB), an open-source lockdown environment that transforms client machines across macOS, Windows, and iOS into secure kiosks. When enabled, the widget requires a cryptographic configuration key or password handshake; launching the activity in an unauthorized browser fails with an access error.
 
-For institutional deployments utilizing managed Google ChromeOS hardware, BookWidgets generates specialized "Exam Links" and "Exam Codes" designed to launch within Chromebook Kiosk Mode, locking the learner into the active assessment viewport without access to supplemental tabs, terminal utilities, or external applications.
+For institutional deployments utilizing managed Google ChromeOS hardware, das proprietäre Originalprodukt generates specialized "Exam Links" and "Exam Codes" designed to launch within Chromebook Kiosk Mode, locking the learner into the active assessment viewport without access to supplemental tabs, terminal utilities, or external applications.
 
-### Architectural Constraints, Commercial Bottlenecks, and Criticisms of BookWidgets
+### Architectural Constraints, Commercial Bottlenecks, and Criticisms of das proprietäre Originalprodukt
 
-Despite its instructional breadth, BookWidgets presents architectural constraints, commercial overheads, and functional trade-offs that drive the demand for an open-source, self-hosted alternative.
+Despite its instructional breadth, das proprietäre Originalprodukt presents architectural constraints, commercial overheads, and functional trade-offs that drive the demand for an open-source, self-hosted alternative.
 
 The platform operates a proprietary subscription model characterized by steep licensing tiers. The single-teacher plan restricts LMS connectivity to Google Classroom and Microsoft Teams, locking out direct LTI-based LMS integrations with Canvas, Moodle, Blackboard, and Schoology unless institutions upgrade to group or site licenses. Furthermore, when an individual or institutional subscription lapses, all widget editing capabilities freeze, and active LTI integration endpoints cease functioning, creating an administrative barrier for long-term curriculum maintenance.
 
 | Subscription Tier | Approximate Baseline Cost | Permitted LMS Connections | Institutional Constraints & Trade-offs |
 | --- | --- | --- | --- |
 | 30-Day Free Trial | Free for 30 calendar days. | Full LMS integration suite enabled during trial window. | Hard account lock upon expiration; all widget authoring and editing capabilities cease. |
-| Individual Teacher Plan | $11.95/month or $67/year. | Google Classroom and Microsoft Teams only. | Excludes enterprise LTI connections (Canvas, Moodle, Schoology locked out); BookWidgets branding enforced. |
+| Individual Teacher Plan | $11.95/month or $67/year. | Google Classroom and Microsoft Teams only. | Excludes enterprise LTI connections (Canvas, Moodle, Schoology locked out); das proprietäre Originalprodukt branding enforced. |
 | Teacher Group (5 Licenses) | $67 per teacher/year ($335 annual minimum). | Unlocks full LTI 1.3 LMS integrations; white-label branding. | Minimum cost threshold for institutions running modern LMS environments. |
 | Teacher Group (10+ Licenses) | $49.50 per teacher/year. | Enterprise LTI integration and administrative reporting dashboards. | Requires continuous annual line-item commitments from institutional budgets. |
 
@@ -141,7 +141,7 @@ The platform's cloud-hosted architecture introduces significant vendor lock-in a
 
 A further operational challenge stems from the platform's reliance on constant, low-latency network connectivity. The real-time monitoring engine, automated grading routines, and submission pipelines assume uninterrupted internet access. In school environments with intermittent Wi-Fi, high packet loss, or saturated campus networks, client connections can drop unexpectedly. Network drops during a summative test can cause submission failures, lost input buffers, or inaccurate status indicators on the teacher's Live View dashboard. The platform lacks an offline-first architecture capable of caching responses locally and reconciling them once connectivity is restored.
 
-User evaluations also point to authoring bottlenecks and accessibility gaps. The authoring interface remains anchored to nested configuration forms, requiring instructors to switch between tabbed views, modal windows, and separate preview screens to build complex activities. In institutional accessibility audits, BookWidgets has historically received middling ratings (such as 3 out of 5 stars), with audits noting that complex visual interactions—including image annotation, coordinate matching, and whiteboard tasks—often fail to expose accessible semantic DOM structures, ARIA live regions, or full keyboard-navigable operational paths for assistive screen readers.
+User evaluations also point to authoring bottlenecks and accessibility gaps. The authoring interface remains anchored to nested configuration forms, requiring instructors to switch between tabbed views, modal windows, and separate preview screens to build complex activities. In institutional accessibility audits, das proprietäre Originalprodukt has historically received middling ratings (such as 3 out of 5 stars), with audits noting that complex visual interactions—including image annotation, coordinate matching, and whiteboard tasks—often fail to expose accessible semantic DOM structures, ARIA live regions, or full keyboard-navigable operational paths for assistive screen readers.
 
 ### Open Educational Standards Benchmark: Foundations for an Alternative Architecture
 
@@ -163,7 +163,7 @@ H5P's architectural strength lies in decoupling content data from rendering libr
 
 While H5P excels at media presentation and casual practice, 1EdTech QTI 3.0 provides the standard for formal testing. QTI 3.0 unifies the data model for Assessment, Section, and Item (ASI), defining standardized interaction targets such as choiceInteraction, textEntryInteraction, extendedTextInteraction, matchInteraction, and hotspotInteraction. Adopting QTI 3.0 compliance ensures the self-hosted alternative can export item banks directly into institutional platforms (Canvas, Moodle) or import legacy standardized items without data translation loss. Furthermore, QTI 3.0's Portable Custom Interaction (PCI) standard provides a sandboxed JavaScript API for extending assessments with custom interactive widgets (such as chemistry builders or piano keyboards) while preserving scoring pipelines across standardized assessment runners.
 
-To match BookWidgets' LMS integration without commercial licensing fees, the self-hosted engine implements the complete LTI Advantage suite:
+To match das proprietäre Originalprodukt' LMS integration without commercial licensing fees, the self-hosted engine implements the complete LTI Advantage suite:
 - LTI Core (OIDC + JWT): Authenticates launches securely via asymmetric RSA-signed JWT assertions, eliminating manual user account synchronization.
 - Deep Linking (v2.0): Allows instructors browsing their LMS course builder to launch an embedded widget picker and link specific exercises directly into course modules.
 - Assignment and Grade Services (AGS v2.0): Automatically synchronizes scores, submission states, and qualitative feedback directly into the LMS gradebook.
@@ -312,7 +312,7 @@ The deployment infrastructure uses Docker and Kubernetes container orchestration
 - Asset Storage: MinIO clusters provide S3-compatible object storage for learner audio recordings, camera uploads, and instructional reference files.
 - Data Sovereignty: Hosting the entire stack on internal institutional servers or sovereign European cloud providers ensures compliance with GDPR and student data privacy regulations.
 
-### Transformative Improvements Over Legacy BookWidgets
+### Transformative Improvements Over Legacy das proprietäre Originalprodukt
 
 OpenWidget Engine addresses the major operational and technical limitations of proprietary assessment software by implementing an offline-first foundation, open data formats, local machine learning models, and modern authoring interfaces.
 
@@ -339,7 +339,7 @@ The authoring experience replaces multi-tabbed configuration forms with an inter
 
 An open Web Component plugin architecture allows the community to extend the platform without modifying core code. Developers can package new widgets with an open Software Development Kit (SDK) by providing a component manifest and a Web Component bundle implementing standard lifecycle methods (render(), serializeResponse(), evaluate()). Custom widgets execute within a sandboxed runtime, enabling specialized disciplines to contribute interactive modules—such as 3D molecular viewers (Three.js), electronic circuit simulators, interactive coding sandboxes (Monaco Editor), or sheet music notation editors—while protecting core platform stability and security.
 
-| Architectural Dimension | BookWidgets (Proprietary SaaS) | OpenWidget Engine (Open-Source Architecture) |
+| Architectural Dimension | das proprietäre Originalprodukt (Proprietary SaaS) | OpenWidget Engine (Open-Source Architecture) |
 | --- | --- | --- |
 | Hosting Model | Proprietary multi-tenant cloud. | Self-hosted containerized deployment on institutional infrastructure. |
 | Licensing & Cost | Proprietary subscription ($11.95/mo per teacher; group fees for LTI). | Open-source (AGPLv3/Apache 2.0); no recurring per-seat fees. |
@@ -367,4 +367,4 @@ Phase 3 establishes institutional interoperability and assessment security. The 
 
 Phase 4 expands the platform with modern authoring ergonomics and extensible integrations. The nested form interface is replaced by the visual, block-based WYSIWYG canvas with slash-command menus. Self-hosted local language models (via Ollama or vLLM) are integrated to assist with question drafting, distractor generation, and rubric creation without external data transfers. Finally, the platform delivers bi-directional QTI 3.0 and H5P import/export tools alongside the public Web Component plugin SDK, establishing an extensible, community-driven ecosystem.
 
-This open architecture provides educational institutions with a sustainable alternative to proprietary assessment software. By combining open educational standards, offline-first reliability, and sovereign data governance, OpenWidget Engine delivers the instructional breadth of BookWidgets while establishing an extensible, accessible, and resilient platform for modern digital learning.
+This open architecture provides educational institutions with a sustainable alternative to proprietary assessment software. By combining open educational standards, offline-first reliability, and sovereign data governance, OpenWidget Engine delivers the instructional breadth of das proprietäre Originalprodukt while establishing an extensible, accessible, and resilient platform for modern digital learning.

@@ -986,3 +986,12 @@
   .match-pair-sides { grid-template-columns: 1fr; }
   .match-pair-sides .item-match-arrow { transform: rotate(90deg); justify-self: center; }
 }
+
+/* QR + roster */
+.qr-wrap { flex-shrink: 0; }
+.qr-wrap svg { display: block; border-radius: var(--radius-sm); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+.roster-cred-table { width: 100%; border-collapse: collapse; margin-top: var(--space-2); }
+.roster-cred-table th, .roster-cred-table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 0.9em; }
+.roster-cred-table thead th { color: var(--text-muted); font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.04em; }
+.roster-list .mono { font-size: 0.85em; }
+

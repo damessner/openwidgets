@@ -522,7 +522,7 @@ test('regenerateItemIds changes item and nested ids but keeps answers', () => {
 // ---------------------------------------------------------------------------
 
 import { parseGaps, maskGaps } from '../shared/items/text.js';
-import { normalizeSide, sideLabel } from '../shared/items/match.js';
+import { normalizeSide, rightEntryId, sideLabel } from '../shared/items/match.js';
 import { itemIsScoreable } from '../shared/activity.js';
 
 test('text: parseGaps finds <<answer|alt>> gaps in order', () => {
@@ -778,11 +778,20 @@ test('match: sanitize emits lefts/rights with media kinds and never leaks pair s
   assert.ok(Array.isArray(safe.config.rights));
   assert.deepEqual(safe.config.lefts.map((s) => s.kind), ['text', 'audio']);
   assert.deepEqual(safe.config.rights.map((s) => s.kind).sort(), ['image', 'text']);
+  // separate id namespaces: rights are "r:<pairId>", never the bare pair id
+  assert.deepEqual(safe.config.lefts.map((s) => s.id), ['p1', 'p2']);
+  assert.deepEqual(safe.config.rights.map((s) => s.id).sort(), ['r:p1', 'r:p2']);
+  assert.ok(!safe.config.rights.some((s) => s.id === 'p1' || s.id === 'p2'));
   // right side is shuffled deterministically per item id
   const safeAgain = sanitizeItem(item);
   assert.deepEqual(safeAgain.config.rights, safe.config.rights);
-  // scoring still works on the normalized item
-  const result = scoreItem(item,getType(item.type).normalizeResponse(item, { matches: { p1: 'p1', p2: 'p2' } }));
+  // scoring: new namespace works, legacy bare-pair-id responses still accepted
+  const result = scoreItem(item, getType(item.type).normalizeResponse(item, { matches: { p1: rightEntryId('p1'), p2: rightEntryId('p2') } }));
   assert.equal(result.correct, true);
+  const legacy = scoreItem(item, getType(item.type).normalizeResponse(item, { matches: { p1: 'p1', p2: 'p2' } }));
+  assert.equal(legacy.correct, true);
+  const wrong = scoreItem(item, getType(item.type).normalizeResponse(item, { matches: { p1: rightEntryId('p2') } }));
+  assert.equal(wrong.correct, false);
+  assert.equal(wrong.correctParts, 0);
   assert.equal(result.autoScore, 2);
 });

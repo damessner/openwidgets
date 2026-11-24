@@ -6,7 +6,11 @@ import { post, errorMessage } from './lib/api.js';
 registerMessages({
   de: {
     'login.title': 'Anmelden',
-    'login.subtitle': 'Für Lehrkräfte dieser Instanz. Schüler:innen treten über den Aufgaben-Link bei.',
+    'login.subtitle': 'Lehrkräfte melden sich mit E-Mail an, Schüler:innen mit ihrem persönlichen Login.',
+    'login.mode_teacher': 'Lehrkraft',
+    'login.mode_student': 'Schüler:in',
+    'login.username': 'Benutzername',
+    'login.student_hint': 'Benutzername und Passwort hat dir deine Lehrkraft gegeben.',
     'login.selfhosted_note':
       'Diese Instanz wird selbst gehostet. Passwort vergessen? Bitte an die Administration wenden.',
     'login.redirecting': 'Anmeldung erfolgreich — weiter …',
@@ -16,7 +20,11 @@ registerMessages({
   },
   en: {
     'login.title': 'Sign in',
-    'login.subtitle': 'For teachers of this instance. Students join via the assignment link.',
+    'login.subtitle': 'Teachers sign in with email; students use their personal login.',
+    'login.mode_teacher': 'Teacher',
+    'login.mode_student': 'Student',
+    'login.username': 'Username',
+    'login.student_hint': 'Your teacher gave you your username and password.',
     'login.selfhosted_note':
       'This instance is self-hosted. Forgot your password? Please contact your administrator.',
     'login.redirecting': 'Signed in — continuing …',
@@ -55,7 +63,44 @@ function safeNext() {
   } catch {
     /* stay on the login page */
   }
+  // Already logged in as a student? Send them to the landing page panel.
+  try {
+    const res = await fetch('/api/student/me', { credentials: 'same-origin' });
+    if (res.ok) window.location.replace('/');
+  } catch {
+    /* not a student — stay */
+  }
 })();
+
+// ---------------------------------------------------------------------------
+// Mode toggle: teacher (email) vs student (username + generated password)
+// ---------------------------------------------------------------------------
+let mode = 'teacher';
+const modeTeacherBtn = qs('#mode-teacher');
+const modeStudentBtn = qs('#mode-student');
+const emailInput = qs('#email');
+const emailLabel = qs('#email-label');
+
+function setMode(next) {
+  mode = next;
+  modeTeacherBtn.classList.toggle('is-active', mode === 'teacher');
+  modeStudentBtn.classList.toggle('is-active', mode === 'student');
+  if (mode === 'student') {
+    emailLabel.textContent = t('login.username');
+    emailInput.type = 'text';
+    emailInput.autocomplete = 'username';
+    emailInput.inputMode = 'text';
+    emailInput.value = '';
+  } else {
+    emailLabel.textContent = t('common.email');
+    emailInput.type = 'email';
+    emailInput.autocomplete = 'username';
+    emailInput.inputMode = 'email';
+  }
+  qs('#login-error').hidden = true;
+}
+modeTeacherBtn.addEventListener('click', () => setMode('teacher'));
+modeStudentBtn.addEventListener('click', () => setMode('student'));
 
 // Demo instances advertise themselves: show the throwaway credentials.
 (async () => {
@@ -94,9 +139,15 @@ form.addEventListener('submit', async (event) => {
   submit.disabled = true;
   submit.textContent = t('common.loading');
   try {
-    await post('/api/auth/login', { email, password });
-    submit.textContent = t('login.redirecting');
-    window.location.assign(safeNext());
+    if (mode === 'student') {
+      await post('/api/auth/student-login', { username: email, password });
+      submit.textContent = t('login.redirecting');
+      window.location.assign('/');
+    } else {
+      await post('/api/auth/login', { email, password });
+      submit.textContent = t('login.redirecting');
+      window.location.assign(safeNext());
+    }
   } catch (err) {
     showError(errorMessage(err));
     submit.disabled = false;

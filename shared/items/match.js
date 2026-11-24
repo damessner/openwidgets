@@ -134,6 +134,15 @@ export function validateItem(item) {
   return errors;
 }
 
+/**
+ * Right-side entry id in the sanitized payload: separate namespace from left
+ * ids so the two sides can never collide or leak pair structure. Legacy
+ * responses (rightId === pairId) are still accepted when scoring.
+ */
+export function rightEntryId(pairId) {
+  return `r:${pairId}`;
+}
+
 export function normalizeResponse(item, raw) {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const rawMatches = source.matches;
@@ -144,11 +153,12 @@ export function normalizeResponse(item, raw) {
     throw new Error('match response "matches" must be an object');
   }
   const normalized = normalizeItem(item);
-  const known = new Set(normalized.config.pairs.map((pair) => pair.id));
+  const knownRights = new Set(normalized.config.pairs.map((pair) => rightEntryId(pair.id)));
+  const legacyRights = new Set(normalized.config.pairs.map((pair) => pair.id));
   const matches = {};
   for (const pair of normalized.config.pairs) {
     const value = rawMatches[pair.id];
-    if (typeof value === 'string' && known.has(value)) matches[pair.id] = value;
+    if (typeof value === 'string' && (knownRights.has(value) || legacyRights.has(value))) matches[pair.id] = value;
   }
   return { matches };
 }
@@ -161,7 +171,8 @@ export function score(item, response) {
   const hits = [];
   const misses = [];
   for (const pair of pairs) {
-    if (matches[pair.id] === pair.id) hits.push(pair.id);
+    const given = matches[pair.id];
+    if (given === rightEntryId(pair.id) || given === pair.id) hits.push(pair.id);
     else misses.push(pair.id);
   }
   const total = pairs.length;
@@ -182,9 +193,12 @@ export function sanitizeItem(item) {
   const normalized = normalizeItem(item);
   // `url` for image/audio sides is filled in by the server API layer from the
   // assets table (see enrichAssetUrls in server/api/_helpers.js).
+  // Left and right entries use separate id namespaces (left = pair id,
+  // right = "r:<pair id>") so the student payload never reveals which right
+  // side belongs to which pair.
   const lefts = normalized.config.pairs.map((pair) => ({ id: pair.id, ...pair.left }));
   const rights = seededShuffle(
-    normalized.config.pairs.map((pair) => ({ id: pair.id, ...pair.right })),
+    normalized.config.pairs.map((pair) => ({ id: rightEntryId(pair.id), ...pair.right })),
     `match-rights:${normalized.id}`,
   );
   return {

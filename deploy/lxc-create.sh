@@ -162,7 +162,7 @@ CREATE_ARGS=(
   --rootfs "${STORAGE}:${DISK_GB}"
   --net0 "$NET0"
   --onboot 1
-  --description "OpenWidgets — self-hosted interactive worksheets (BookWidgets alternative). Mode: ${MODE}. Created: $(date -Iseconds)"
+  --description "OpenWidgets — self-hosted interactive worksheets (das proprietäre Originalprodukt alternative). Mode: ${MODE}. Created: $(date -Iseconds)"
 )
 [[ -n "$FEATURES" ]] && CREATE_ARGS+=(--features "$FEATURES")
 [[ -n "$DNS_SERVER" ]] && CREATE_ARGS+=(--nameserver "$DNS_SERVER")

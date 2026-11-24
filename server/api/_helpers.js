@@ -307,6 +307,13 @@ export function participantFlags(row) {
   return Array.isArray(flags) ? flags.filter((value) => typeof value === 'string') : [];
 }
 
+/** Practice attempts (settings.practice) are excluded from results/dashboard. */
+export function isPracticeParticipant(row) {
+  return participantFlags(row).includes('practice');
+}
+
+const NOT_PRACTICE_SQL = `(p.flags IS NULL OR p.flags NOT LIKE '%"practice"%')`;
+
 export function livePlayer(row, order, responseRows) {
   const byItem = new Map((responseRows || []).map((responseRow) => [responseRow.item_id, responseRow]));
   const items = {};
@@ -328,11 +335,11 @@ export function livePlayer(row, order, responseRows) {
 /** All participants of an assignment as live-player objects. */
 export function livePlayers(assignmentId, order) {
   const participants = all(
-    'SELECT * FROM participants WHERE assignment_id = ? ORDER BY started_at ASC, id ASC',
+    `SELECT p.* FROM participants p WHERE p.assignment_id = ? AND ${NOT_PRACTICE_SQL} ORDER BY p.started_at ASC, p.id ASC`,
     assignmentId,
   );
   const responses = all(
-    'SELECT r.* FROM responses r JOIN participants p ON p.id = r.participant_id WHERE p.assignment_id = ?',
+    `SELECT r.* FROM responses r JOIN participants p ON p.id = r.participant_id WHERE p.assignment_id = ? AND ${NOT_PRACTICE_SQL}`,
     assignmentId,
   );
   const byParticipant = new Map();
@@ -361,11 +368,11 @@ export function responseTeacherJson(row) {
 /** Live players plus their raw responses (teacher results / review). */
 export function playersWithResponses(assignmentId, order) {
   const participants = all(
-    'SELECT * FROM participants WHERE assignment_id = ? ORDER BY started_at ASC, id ASC',
+    `SELECT p.* FROM participants p WHERE p.assignment_id = ? AND ${NOT_PRACTICE_SQL} ORDER BY p.started_at ASC, p.id ASC`,
     assignmentId,
   );
   const responses = all(
-    'SELECT r.* FROM responses r JOIN participants p ON p.id = r.participant_id WHERE p.assignment_id = ? ORDER BY r.updated_at ASC',
+    `SELECT r.* FROM responses r JOIN participants p ON p.id = r.participant_id WHERE p.assignment_id = ? AND ${NOT_PRACTICE_SQL} ORDER BY r.updated_at ASC`,
     assignmentId,
   );
   const byParticipant = new Map();
@@ -436,10 +443,19 @@ export function recomputeStatus(participantId) {
 /** Mark an in-progress attempt as submitted, then recompute totals/status. */
 export function finalizeSubmission(participantRow) {
   const submittedAt = participantRow.submitted_at || now();
+  // Practice attempts are flagged so results/dashboard/grading exclude them.
+  let flags = participantFlags(participantRow);
+  const assignment = one('SELECT * FROM assignments WHERE id = ?', participantRow.assignment_id);
+  if (assignment) {
+    const activity = one('SELECT * FROM activities WHERE id = ?', assignment.activity_id);
+    const settings = settingsFor(assignment, activity ? definitionFromRow(activity) : null);
+    if (settings.practice && !flags.includes('practice')) flags = [...flags, 'practice'];
+  }
   run(
-    "UPDATE participants SET status = 'submitted', submitted_at = ?, last_seen_at = ? WHERE id = ?",
+    "UPDATE participants SET status = 'submitted', submitted_at = ?, last_seen_at = ?, flags = ? WHERE id = ?",
     submittedAt,
     now(),
+    JSON.stringify(flags),
     participantRow.id,
   );
   const totals = recomputeTotals(participantRow.id);
@@ -610,6 +626,7 @@ export function snapshotPayload(assignmentRow, activityRow) {
 }
 
 export function publishParticipantEvent(assignmentRow, activityRow, participantRow, action) {
+  if (isPracticeParticipant(participantRow)) return; // practice attempts stay out of the live dashboard
   const definition = definitionFromRow(activityRow);
   const settings = settingsFor(assignmentRow, definition);
   const order = scoreableItemIds(definition, itemOrderFor(definition, settings, assignmentRow.id));
@@ -623,6 +640,7 @@ export function publishParticipantEvent(assignmentRow, activityRow, participantR
 }
 
 export function publishResponseEvent(assignmentRow, participantRow, itemId, responseRow, totals) {
+  if (isPracticeParticipant(participantRow)) return;
   publish(assignmentRow.id, {
     type: 'response',
     participantId: participantRow.id,

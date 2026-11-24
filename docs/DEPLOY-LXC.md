@@ -6,7 +6,7 @@
 **Artifacts referenced:** everything in [`deploy/`](../deploy/) — `lxc-create.sh`, `provision.sh`, `Dockerfile`, `docker-compose.yml`, `Caddyfile`, `systemd/openwidgets.service`, `backup.sh`, `restore.sh`, `upgrade.sh`.
 **Review date:** 2026-11-09. Re-check versions before a fresh install; "latest" ages badly.
 
-> **Scope note:** this guide documents *our* deployment. It is not a BookWidgets migration guide (see [`CRITICAL-EVALUATION.md`](CRITICAL-EVALUATION.md) §3.3 — activity content cannot be exported from BookWidgets, so migration is re-authoring).
+> **Scope note:** this guide documents *our* deployment. It is not a das proprietäre Originalprodukt migration guide (see [`CRITICAL-EVALUATION.md`](CRITICAL-EVALUATION.md) §3.3 — activity content cannot be exported from das proprietäre Originalprodukt, so migration is re-authoring).
 
 ---
 
@@ -104,7 +104,7 @@ pct create 210 local:vztmpl/debian-12-standard_<date>_amd64.tar.zst \
   --net0 name=eth0,bridge=vmbr0,ip=10.10.20.15/24,gw=10.10.20.1 \
   --nameserver 10.10.20.1 \
   --onboot 1 --start 1 \
-  --description "OpenWidgets - BookWidgets alternative (school)"
+  --description "OpenWidgets - das proprietäre Originalprodukt alternative (school)"
 
 # Docker path only (see §5): add --features nesting=1,keyctl=1
 ```

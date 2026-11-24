@@ -9,6 +9,7 @@ import { h, clear, toast, confirmDialog, copyText } from '/lib/dom.js';
 import { t, formatDateTime, getLocale } from '/lib/i18n.js';
 import { icon } from '/lib/icons.js';
 import { joinUrlForCode } from '../lib/core.js';
+import { qrSvg } from '/lib/qr.js';
 
 const ANON_KEY = 'ow_teacher_anonymize';
 const BLUR_KEY = 'ow_teacher_blur_names';
@@ -548,6 +549,9 @@ export async function mount(root, ctx) {
           h('p.tiny.muted.mb-1', t('teacher.join_link')),
           h('div.join-url', link || '—'),
         ),
+        link
+          ? h('div.qr-wrap', qrSvg(link, { size: 116, title: link }))
+          : null,
         h('div.row.gap-2', copyButton, printLink),
       ),
     );

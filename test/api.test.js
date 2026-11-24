@@ -341,10 +341,20 @@ test('health and capabilities', async () => {
   assert.equal(health.status, 'ok');
   assert.equal(health.db, 'ok');
   assert.equal(typeof health.version, 'string');
-  const capabilities = expectStatus(await anon.get('/api/capabilities'), 200, 'capabilities');
+  const anonCaps = expectStatus(await anon.get('/api/capabilities'), 200, 'capabilities anon');
+  // Anonymous callers must NOT see version/item types (public landing page).
+  assert.equal(anonCaps.itemTypes, undefined);
+  assert.equal(anonCaps.version, undefined);
+  assert.equal(anonCaps.features.sse, true);
+  assert.equal(anonCaps.features.studentAccounts, true);
+  assert.ok(anonCaps.maxUploadMb >= 1);
+
+  // Authenticated teacher gets the full capabilities.
+  const authed = new Client(baseUrl);
+  await authed.post('/api/auth/login', { email: ADMIN.email, password: ADMIN.password });
+  const capabilities = expectStatus(await authed.get('/api/capabilities'), 200, 'capabilities authed');
   assert.equal(capabilities.itemTypes.length, 10);
-  assert.equal(capabilities.features.sse, true);
-  assert.ok(capabilities.maxUploadMb >= 1);
+  assert.equal(typeof capabilities.version, 'string');
 });
 
 test('auth: guards and login', async () => {

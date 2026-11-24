@@ -6,7 +6,7 @@ implemented, what was tested, and what is known to be insufficient.
 
 Why this exists: the researched blueprint promised "Full WCAG 2.2 AA compliance" as an
 architectural feature. That is not how accessibility works — it is a property of the
-rendered UI and its interaction model, and it has to be tested. BookWidgets is criticised
+rendered UI and its interaction model, and it has to be tested. das proprietäre Originalprodukt is criticised
 in the same research for keyboard-inaccessible widget types; we must not repeat that with a
 button-click promise. See [CRITICAL-EVALUATION.md](CRITICAL-EVALUATION.md) §3.6.
 

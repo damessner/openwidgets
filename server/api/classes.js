@@ -21,6 +21,16 @@ import {
 } from '../lib/http.js';
 import { assertCanAccess, roundScore, tokenHash, newParticipantToken } from './_helpers.js';
 import { CLASS_LIMITS, computeItemStates, firstBlockingPosition, validateClass } from '../../shared/classes.js';
+import {
+  createStudent,
+  findStudentByName,
+  generatePassword,
+  getStudent,
+  normalizeStudentName,
+  requireStudent,
+  studentPublic,
+} from '../lib/students.js';
+import { hashPassword } from '../lib/auth.js';
 
 const MAX_BODY_BYTES = 64 * 1024;
 const CLASS_JOIN_LIMIT_PER_IP = 30;
@@ -204,7 +214,13 @@ export function enforceClassUnlock(assignmentRow, classToken) {
       classCode: seqClasses[0].code,
     });
   }
+  return enforceClassUnlockForParticipant(assignmentRow, cp);
+}
+
+/** Same unlock check, but for an already-resolved class participant row (student account). */
+export function enforceClassUnlockForParticipant(assignmentRow, cp) {
   const classRow = one('SELECT * FROM classes WHERE id = ?', cp.class_id);
+  if (!classRow) throw notFound('class_not_found');
   const items = all('SELECT * FROM class_items WHERE class_id = ? ORDER BY position ASC', classRow.id);
   const rows = all('SELECT * FROM participants WHERE class_participant_id = ?', cp.id);
   const states = computeItemStates(classRow, items, rows);
@@ -220,6 +236,11 @@ export function enforceClassUnlock(assignmentRow, classToken) {
     });
   }
   return cp;
+}
+
+/** The class_participants row of a logged-in student account for a class (if any). */
+export function classParticipantOfStudent(classId, studentId) {
+  return one('SELECT * FROM class_participants WHERE class_id = ? AND student_id = ?', classId, studentId);
 }
 
 /** Class link info for a participant row (student payloads). */
@@ -404,6 +425,50 @@ export function register(router) {
     const cls = findClassByCode(body.code);
     if (!cls || cls.status !== 'published') throw notFound('invalid_code');
 
+    // Logged-in student account: reuse/link the roster entry, name comes from
+    // the account. A fresh class token is issued (single active session).
+    const student = getStudent(req);
+    if (student) {
+      let cp = classParticipantOfStudent(cls.id, student.id);
+      const rawToken = newParticipantToken();
+      const timestamp = now();
+      if (cp) {
+        run('UPDATE class_participants SET token_hash = ?, name = ?, last_seen_at = ? WHERE id = ?', tokenHash(rawToken), student.name, timestamp, cp.id);
+        cp = one('SELECT * FROM class_participants WHERE id = ?', cp.id);
+      } else {
+        // Link to an existing anonymous entry with the same name if present.
+        const existing = one(
+          'SELECT * FROM class_participants WHERE class_id = ? AND student_id IS NULL AND lower(name) = ?',
+          cls.id,
+          student.name.toLowerCase(),
+        );
+        if (existing) {
+          run('UPDATE class_participants SET student_id = ?, token_hash = ?, last_seen_at = ? WHERE id = ?', student.id, tokenHash(rawToken), timestamp, existing.id);
+          cp = one('SELECT * FROM class_participants WHERE id = ?', existing.id);
+        } else {
+          const id = uid();
+          run(
+            'INSERT INTO class_participants (id, class_id, name, token_hash, created_at, last_seen_at, student_id) VALUES (?,?,?,?,?,?,?)',
+            id,
+            cls.id,
+            student.name,
+            tokenHash(rawToken),
+            timestamp,
+            timestamp,
+            student.id,
+          );
+          cp = one('SELECT * FROM class_participants WHERE id = ?', id);
+        }
+      }
+      const rows = all('SELECT * FROM participants WHERE class_participant_id = ?', cp.id);
+      json(res, 200, {
+        classToken: rawToken,
+        class: classStudentPayload(cls, rows),
+        participant: { id: cp.id, name: cp.name, username: student.username },
+      });
+      return;
+    }
+
     let name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name) throw badRequest('name_required', 'Please enter your name');
     if (name.length > 80) throw badRequest('invalid_name', 'Name must be at most 80 characters');
@@ -444,7 +509,141 @@ export function register(router) {
     const rows = all('SELECT * FROM participants WHERE class_participant_id = ?', cp.id);
     json(res, 200, {
       class: classStudentPayload(cls, rows),
-      participant: { id: cp.id, name: cp.name },
+      participant: { id: cp.id, name: cp.name, username: studentUsernameOf(cp) },
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Student account: own profile + all classes with per-item states
+  // -------------------------------------------------------------------------
+  router.get('/api/student/me', async (req, res) => {
+    const student = requireStudent(req);
+    const cps = all('SELECT * FROM class_participants WHERE student_id = ? ORDER BY created_at ASC', student.id);
+    const classes = [];
+    for (const cp of cps) {
+      const cls = one('SELECT * FROM classes WHERE id = ?', cp.class_id);
+      if (!cls || cls.status !== 'published') continue;
+      const rows = all('SELECT * FROM participants WHERE class_participant_id = ?', cp.id);
+      classes.push(classStudentPayload(cls, rows));
+    }
+    json(res, 200, { student: studentPublic(student), classes });
+  });
+
+  // -------------------------------------------------------------------------
+  // Teacher: class roster (students with accounts)
+  // -------------------------------------------------------------------------
+  router.get('/api/classes/:id/students', async (req, res, params) => {
+    requireUser(req);
+    const row = requireOwnedClass(req, params.id);
+    const rows = all(
+      `SELECT cp.id AS cp_id, cp.name AS name, cp.created_at AS added_at, cp.last_seen_at AS last_seen_at,
+              s.id AS student_id, s.username AS username, s.last_login_at AS last_login_at
+       FROM class_participants cp LEFT JOIN students s ON s.id = cp.student_id
+       WHERE cp.class_id = ? ORDER BY lower(cp.name) ASC`,
+      row.id,
+    );
+    json(res, 200, {
+      students: rows.map((r) => ({
+        id: r.student_id || null,
+        participantId: r.cp_id,
+        name: r.name,
+        username: r.username || null,
+        hasAccount: !!r.student_id,
+        addedAt: r.added_at,
+        lastSeenAt: r.last_seen_at || null,
+        lastLoginAt: r.last_login_at || null,
+      })),
+    });
+  });
+
+  // Create accounts for a list of names and add them to the class roster.
+  // Plaintext passwords are returned exactly once (only for new accounts).
+  router.post('/api/classes/:id/students', async (req, res, params) => {
+    assertSameOrigin(req);
+    const user = requireUser(req);
+    const row = requireOwnedClass(req, params.id);
+    const body = await readJsonSafe(req);
+    if (!Array.isArray(body.names)) throw badRequest('invalid_names', 'names must be an array of strings');
+    const names = [...new Set(body.names.map((n) => normalizeStudentName(n)).filter((n) => n.length >= 2))];
+    if (names.length === 0) throw badRequest('invalid_names', 'At least one valid name (2+ characters) is required');
+    if (names.length > 100) throw badRequest('too_many_names', 'At most 100 names per request');
+
+    const credentials = [];
+    const linked = [];
+    const skipped = [];
+    tx(() => {
+      for (const name of names) {
+        // Reuse an existing roster entry with the same name in this class.
+        let cp = one('SELECT * FROM class_participants WHERE class_id = ? AND lower(name) = ?', row.id, name.toLowerCase());
+        // Account of this teacher with the same name?
+        let student = findStudentByName(user.id, name);
+        let isNewAccount = false;
+        if (!student) {
+          const password = generatePassword();
+          student = createStudent({ ownerId: user.id, name, password });
+          credentials.push({ name: student.name, username: student.username, password });
+          isNewAccount = true;
+        }
+        if (cp) {
+          if (cp.student_id && cp.student_id !== student.id) {
+            skipped.push({ name, reason: 'name_taken' });
+            continue;
+          }
+          if (!cp.student_id) {
+            run('UPDATE class_participants SET student_id = ? WHERE id = ?', student.id, cp.id);
+          }
+          linked.push({ name: cp.name, username: student.username, created: isNewAccount });
+          continue;
+        }
+        const rawToken = newParticipantToken();
+        const id = uid();
+        const timestamp = now();
+        run(
+          'INSERT INTO class_participants (id, class_id, name, token_hash, created_at, last_seen_at, student_id) VALUES (?,?,?,?,?,?,?)',
+          id,
+          row.id,
+          name,
+          tokenHash(rawToken),
+          timestamp,
+          timestamp,
+          student.id,
+        );
+        linked.push({ name, username: student.username, created: isNewAccount });
+      }
+    });
+    run('UPDATE classes SET updated_at = ? WHERE id = ?', now(), row.id);
+    json(res, 201, { credentials, linked, skipped });
+  });
+
+  // Reset the password of one roster student — new plaintext returned once.
+  router.post('/api/classes/:id/students/:studentId/reset', async (req, res, params) => {
+    assertSameOrigin(req);
+    const user = requireUser(req);
+    const row = requireOwnedClass(req, params.id);
+    const cp = one('SELECT * FROM class_participants WHERE class_id = ? AND student_id = ?', row.id, params.studentId);
+    if (!cp) throw notFound('student_not_found');
+    const student = one('SELECT * FROM students WHERE id = ?', params.studentId);
+    if (!student) throw notFound('student_not_found');
+    assertCanAccess(user, student);
+    const password = generatePassword();
+    run('UPDATE students SET password_hash = ? WHERE id = ?', hashPassword(password), student.id);
+    json(res, 200, { username: student.username, password });
+  });
+
+  // Remove a student from the class roster (the account itself stays).
+  router.delete('/api/classes/:id/students/:studentId', async (req, res, params) => {
+    assertSameOrigin(req);
+    requireUser(req);
+    const row = requireOwnedClass(req, params.id);
+    const cp = one('SELECT * FROM class_participants WHERE class_id = ? AND student_id = ?', row.id, params.studentId);
+    if (!cp) throw notFound('student_not_found');
+    run('DELETE FROM class_participants WHERE id = ?', cp.id);
+    noContent(res);
+  });
+}
+
+function studentUsernameOf(cp) {
+  if (!cp || !cp.student_id) return null;
+  const student = one('SELECT username FROM students WHERE id = ?', cp.student_id);
+  return student ? student.username : null;
 }

@@ -1126,6 +1126,7 @@ export async function mount(root, ctx) {
         switchRow('showAnswers', 'Lösungen zeigen', 'Show answers', t('teacher.setting_show_answers_help')),
         switchRow('warnUnanswered', 'Bei offenen Fragen warnen', 'Warn about unanswered questions'),
         switchRow('requireName', 'Namen verlangen', 'Require name'),
+        switchRow('practice', 'Übungsmodus (nicht gewertet)', 'Practice mode (not graded)', t('teacher.setting_practice_help')),
       ),
     );
 

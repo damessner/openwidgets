@@ -74,9 +74,14 @@
         OpenWidgets
       </a>
       <h1 class="center login-title" data-i18n="login.title">Anmelden</h1>
-      <p class="small muted center mb-4" data-i18n="login.subtitle">
-        Für Lehrkräfte dieser Instanz. Schüler:innen treten über den Aufgaben-Link bei.
+      <p class="small muted center mb-3" data-i18n="login.subtitle">
+        Lehrkräfte melden sich mit E-Mail an, Schüler:innen mit ihrem generated Login.
       </p>
+
+      <div class="segmented login-mode mb-4" role="group" aria-label="Login-Modus">
+        <button type="button" id="mode-teacher" class="is-active" data-i18n="login.mode_teacher">Lehrkraft</button>
+        <button type="button" id="mode-student" data-i18n="login.mode_student">Schüler:in</button>
+      </div>
 
       <div id="demo-hint" class="demo-hint" role="status" hidden></div>
 
@@ -84,7 +89,7 @@
 
       <form id="login-form" novalidate>
         <div class="field">
-          <label class="label" for="email" data-i18n="common.email">E-Mail</label>
+          <label class="label" for="email" id="email-label" data-i18n="common.email">E-Mail</label>
           <input
             class="input"
             id="email"

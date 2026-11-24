@@ -10,7 +10,7 @@
 # What it installs:
 #   /usr/local/sbin/openwidgets-update          the updater script
 #   /etc/systemd/system/openwidgets-update.service   oneshot runner
-#   /etc/systemd/system/openwidgets-update.timer     every 10 min + 3 min after boot
+#   /etc/systemd/system/openwidgets-update.timer     every 30 min + 3 min after boot
 #   /etc/openwidgets/update.env                 config (repo, branch, paths)
 set -euo pipefail
 

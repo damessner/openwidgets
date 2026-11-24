@@ -17,6 +17,7 @@ export function defaultSettings() {
     warnUnanswered: true,
     timeLimitMinutes: null,
     requireName: true,
+    practice: false,
     accessibility: { tts: true, starQuestions: true, fontScale: true },
   };
 }
@@ -42,6 +43,7 @@ export function normalizeSettings(settings) {
     warnUnanswered: typeof src.warnUnanswered === 'boolean' ? src.warnUnanswered : true,
     timeLimitMinutes,
     requireName: typeof src.requireName === 'boolean' ? src.requireName : true,
+    practice: typeof src.practice === 'boolean' ? src.practice : false,
     accessibility: {
       tts: typeof accessibility.tts === 'boolean' ? accessibility.tts : true,
       starQuestions: typeof accessibility.starQuestions === 'boolean' ? accessibility.starQuestions : true,
@@ -133,6 +135,7 @@ export function validateActivity(definition) {
     'showAnswers',
     'warnUnanswered',
     'requireName',
+    'practice',
   ]) {
     if (rawSettings[key] !== undefined && typeof rawSettings[key] !== 'boolean') {
       push(`settings.${key}`, `${key} must be a boolean`);

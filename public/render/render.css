@@ -1015,6 +1015,12 @@ span.item-pin {
   cursor: default;
 }
 
+.ib-chip.is-picked {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: var(--focus-ring);
+}
+
 .ib-solution-layer {
   pointer-events: none;
 }

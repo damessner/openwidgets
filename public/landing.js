@@ -1,7 +1,7 @@
 // Landing page behaviour: join-code form, language toggle, capabilities badge.
 import { registerMessages, initLocale, applyI18n, mountLanguageToggle, t } from './lib/i18n.js';
 import { h, qs, toast } from './lib/dom.js';
-import { get } from './lib/api.js';
+import { get, post } from './lib/api.js';
 
 registerMessages({
   de: {
@@ -44,6 +44,16 @@ registerMessages({
     'landing.item_types': 'Aufgabentypen',
     'landing.available': 'verfügbar',
     'landing.unreachable': 'Server nicht erreichbar',
+    'landing.reachable': 'Server erreichbar',
+    'landing.student_title': 'Deine Aufgaben',
+    'landing.student_hint': 'Angemeldet als {name} ({username}).',
+    'landing.student_logout': 'Abmelden',
+    'landing.student_empty': 'Dir wurden noch keine Klassen-Aufgaben zugewiesen.',
+    'landing.state_locked': 'gesperrt',
+    'landing.state_open': 'offen',
+    'landing.state_done': 'erledigt',
+    'landing.open_class': 'Öffnen',
+    'landing.score_label': '{score} / {max} Punkte',
   },
   en: {
     'landing.eyebrow': 'Open source · Built for schools',
@@ -85,6 +95,16 @@ registerMessages({
     'landing.item_types': 'question types',
     'landing.available': 'available',
     'landing.unreachable': 'Server unreachable',
+    'landing.reachable': 'Server reachable',
+    'landing.student_title': 'Your assignments',
+    'landing.student_hint': 'Signed in as {name} ({username}).',
+    'landing.student_logout': 'Sign out',
+    'landing.student_empty': 'No class assignments for you yet.',
+    'landing.state_locked': 'locked',
+    'landing.state_open': 'open',
+    'landing.state_done': 'done',
+    'landing.open_class': 'Open',
+    'landing.score_label': '{score} / {max} points',
   },
 });
 
@@ -118,24 +138,76 @@ const langSlot = qs('#lang-slot');
 mountLanguageToggle(langSlot);
 applyI18n(document);
 
-// Capabilities badge (version + question types + reachability)
+// Reachability badge — anonymous capabilities no longer disclose version or
+// the item-type list, so the public page only shows that the server is up.
 (async () => {
-  const badge = qs('#version-badge');
   const capabilitiesBox = qs('#capabilities');
   try {
-    const data = await get('/api/capabilities');
-    badge.hidden = false;
-    badge.textContent = `v${data.version}`;
-    const typeCount = Array.isArray(data.itemTypes) ? data.itemTypes.length : 0;
-    capabilitiesBox.appendChild(
-      h('span.badge.badge-success', `v${data.version} · ${typeCount} ${t('landing.item_types')}`),
-    );
+    await get('/api/capabilities');
+    capabilitiesBox.appendChild(h('span.badge.badge-success', t('landing.reachable')));
   } catch {
-    badge.hidden = false;
-    badge.textContent = t('landing.unreachable');
-    badge.className = 'badge badge-danger';
     capabilitiesBox.appendChild(h('span.badge.badge-danger', t('landing.unreachable')));
   }
+})();
+
+// Logged-in student? Show their classes with per-item states instead of only
+// the anonymous join-by-code form.
+(async () => {
+  const panel = qs('#student-panel');
+  if (!panel) return;
+  let me;
+  try {
+    me = await get('/api/student/me');
+  } catch {
+    return; // not logged in as a student
+  }
+  const student = me.student || {};
+  const classes = Array.isArray(me.classes) ? me.classes : [];
+  const card = h('section.card.landing-join',
+    h('div.row.between.wrap.gap-2',
+      h('div',
+        h('h2.landing-join-title', t('landing.student_title')),
+        h('p.small.muted.mb-0', t('landing.student_hint', { name: student.name || '', username: student.username || '' })),
+      ),
+      h('button.btn.btn-ghost.btn-sm', {
+        type: 'button',
+        on: {
+          click: async () => {
+            try {
+              await post('/api/auth/student-logout');
+            } catch { /* ignore */ }
+            window.location.reload();
+          },
+        },
+      }, t('landing.student_logout')),
+    ),
+  );
+  if (classes.length === 0) {
+    card.appendChild(h('p.small.muted.mt-2', t('landing.student_empty')));
+  }
+  for (const cls of classes) {
+    const box = h('div.mt-3',
+      h('div.row.between.wrap.gap-2',
+        h('div.strong', cls.name || cls.code),
+        h('a.btn.btn-secondary.btn-sm', { href: `/c/${encodeURIComponent(String(cls.code || '').toUpperCase())}` }, t('landing.open_class')),
+      ),
+    );
+    const list = h('ul.landing-student-items');
+    for (const item of cls.items || []) {
+      const stateKey = item.state === 'locked' ? 'landing.state_locked' : item.state === 'passed' || item.state === 'done' ? 'landing.state_done' : 'landing.state_open';
+      list.appendChild(h('li.row.between.wrap.gap-2',
+        h('span', { text: `${item.position}. ${item.title || ''}` }),
+        h('span.row.gap-2',
+          item.maxScore ? h('span.small.muted', t('landing.score_label', { score: item.score || 0, max: item.maxScore })) : null,
+          h('span.badge', { text: t(stateKey) }),
+          item.code ? h('a.btn.btn-primary.btn-sm', { href: `/a/${encodeURIComponent(item.code)}${cls.code ? `?c=${encodeURIComponent(cls.code)}` : ''}` }, t('landing.open_class')) : null,
+        ),
+      ));
+    }
+    box.appendChild(list);
+    card.appendChild(box);
+  }
+  panel.appendChild(card);
 })();
 
 window.addEventListener('unhandledrejection', () => {

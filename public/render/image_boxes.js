@@ -180,7 +180,10 @@ export function mount(container, rawCtx) {
         }, word);
         chip.addEventListener('click', () => {
           selectedWord = selectedWord === word ? null : word;
-          for (const [w, el] of chipEls) el.setAttribute('aria-pressed', w === selectedWord ? 'true' : 'false');
+          for (const [w, el] of chipEls) {
+            el.setAttribute('aria-pressed', w === selectedWord ? 'true' : 'false');
+            el.classList.toggle('is-picked', w === selectedWord);
+          }
         });
         chip.addEventListener('dragstart', (event) => {
           if (event.dataTransfer) {

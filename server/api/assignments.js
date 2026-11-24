@@ -296,11 +296,11 @@ export function register(router) {
     const order = itemOrderFor(definition, settings, assignment.id);
     const items = itemBriefs(definition, order);
     const participants = all(
-      'SELECT * FROM participants WHERE assignment_id = ? ORDER BY started_at ASC, id ASC',
+      `SELECT p.* FROM participants p WHERE p.assignment_id = ? AND (p.flags IS NULL OR p.flags NOT LIKE '%"practice"%') ORDER BY p.started_at ASC, p.id ASC`,
       assignment.id,
     );
     const responses = all(
-      'SELECT r.* FROM responses r JOIN participants p ON p.id = r.participant_id WHERE p.assignment_id = ?',
+      `SELECT r.* FROM responses r JOIN participants p ON p.id = r.participant_id WHERE p.assignment_id = ? AND (p.flags IS NULL OR p.flags NOT LIKE '%"practice"%')`,
       assignment.id,
     );
     const byParticipant = new Map();

@@ -10,6 +10,12 @@ import {
   requireUser,
   verifyPassword,
 } from '../lib/auth.js';
+import {
+  createStudentSession,
+  destroyStudentSession,
+  findStudentByUsername,
+  studentPublic,
+} from '../lib/students.js';
 
 // In-memory login throttle: 10 failures per 15 minutes per IP.
 const WINDOW_MS = 15 * 60 * 1000;
@@ -68,6 +74,36 @@ export function register(router) {
   router.post('/api/auth/logout', async (req, res) => {
     assertSameOrigin(req);
     destroySession(req, res);
+    noContent(res);
+  });
+
+  // -------------------------------------------------------------------------
+  // Student (roster) login — username + generated password
+  // -------------------------------------------------------------------------
+  router.post('/api/auth/student-login', async (req, res) => {
+    assertSameOrigin(req);
+    const ip = clientIp(req, config.trustProxy);
+    assertNotThrottled(ip);
+
+    const body = await readJson(req, 16 * 1024);
+    const username = String(body.username || '').trim().toLowerCase();
+    const password = String(body.password || '');
+    if (!username || !password) throw badRequest('missing_credentials', 'Username and password are required');
+
+    const row = findStudentByUsername(username);
+    if (!row || !verifyPassword(password, row.password_hash)) {
+      bumpFailure(ip);
+      throw unauthorized('invalid_credentials');
+    }
+    clearFailures(ip);
+    run('UPDATE students SET last_login_at = ? WHERE id = ?', now(), row.id);
+    createStudentSession(req, res, row);
+    json(res, 200, { student: studentPublic({ ...row, last_login_at: now() }) });
+  });
+
+  router.post('/api/auth/student-logout', async (req, res) => {
+    assertSameOrigin(req);
+    destroyStudentSession(req, res);
     noContent(res);
   });
 

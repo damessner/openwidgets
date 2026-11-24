@@ -33,7 +33,14 @@ import {
   settingsFor,
   timeLimitInfo,
 } from './_helpers.js';
-import { classLinkForParticipant, enforceClassUnlock, sequenceClassesForAssignment } from './classes.js';
+import {
+  classLinkForParticipant,
+  classParticipantOfStudent,
+  enforceClassUnlock,
+  enforceClassUnlockForParticipant,
+  sequenceClassesForAssignment,
+} from './classes.js';
+import { getStudent } from '../lib/students.js';
 
 const MAX_PARTICIPANTS_PER_ASSIGNMENT = 500;
 const JOIN_LIMIT_PER_IP = 30;
@@ -152,7 +159,14 @@ export function register(router) {
       throw new HttpError(409, 'participant_limit_reached', 'This assignment has reached the participant limit');
     }
 
+    // Logged-in student account: name comes from the account; if the
+    // assignment belongs to one of the student's classes, link the attempt to
+    // the roster entry (and enforce the class unlock rules for it).
+    const student = getStudent(req);
+    const studentId = student ? student.id : null;
+
     let name = typeof body.name === 'string' ? body.name.trim() : '';
+    if (!name && student) name = student.name;
     if (!name) {
       if (settings.requireName !== false) throw badRequest('name_required', 'Please enter your name');
       name = definition.locale === 'en' ? 'Guest' : 'Gast';
@@ -161,7 +175,22 @@ export function register(router) {
 
     // Sequence-class gate: assignments bundled in a published sequence class
     // may only be joined through the class, and only when unlocked there.
-    const classParticipant = enforceClassUnlock(assignment, body.classToken);
+    let classParticipant = enforceClassUnlock(assignment, body.classToken);
+    if (!classParticipant && student) {
+      const seqClasses = sequenceClassesForAssignment(assignment.id);
+      for (const cls of seqClasses) {
+        const cp = classParticipantOfStudent(cls.id, student.id);
+        if (cp) {
+          classParticipant = enforceClassUnlockForParticipant(assignment, cp);
+          break;
+        }
+      }
+      if (!classParticipant && seqClasses.length > 0) {
+        throw new HttpError(403, 'class_required', 'This assignment is part of a class — join it through the class link', {
+          classCode: seqClasses[0].code,
+        });
+      }
+    }
 
     const rawToken = newParticipantToken();
     const id = uid();
@@ -170,10 +199,11 @@ export function register(router) {
     // Data minimisation: participant IP / user agent are intentionally NOT
     // stored (minors, DSGVO). The columns stay NULL for a future opt-in.
     run(
-      'INSERT INTO participants (id, assignment_id, class_participant_id, name, token_hash, status, started_at, submitted_at, last_seen_at, score, max_score, flags, ip, user_agent) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      'INSERT INTO participants (id, assignment_id, class_participant_id, student_id, name, token_hash, status, started_at, submitted_at, last_seen_at, score, max_score, flags, ip, user_agent) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       id,
       assignment.id,
       classParticipant ? classParticipant.id : null,
+      studentId,
       name,
       tokenHash(rawToken),
       'in_progress',
@@ -193,7 +223,7 @@ export function register(router) {
     const sanitized = sanitizedActivityFor(assignment, activity);
     json(res, 200, {
       participantToken: rawToken,
-      participant: { id: participant.id, name: participant.name },
+      participant: { id: participant.id, name: participant.name, username: student ? student.username : null },
       assignment: {
         code: assignment.code,
         title: assignment.title,
@@ -409,6 +439,34 @@ export function register(router) {
     const finalized = finalizeSubmission(participant);
     publishParticipantEvent(assignment, activity, finalized.participant, 'submitted');
     json(res, 200, resultPayload(finalized.participant, assignment, activity));
+  });
+
+  // -------------------------------------------------------------------------
+  // Reopen (practice mode only: lets a student retry an ungraded attempt)
+  // -------------------------------------------------------------------------
+  router.post('/api/participant/reopen', async (req, res) => {
+    assertSameOrigin(req);
+    const { participant, assignment, activity } = requireParticipantAuth(req);
+    const definition = definitionFromRow(activity);
+    const settings = settingsFor(assignment, definition);
+    if (!settings.practice) throw conflict('not_practice', 'Only practice assignments can be reopened');
+    if (participant.status === 'in_progress') throw conflict('already_open', 'The attempt is still open');
+    run(
+      "UPDATE participants SET status = 'in_progress', submitted_at = NULL, last_seen_at = ? WHERE id = ?",
+      now(),
+      participant.id,
+    );
+    const fresh = one('SELECT * FROM participants WHERE id = ?', participant.id);
+    publishParticipantEvent(assignment, activity, fresh, 'reopened');
+    json(res, 200, {
+      participant: {
+        id: fresh.id,
+        name: fresh.name,
+        status: fresh.status,
+        score: roundScore(fresh.score),
+        maxScore: roundScore(fresh.max_score),
+      },
+    });
   });
 
   // -------------------------------------------------------------------------

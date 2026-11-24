@@ -118,6 +118,9 @@ registerMessages({
     'student.submit_pending_warning': 'Einige Antworten konnten noch nicht gespeichert werden. Trotzdem abgeben?',
     'student.submitting': 'Wird abgegeben …',
     'student.submitted_title': 'Abgegeben!',
+    'student.practice_banner': 'Übungsmodus — diese Abgabe wird nicht gewertet. Du kannst beliebig oft neu versuchen.',
+    'student.practice_note': 'Übungsmodus: Diese Abgabe zählt nicht für die Wertung.',
+    'student.practice_retry': 'Erneut versuchen',
     'student.submitted_text': 'Ihre Antworten wurden gespeichert. Sie können diese Seite jetzt schließen.',
     'student.result_hidden': 'Ihre Lehrkraft hat entschieden, dass das Ergebnis nicht angezeigt wird.',
     'student.result_percent': '{percent} erreicht',
@@ -213,6 +216,9 @@ registerMessages({
     'student.submit_pending_warning': 'Some answers could not be saved yet. Submit anyway?',
     'student.submitting': 'Submitting …',
     'student.submitted_title': 'Submitted!',
+    'student.practice_banner': 'Practice mode — this attempt is not graded. You can retry as often as you like.',
+    'student.practice_note': 'Practice mode: this attempt does not count towards grading.',
+    'student.practice_retry': 'Try again',
     'student.submitted_text': 'Your answers have been saved. You may close this page.',
     'student.result_hidden': 'Your teacher decided not to show the result.',
     'student.result_percent': '{percent} achieved',
@@ -1723,6 +1729,11 @@ function buildPlayerScreen() {
 
 function buildWorksheetScreen() {
   const wrap = h('div.student-player');
+  if (state.settings && state.settings.practice) {
+    wrap.appendChild(
+      h('p.student-practice-banner', { role: 'note', text: t('student.practice_banner') }),
+    );
+  }
   if (state.activity && state.activity.description) {
     const description = h('div.card.compact');
     const body = h('div.small.muted');
@@ -1767,6 +1778,11 @@ function buildSubmitBar() {
 function buildQuizScreen() {
   const total = state.items.length;
   const wrap = h('div.student-quiz');
+  if (state.settings && state.settings.practice) {
+    wrap.appendChild(
+      h('p.student-practice-banner', { role: 'note', text: t('student.practice_banner') }),
+    );
+  }
   if (!total) {
     wrap.appendChild(h('div.card.empty', h('p.empty-title', { text: t('student.no_items') })));
     return wrap;
@@ -1946,6 +1962,18 @@ function buildResultScreen() {
     });
     actions.appendChild(reviewBtn);
   }
+  // Practice mode: the attempt is not graded — offer an immediate retry.
+  if (state.settings && state.settings.practice) {
+    hero.appendChild(h('p.student-result-note', { text: t('student.practice_note') }));
+    const retryBtn = h(
+      'button.btn.btn-secondary',
+      { type: 'button' },
+      h('span', { html: icon('refresh', { size: 18 }) }),
+      h('span', { text: t('student.practice_retry') }),
+    );
+    retryBtn.addEventListener('click', () => reopenPracticeAttempt(retryBtn));
+    actions.appendChild(retryBtn);
+  }
   // Shared classroom device: allow the next pupil to start fresh.
   actions.appendChild(switchPersonButton());
   if (actions.childNodes.length) hero.appendChild(actions);
@@ -1953,6 +1981,22 @@ function buildResultScreen() {
   wrap.appendChild(hero);
   if (showResults) wrap.appendChild(buildBreakdownCard());
   return wrap;
+}
+
+/** Practice mode: reopen the attempt so the student can try again. */
+async function reopenPracticeAttempt(button) {
+  if (button) button.disabled = true;
+  try {
+    await post('/api/participant/reopen', {}, { headers: participantHeaders(state.token) });
+    const full = await get('/api/participant', { headers: participantHeaders(state.token) });
+    state.submitted = !applyPayload(full);
+    state.screen = 'player';
+    renderScreen();
+    scrollToTop();
+  } catch (error) {
+    toast(errorMessage(error), 'error');
+    if (button) button.disabled = false;
+  }
 }
 
 // Lightweight confetti burst for strong results (skipped for reduced motion).

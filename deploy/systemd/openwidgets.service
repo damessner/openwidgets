@@ -9,7 +9,7 @@
 # /usr/bin/node symlink; adjust ExecStart if you keep it elsewhere.
 
 [Unit]
-Description=OpenWidgets — self-hosted interactive worksheets (BookWidgets alternative)
+Description=OpenWidgets — self-hosted, open-source interactive worksheets for schools
 Documentation=file:///opt/openwidgets/docs/DEPLOY-LXC.md
 After=network-online.target
 Wants=network-online.target

@@ -145,6 +145,24 @@ CREATE TABLE IF NOT EXISTS class_participants (
   last_seen_at TEXT
 );
 
+-- v3: student accounts (roster logins with generated passwords) -------------
+CREATE TABLE IF NOT EXISTS students (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  last_login_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS student_sessions (
+  token_hash TEXT PRIMARY KEY,
+  student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_activities_owner ON activities(owner_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_assignments_owner ON assignments(owner_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_assignments_activity ON assignments(activity_id);
@@ -157,11 +175,14 @@ CREATE INDEX IF NOT EXISTS idx_assets_owner ON assets(owner_id);
 CREATE INDEX IF NOT EXISTS idx_classes_owner ON classes(owner_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_class_items_class ON class_items(class_id, position);
 CREATE INDEX IF NOT EXISTS idx_class_participants_class ON class_participants(class_id);
+CREATE INDEX IF NOT EXISTS idx_students_owner ON students(owner_id, name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_student_sessions_student ON student_sessions(student_id);
+CREATE INDEX IF NOT EXISTS idx_student_sessions_expiry ON student_sessions(expires_at);
 `;
 
 export const db = new DatabaseSync(config.dbPath);
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 /**
  * Migration ladder. When the schema changes in v0.2+, append
@@ -182,6 +203,41 @@ const MIGRATIONS = [
         );
       }
       db.exec('CREATE INDEX IF NOT EXISTS idx_participants_class_participant ON participants(class_participant_id)');
+    },
+  },
+  {
+    version: 3,
+    up() {
+      // Student accounts + linking of class participants and assignment
+      // participants to a student account (nullable; NULL = anonymous join).
+      db.exec(`CREATE TABLE IF NOT EXISTS students (
+        id TEXT PRIMARY KEY,
+        owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        last_login_at TEXT
+      )`);
+      db.exec(`CREATE TABLE IF NOT EXISTS student_sessions (
+        token_hash TEXT PRIMARY KEY,
+        student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+      )`);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_students_owner ON students(owner_id, name COLLATE NOCASE)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_student_sessions_student ON student_sessions(student_id)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_student_sessions_expiry ON student_sessions(expires_at)');
+      const cpCols = db.prepare('PRAGMA table_info(class_participants)').all().map((col) => col.name);
+      if (!cpCols.includes('student_id')) {
+        db.exec('ALTER TABLE class_participants ADD COLUMN student_id TEXT REFERENCES students(id) ON DELETE SET NULL');
+      }
+      db.exec('CREATE INDEX IF NOT EXISTS idx_class_participants_student ON class_participants(student_id)');
+      const pCols = db.prepare('PRAGMA table_info(participants)').all().map((col) => col.name);
+      if (!pCols.includes('student_id')) {
+        db.exec('ALTER TABLE participants ADD COLUMN student_id TEXT REFERENCES students(id) ON DELETE SET NULL');
+      }
+      db.exec('CREATE INDEX IF NOT EXISTS idx_participants_student ON participants(student_id)');
     },
   },
 ];
