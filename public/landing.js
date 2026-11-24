@@ -15,7 +15,7 @@ registerMessages({
     'landing.stat_license_value': 'AGPL-3.0',
     'landing.stat_license_label': 'quelloffen',
     'landing.subtitle':
-      'OpenWidgets ist eine quelloffene, datenschutzfreundliche Alternative zu BookWidgets. Lehrkräfte erstellen Quizze und Arbeitsblätter, Schüler:innen bearbeiten sie im Browser, die Auswertung passiert automatisch — alles auf dem eigenen Schulserver.',
+      'OpenWidgets ist eine quelloffene, datenschutzfreundliche Plattform für interaktive Arbeitsblätter. Lehrkräfte erstellen Quizze und Arbeitsblätter, Schüler:innen bearbeiten sie im Browser, die Auswertung passiert automatisch — alles auf dem eigenen Schulserver.',
     'landing.nav_features': 'Funktionen',
     'landing.nav_join': 'Als Schüler:in beitreten',
     'landing.teacher_login': 'Lehrkräfte-Login',
@@ -56,7 +56,7 @@ registerMessages({
     'landing.stat_license_value': 'AGPL-3.0',
     'landing.stat_license_label': 'open source',
     'landing.subtitle':
-      'OpenWidgets is an open-source, privacy-friendly alternative to BookWidgets. Teachers author quizzes and worksheets, students complete them in the browser, grading is automatic — all on your own school server.',
+      'OpenWidgets is an open-source, privacy-friendly platform for interactive worksheets. Teachers author quizzes and worksheets, students complete them in the browser, grading is automatic — all on your own school server.',
     'landing.nav_features': 'Features',
     'landing.nav_join': 'Join as a student',
     'landing.teacher_login': 'Teacher login',
