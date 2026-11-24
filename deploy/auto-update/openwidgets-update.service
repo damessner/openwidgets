@@ -1,0 +1,11 @@
+[Unit]
+Description=OpenWidgets auto-update from GitHub (poll and hot-swap)
+Documentation=https://github.com/damessner/openwidgets/blob/main/docs/AUTO-UPDATE.md
+After=network-online.target openwidgets.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/openwidgets-update
+# never let a failed update take the box down with it
+SuccessExitStatus=0 1

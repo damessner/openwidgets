@@ -116,6 +116,8 @@ join codes. Safe to run repeatedly; it only creates new activities.
 
 See **[docs/DEPLOY-LXC.md](docs/DEPLOY-LXC.md)** for the full guide (Proxmox unprivileged LXC, both Docker Compose and native systemd paths, Caddy + TLS, backups, upgrades, DSGVO notes).
 
+**Auto-update from GitHub:** install a systemd timer once and the server updates itself whenever you push to `main` (sha-pinned download, health check, automatic rollback — data in `DATA_DIR` is never touched). See **[docs/AUTO-UPDATE.md](docs/AUTO-UPDATE.md)**.
+
 Minimal production shape:
 
 ```bash
