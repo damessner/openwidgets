@@ -101,14 +101,15 @@ join codes. Safe to run repeatedly; it only creates new activities.
 
 | Type | Auto-graded | Notes |
 | --- | --- | --- |
-| Text block | — | Instructions, with markdown-lite (`**bold**`, `*italic*`, lists) |
+| Text block | ✅ (with `<<gaps>>`) | markdown-lite (`**bold**`, `*italic*`, lists), tables (`| a | b |`), inline images (`![alt](url)`, paste with Ctrl+V), and inline gaps `<<answer|alt>>` that make it scoreable |
 | Multiple choice (single/multi) | ✅ | Partial credit for multi-answer |
 | Short answer | ✅ | Multiple accepted answers, case/punctuation-insensitive |
 | Numeric answer | ✅ | Absolute/percent tolerance, German and English decimal input |
 | Fill in the blanks | ✅ | Synonym lists per blank, proportional partial credit |
-| Matching pairs | ✅ | Dropdown-based (accessible); partial credit |
+| Matching pairs | ✅ | Each side can be text, image or audio; dropdown-based (accessible); partial credit |
 | Ordering | ✅ | Up/down buttons (no drag required); exact or per-position credit |
 | Image pins | ✅ | Click targets on an uploaded image, tolerance radius |
+| Label boxes on image | ✅ | Draw editable rectangles on an image (paste with Ctrl+V); students type the word into each box or drag words from a word bank; partial credit per box |
 | Long answer | Manual (+ keyword hint) | Keyword hints suggest points; teacher decides |
 | … | | |
 

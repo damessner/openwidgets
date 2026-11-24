@@ -427,12 +427,17 @@ function itemTypeLabel(item) {
   return String((item && item.type) || '');
 }
 
+/** A text block becomes scoreable when it contains <<gap>> markers. */
+function textHasGaps(item) {
+  return Boolean(item) && item.type === 'text' && String((item.config && item.config.text) || '').includes('<<');
+}
+
 function isScoreable(item) {
-  return Boolean(item) && item.type !== 'text' && Number(item.points) > 0;
+  return Boolean(item) && (item.type !== 'text' || textHasGaps(item)) && Number(item.points) > 0;
 }
 
 function scoreableItems() {
-  return state.items.filter((item) => item.type !== 'text');
+  return state.items.filter((item) => item.type !== 'text' || textHasGaps(item));
 }
 
 function seedFor(item) {
@@ -680,7 +685,7 @@ function captureAnswer(itemId) {
   const view = views.get(itemId);
   if (!view || !view.renderer) return;
   // Text blocks are not scoreable and must never be PUT to the responses API.
-  if (!view.item || view.item.type === 'text') return;
+  if (!view.item || (view.item.type === 'text' && !textHasGaps(view.item))) return;
   let response;
   try {
     response = view.renderer.getResponse();
@@ -2001,7 +2006,7 @@ function computeTotalScore() {
 function computeMaxScore() {
   let total = 0;
   for (const item of state.items) {
-    if (item.type !== 'text') total += Number(item.points) || 0;
+    if (item.type !== 'text' || textHasGaps(item)) total += Number(item.points) || 0;
   }
   return Math.round(total * 100) / 100;
 }
@@ -2019,7 +2024,7 @@ function buildBreakdownCard() {
   card.appendChild(h('h3.card-title', { text: t('student.breakdown_title') }));
   const list = h('ul.student-breakdown');
   state.items.forEach((item, index) => {
-    if (item.type === 'text') return;
+    if (item.type === 'text' && !textHasGaps(item)) return;
     const result = state.results[item.id];
     const row = h('li.student-breakdown-row');
     row.appendChild(h('span.student-breakdown-number', { text: String(index + 1) }));

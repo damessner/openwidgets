@@ -6,7 +6,7 @@ import { config } from '../config.js';
 import { all, now, one, parseJson, run, shortId } from '../db.js';
 import { forgetPresence, isOnline, publish } from '../lib/events.js';
 import { HttpError, notFound } from '../lib/http.js';
-import { activityStats, normalizeActivity, normalizeSettings, sanitizeActivity } from '../../shared/activity.js';
+import { activityStats, itemIsScoreable, normalizeActivity, normalizeSettings, sanitizeActivity } from '../../shared/activity.js';
 import {
   answerKey as itemAnswerKey,
   answerText as itemAnswerText,
@@ -98,14 +98,12 @@ export function itemOrderFor(definition, settings, seed) {
   return ids;
 }
 
-/** Item ids in display order that actually accept responses (no text blocks). */
+/** Item ids in display order that actually accept responses (no plain text blocks). */
 export function scoreableItemIds(definition, order) {
   const byId = new Map(definition.items.map((item) => [item.id, item]));
   return order.filter((itemId) => {
     const item = byId.get(itemId);
-    if (!item) return false;
-    const module = getType(item.type);
-    return !!(module && module.meta && module.meta.scoreable);
+    return item ? itemIsScoreable(item) : false;
   });
 }
 
@@ -117,7 +115,7 @@ export function itemBriefs(definition, order) {
     const item = byId.get(itemId);
     if (!item) return;
     const module = getType(item.type);
-    if (!module || !module.meta || !module.meta.scoreable) return;
+    if (!itemIsScoreable(item)) return;
     briefs.push({
       id: item.id,
       index: briefs.length + 1,
@@ -453,28 +451,47 @@ export function finalizeSubmission(participantRow) {
 // Student payloads
 // ---------------------------------------------------------------------------
 
-/** Add /assets/<id>/<filename> URLs for pin images (student payloads only). */
+/** Collect every asset id referenced by an item's sanitized config. */
+function collectAssetIds(item, into) {
+  const config = item && item.config;
+  if (!config || typeof config !== 'object') return;
+  if ((item.type === 'pins' || item.type === 'image_boxes') && config.image && typeof config.image.assetId === 'string' && config.image.assetId) {
+    into.add(config.image.assetId);
+  }
+  if (item.type === 'match') {
+    for (const side of [...(Array.isArray(config.lefts) ? config.lefts : []), ...(Array.isArray(config.rights) ? config.rights : [])]) {
+      if (side && (side.kind === 'image' || side.kind === 'audio') && typeof side.assetId === 'string' && side.assetId) into.add(side.assetId);
+    }
+  }
+}
+
+/** Add /assets/<id>/<filename> URLs for every referenced asset (student payloads only). */
 export function enrichPinImageUrls(items) {
   const assetIds = new Set();
-  for (const item of items) {
-    if (item.type !== 'pins') continue;
-    const assetId = item.config && item.config.image && item.config.image.assetId;
-    if (typeof assetId === 'string' && assetId) assetIds.add(assetId);
-  }
+  for (const item of items) collectAssetIds(item, assetIds);
   if (assetIds.size === 0) return items;
   const rows = all(
     `SELECT id, filename FROM assets WHERE id IN (${[...assetIds].map(() => '?').join(',')})`,
     ...assetIds,
   );
   const filenames = new Map(rows.map((row) => [row.id, row.filename]));
+  const urlFor = (assetId) => (filenames.has(assetId) ? `/assets/${assetId}/${encodeURIComponent(filenames.get(assetId))}` : null);
   for (const item of items) {
-    if (item.type !== 'pins' || !item.config || !item.config.image) continue;
-    const assetId = item.config.image.assetId;
-    if (typeof assetId === 'string' && filenames.has(assetId)) {
-      item.config.image = {
-        ...item.config.image,
-        url: `/assets/${assetId}/${encodeURIComponent(filenames.get(assetId))}`,
-      };
+    const config = item && item.config;
+    if (!config) continue;
+    if ((item.type === 'pins' || item.type === 'image_boxes') && config.image && typeof config.image.assetId === 'string') {
+      const url = urlFor(config.image.assetId);
+      if (url) config.image = { ...config.image, url };
+    }
+    if (item.type === 'match') {
+      for (const key of ['lefts', 'rights']) {
+        if (!Array.isArray(config[key])) continue;
+        config[key] = config[key].map((side) => {
+          if (!side || (side.kind !== 'image' && side.kind !== 'audio') || typeof side.assetId !== 'string') return side;
+          const url = urlFor(side.assetId);
+          return url ? { ...side, url } : side;
+        });
+      }
     }
   }
   return items;

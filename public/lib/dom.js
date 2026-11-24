@@ -187,16 +187,61 @@ export function escapeHtml(value) {
 // blank lines as paragraph breaks. Everything becomes real DOM text nodes.
 // ---------------------------------------------------------------------------
 
-function appendInline(parent, text) {
-  const pattern = /(\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g;
+/** Safe image URL for inline rich text: only /assets/… or http(s). */
+export function safeImageUrl(url) {
+  const value = String(url ?? '').trim();
+  if (/^\/assets\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(value)) return value;
+  if (/^https?:\/\/[^\s"'<>]+$/i.test(value)) return value;
+  return null;
+}
+
+function appendImage(parent, alt, url) {
+  const src = safeImageUrl(url);
+  if (!src) return;
+  const img = document.createElement('img');
+  img.className = 'rt-image';
+  img.src = src;
+  img.alt = String(alt || '');
+  img.loading = 'lazy';
+  parent.appendChild(img);
+}
+
+function appendInline(parent, text, options) {
+  // images ![alt](url) first (start with "!"), then gaps <<…>>, then bold/italic
+  const pattern = /(!\[[^\]]*\]\([^)]+\))|(<<[^<>]*>>)|(\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g;
   let lastIndex = 0;
   let match;
+  let gapCounter = options && options.gapCounter ? options.gapCounter : { n: 0 };
   while ((match = pattern.exec(text)) !== null) {
     if (match.index > lastIndex) {
       parent.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
     }
     const token = match[0];
-    if (token.startsWith('**') || token.startsWith('__')) {
+    if (match[1]) {
+      const imgMatch = token.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+      appendImage(parent, imgMatch ? imgMatch[1] : '', imgMatch ? imgMatch[2] : '');
+    } else if (match[2]) {
+      gapCounter.n += 1;
+      const gapId = `g${gapCounter.n}`;
+      if (options && options.editableGaps) {
+        const input = document.createElement('input');
+        input.className = 'rt-gap';
+        input.type = 'text';
+        input.dataset.gap = gapId;
+        input.setAttribute('aria-label', options.gapLabel ? options.gapLabel(gapId, gapCounter.n) : `Lücke ${gapCounter.n}`);
+        const values = options.gapValues || {};
+        input.value = values[gapId] !== undefined && values[gapId] !== null ? String(values[gapId]) : '';
+        if (options.readonlyGaps) input.disabled = true;
+        if (typeof options.onGapInput === 'function') {
+          input.addEventListener('input', () => options.onGapInput(gapId, input.value));
+        }
+        parent.appendChild(input);
+      } else {
+        // plain rendering: show the gap marker literally (teacher preview /
+        // print). Never render the raw answer as an input.
+        parent.appendChild(document.createTextNode('⟨⟩'));
+      }
+    } else if (token.startsWith('**') || token.startsWith('__')) {
       const strong = document.createElement('strong');
       strong.textContent = token.slice(2, -2);
       parent.appendChild(strong);
@@ -212,12 +257,67 @@ function appendInline(parent, text) {
   }
 }
 
-export function renderRichText(container, text) {
+function isTableSeparator(line) {
+  return /^\|?[\s:|-]+\|[\s:|-]*$/.test(line) && line.includes('-') && line.replace(/[|\s:\-]/g, '').length === 0;
+}
+
+function renderTable(container, rows) {
+  // rows: [{ cells: string[], separator: bool }]
+  const table = document.createElement('table');
+  table.className = 'rt-table';
+  const hasHeader = rows.length > 1 && !!rows[1].separator;
+  let head = null;
+  let body = null;
+  rows.forEach((row, rowIndex) => {
+    if (row.separator) return;
+    const tr = document.createElement('tr');
+    const isHeadRow = hasHeader && rowIndex === 0;
+    if (isHeadRow && !head) {
+      head = document.createElement('thead');
+      table.appendChild(head);
+    } else if (!body) {
+      body = document.createElement('tbody');
+      table.appendChild(body);
+    }
+    for (const cell of row.cells) {
+      const td = document.createElement(isHeadRow ? 'th' : 'td');
+      appendInline(td, cell);
+      tr.appendChild(td);
+    }
+    (isHeadRow ? head : body).appendChild(tr);
+  });
+  container.appendChild(table);
+}
+
+function splitTableRow(line) {
+  return line.replace(/^\|/, '').replace(/\|$/, '').split('|').map((cell) => cell.trim());
+}
+
+/**
+ * Markdown-lite rich text: **bold**, *italic*, __bold__, _italic_, "- " lists,
+ * tables ("| a | b |" lines with an optional |---| separator row), inline
+ * images ![alt](url) (only /assets/… or http(s) URLs), and answer gaps
+ * <<answer>>. With options.editableGaps the <<…>> markers become text inputs
+ * (gap ids g1..gN in order of appearance); gap answers stay hidden otherwise.
+ */
+export function renderRichText(container, text, options = null) {
   if (!container) return container;
   clear(container);
   const lines = String(text ?? '').split(/\r?\n/);
   let list = null;
+  let tableRows = null;
+  const flushTable = () => {
+    if (tableRows && tableRows.length) renderTable(container, tableRows);
+    tableRows = null;
+  };
   for (const line of lines) {
+    if (/^\s*\|/.test(line) && line.includes('|', 1)) {
+      list = null;
+      if (!tableRows) tableRows = [];
+      tableRows.push({ cells: splitTableRow(line), separator: isTableSeparator(line) });
+      continue;
+    }
+    flushTable();
     const bullet = line.match(/^\s*[-*]\s+(.*)$/);
     if (bullet) {
       if (!list) {
@@ -225,7 +325,7 @@ export function renderRichText(container, text) {
         container.appendChild(list);
       }
       const item = document.createElement('li');
-      appendInline(item, bullet[1]);
+      appendInline(item, bullet[1], options);
       list.appendChild(item);
       continue;
     }
@@ -238,9 +338,10 @@ export function renderRichText(container, text) {
     }
     const paragraph = document.createElement('div');
     paragraph.className = 'rt-line';
-    appendInline(paragraph, line);
+    appendInline(paragraph, line, options);
     container.appendChild(paragraph);
   }
+  flushTable();
   return container;
 }
 

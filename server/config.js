@@ -35,7 +35,7 @@ export const config = {
   sessionTtlDays: Math.max(1, intEnv('SESSION_TTL_DAYS', 14)),
   maxUploadBytes: Math.max(1, intEnv('MAX_UPLOAD_MB', 10)) * 1024 * 1024,
   nodeEnv: process.env.NODE_ENV || 'development',
-  version: '0.2.0',
+  version: '0.3.0',
   startedAt: Date.now(),
 };
 

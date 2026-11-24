@@ -11,6 +11,7 @@ import * as fillBlanks from './fill_blanks.js';
 import * as match from './match.js';
 import * as ordering from './ordering.js';
 import * as pins from './pins.js';
+import * as imageBoxes from './image_boxes.js';
 import * as longAnswer from './long_answer.js';
 
 export const itemTypes = [
@@ -22,6 +23,7 @@ export const itemTypes = [
   match,
   ordering,
   pins,
+  imageBoxes,
   longAnswer,
 ];
 
@@ -184,6 +186,9 @@ export function regenerateItemIds(item) {
       break;
     case 'pins':
       out.config = { ...normalized.config, zones: freshIds(normalized.config.zones, 'z') };
+      break;
+    case 'image_boxes':
+      out.config = { ...normalized.config, boxes: freshIds(normalized.config.boxes, 'b') };
       break;
     default:
       break;

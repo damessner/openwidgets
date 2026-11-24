@@ -122,7 +122,9 @@ export function normalizeFeedback(feedback) {
  */
 export function normalizeBaseItem(source, type, config, defaultPointsValue = 1) {
   const src = source && typeof source === 'object' && !Array.isArray(source) ? source : {};
-  const points = type === 'text' ? 0 : asPoints(src.points, defaultPointsValue);
+  // text defaults to 0 points (pure content) but may carry points when it
+  // contains <<answer gaps>> (see text.js).
+  const points = asPoints(src.points, defaultPointsValue);
   return {
     id: typeof src.id === 'string' && src.id.trim() ? src.id.trim() : shortId('it'),
     type,

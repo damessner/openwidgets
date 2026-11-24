@@ -772,7 +772,8 @@ export async function mount(root, ctx) {
       },
     });
     const pointsId = `points-${item.id}`;
-    const pointsDisabled = !isScoreableType(item.type);
+    // text blocks may carry points once they contain <<gap>> markers
+    const pointsDisabled = item.type === 'text' ? false : !isScoreableType(item.type);
     const pointsInput = h('input.input.input-sm', {
       id: pointsId,
       type: 'number',
@@ -799,7 +800,7 @@ export async function mount(root, ctx) {
           'div.field.mb-0.field-points',
           h('label.label', { for: pointsId }, t('common.points')),
           pointsInput,
-          pointsDisabled ? h('p.help', t('teacher.text_no_points')) : null,
+          item.type === 'text' ? h('p.help', t('teacher.text_points_hint')) : pointsDisabled ? h('p.help', t('teacher.text_no_points')) : null,
         ),
       ),
     );
@@ -1265,6 +1266,44 @@ export async function mount(root, ctx) {
   }
   window.addEventListener('beforeunload', onBeforeUnload);
 
+  // Ctrl+V with an image on the clipboard: when a text field is focused, the
+  // field's own paste handler inserts it as markdown; anywhere else in the
+  // editor we create a new "Kästchen im Bild" (image_boxes) item with the
+  // pasted picture so the teacher can draw the boxes right away.
+  const onPasteImage = async (event) => {
+    if (disposed) return;
+    const target = event.target;
+    if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')) return;
+    const files = event.clipboardData && event.clipboardData.files;
+    const image = files && Array.from(files).find((file) => file.type && file.type.startsWith('image/'));
+    if (!image) return;
+    event.preventDefault();
+    try {
+      const result = await uploadAsset(image);
+      if (result && result.asset) {
+        rememberAssetUrl(result.asset);
+        const item = createItem('image_boxes');
+        item.id = newItemId();
+        item.points = 2;
+        item.stem = t('teacher.ib_default_stem');
+        item.config.image = { assetId: result.asset.id, alt: result.asset.filename || '' };
+        const selectedIndex = state.doc.items.findIndex((entry) => entry.id === state.selectedItemId);
+        const insertAt = selectedIndex >= 0 ? selectedIndex + 1 : state.doc.items.length;
+        state.doc.items.splice(insertAt, 0, item);
+        state.selectedItemId = item.id;
+        scheduleChange();
+        renderItemList();
+        renderPreview();
+        const node = itemListHost && itemListHost.querySelector(`[data-item-id="${item.id}"]`);
+        if (node && typeof node.scrollIntoView === 'function') node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        toast(t('teacher.image_pasted'), 'success');
+      }
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    }
+  };
+  document.addEventListener('paste', onPasteImage);
+
   renderAll();
   await Promise.all([loadActivity(), loadPaletteData()]);
 
@@ -1280,6 +1319,7 @@ export async function mount(root, ctx) {
       }
     }
     window.removeEventListener('beforeunload', onBeforeUnload);
+    document.removeEventListener('paste', onPasteImage);
     if (state.dirty) {
       saveDebounced.cancel();
       requestSave();

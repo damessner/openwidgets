@@ -342,7 +342,7 @@ test('health and capabilities', async () => {
   assert.equal(health.db, 'ok');
   assert.equal(typeof health.version, 'string');
   const capabilities = expectStatus(await anon.get('/api/capabilities'), 200, 'capabilities');
-  assert.equal(capabilities.itemTypes.length, 9);
+  assert.equal(capabilities.itemTypes.length, 10);
   assert.equal(capabilities.features.sse, true);
   assert.ok(capabilities.maxUploadMb >= 1);
 });

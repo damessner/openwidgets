@@ -19,7 +19,7 @@ import {
 
 const SECRET = 'SENTINEL_SECRET_ANSWER';
 
-test('registry: nine types with palette metadata', () => {
+test('registry: ten types with palette metadata', () => {
   assert.deepEqual(
     itemTypes.map((module) => module.type),
     [
@@ -31,11 +31,12 @@ test('registry: nine types with palette metadata', () => {
       'match',
       'ordering',
       'pins',
+      'image_boxes',
       'long_answer',
     ],
   );
   const meta = itemTypeMeta();
-  assert.equal(meta.length, 9);
+  assert.equal(meta.length, 10);
   assert.equal(meta.find((entry) => entry.type === 'text').scoreable, false);
   assert.equal(meta.find((entry) => entry.type === 'multiple_choice').scoreable, true);
   for (const entry of meta) {
@@ -55,7 +56,14 @@ test('every type creates a valid default item with an editSchema', () => {
     const item = createItem(module.type);
     assert.equal(item.type, module.type);
     assert.match(item.id, /^it_/);
-    assert.deepEqual(validateItem(item), [], `${module.type} default item should be valid`);
+    if (module.type === 'image_boxes') {
+      // the default has no image yet — it only becomes valid once one is uploaded
+      assert.ok(validateItem(item).some((e) => e.includes('config.image.assetId')));
+      const withImage = normalizeItem({ ...item, config: { ...item.config, image: { assetId: 'a1', alt: '' } } });
+      assert.deepEqual(validateItem(withImage), []);
+    } else {
+      assert.deepEqual(validateItem(item), [], `${module.type} default item should be valid`);
+    }
     const schema = module.editSchema();
     assert.ok(Array.isArray(schema) && schema.length > 0, `${module.type} editSchema`);
     for (const field of schema) {
@@ -475,7 +483,7 @@ test('answerKey / answerText / summarizeResponse produce teacher material', () =
   assert.equal(summarizeResponse(num, { value: '3,4' }), '3,4');
 
   const text = createItem('text');
-  assert.equal(answerKey(text), null);
+  assert.deepEqual(answerKey(text), { gaps: {} });
   assert.deepEqual(answerText(text), []);
 });
 
@@ -504,7 +512,277 @@ test('regenerateItemIds changes item and nested ids but keeps answers', () => {
   const matchCopy = regenerateItemIds(match);
   assert.equal(matchCopy.config.pairs.length, 2);
   assert.deepEqual(
-    matchCopy.config.pairs.map((pair) => pair.left),
+    matchCopy.config.pairs.map((pair) => pair.left.text),
     ['l', 'l2'],
   );
+});
+
+// ---------------------------------------------------------------------------
+// rich-media authoring: text gaps, image boxes, match media sides
+// ---------------------------------------------------------------------------
+
+import { parseGaps, maskGaps } from '../shared/items/text.js';
+import { normalizeSide, sideLabel } from '../shared/items/match.js';
+import { itemIsScoreable } from '../shared/activity.js';
+
+test('text: parseGaps finds <<answer|alt>> gaps in order', () => {
+  assert.deepEqual(parseGaps('Die <<Hauptstadt|Haupt-Stadt>> von Frankreich ist <<Paris>>.'), [
+    { index: 1, raw: 'Hauptstadt|Haupt-Stadt', accepted: ['Hauptstadt', 'Haupt-Stadt'] },
+    { index: 2, raw: 'Paris', accepted: ['Paris'] },
+  ]);
+  assert.deepEqual(parseGaps('no gaps here'), []);
+  assert.deepEqual(parseGaps('<<>>'), [{ index: 1, raw: '', accepted: [] }]);
+  assert.equal(parseGaps('<<a>>'.repeat(60)).length, 60);
+});
+
+test('text: maskGaps hides answers but keeps the placeholder', () => {
+  const masked = maskGaps(`Das ist das Ende mit <<${SECRET}|x>>.`);
+  assert.ok(!masked.includes(SECRET));
+  assert.ok(masked.includes('<<>>'));
+  // text outside gaps is untouched
+  assert.equal(maskGaps(`plain ${SECRET}`), `plain ${SECRET}`);
+});
+
+test('text: points require at least one gap; empty gap is a validation error', () => {
+  const plain = normalizeItem({ id: 't1', type: 'text', points: 3, config: { text: 'Nur ein Text.' } });
+  assert.ok(validateItem(plain).some((e) => e.startsWith('points:')));
+
+  const plainSecret = normalizeItem({ id: 't2', type: 'text', points: 3, config: { text: `Das ${SECRET} ist schön, aber ohne Lücke.` } });
+  assert.ok(validateItem(plainSecret).some((e) => e.startsWith('points:')));
+
+  const gapped = normalizeItem({ id: 't3', type: 'text', points: 4, config: { text: `Paris ist die <<${SECRET}>>.` } });
+  assert.deepEqual(validateItem(gapped), []);
+
+  const emptyGap = normalizeItem({ id: 't4', type: 'text', points: 2, config: { text: 'Ein <<>> hier.' } });
+  assert.ok(validateItem(emptyGap).some((e) => e.includes('gap #1')));
+});
+
+test('text: gaps make the item scoreable and are scored per gap', () => {
+  const item = normalizeItem({
+    id: 't5',
+    type: 'text',
+    points: 4,
+    config: { text: '<<eins>> und <<zwei|2>>.' },
+  });
+  assert.equal(itemIsScoreable(item), true);
+  assert.equal(itemIsScoreable(normalizeItem({ id: 't6', type: 'text', points: 0, config: { text: '<<x>>' } })), false);
+  assert.equal(itemIsScoreable(normalizeItem({ id: 't7', type: 'text', points: 2, config: { text: 'kein gap' } })), false);
+
+  const response =getType(item.type).normalizeResponse(item, { gaps: { g1: ' Eins ', g2: 'zwei' } });
+  assert.deepEqual(response, { gaps: { g1: ' Eins ', g2: 'zwei' } });
+  const result = scoreItem(item, response);
+  assert.equal(result.maxScore, 4);
+  assert.equal(result.correctParts, 2);
+  assert.equal(result.totalParts, 2);
+  assert.equal(result.correct, true);
+  assert.equal(result.autoScore, 4);
+
+  const wrong = scoreItem(item,getType(item.type).normalizeResponse(item, { gaps: { g1: 'drei', g2: '' } }));
+  assert.equal(wrong.correctParts, 0);
+  assert.equal(wrong.autoScore, 0);
+  assert.equal(wrong.correct, false);
+  assert.equal(wrong.detail.gaps.g1.correct, false);
+});
+
+test('text: sanitize masks gap answers in the student payload', () => {
+  const item = normalizeItem({ id: 't8', type: 'text', points: 2, config: { text: `Antwort: <<${SECRET}>>.` } });
+  const safe = sanitizeItem(item);
+  assert.ok(!JSON.stringify(safe).includes(SECRET));
+  assert.ok(safe.config.text.includes('<<>>'));
+  assert.deepEqual(answerKey(item), { gaps: { g1: SECRET } });
+  assert.deepEqual(answerText(item), [`Lücke 1: ${SECRET}`]);
+});
+
+test('image_boxes: normalize clamps geometry, keeps label, caps boxes', () => {
+  const item = normalizeItem({
+    id: 'ib1',
+    type: 'image_boxes',
+    points: 6,
+    config: {
+      image: { assetId: 'a1', alt: 'Karte' },
+      boxes: [
+        { id: 'b1', x: 2, y: -1, w: 0.5, h: 0.4, label: 'Hauptstadt', accepted: [SECRET] },
+        { id: 'b2', x: 0.1, y: 0.1, w: 2, h: 0.2, label: '', accepted: ['x', 'y'] },
+        { id: 'b1', x: 0, y: 0, w: 0.1, h: 0.1, label: '', accepted: [] }, // duplicate id gets re-issued
+      ],
+    },
+  });
+  assert.equal(item.config.boxes.length, 3);
+  assert.equal(item.config.boxes[0].x, 1);
+  assert.equal(item.config.boxes[0].y, 0);
+  assert.equal(item.config.boxes[1].w, 0.2); // invalid w falls back to default
+  assert.notEqual(item.config.boxes[2].id, 'b1');
+  assert.deepEqual(validateItem(item).filter((e) => e.includes('assetId') || e.includes('inputMode')), []);
+});
+
+test('image_boxes: validation requires image, boxes and drag-mode word bank coverage', () => {
+  const noImage = normalizeItem({ id: 'ib2', type: 'image_boxes', config: { boxes: [{ id: 'b1', x: 0, y: 0, w: 0.2, h: 0.2, label: '', accepted: ['a'] }] } });
+  assert.ok(validateItem(noImage).some((e) => e.includes('config.image.assetId')));
+
+  const drag = normalizeItem({
+    id: 'ib3',
+    type: 'image_boxes',
+    config: {
+      image: { assetId: 'a1', alt: '' },
+      inputMode: 'drag',
+      wordBank: ['Haus', 'Baum'],
+      boxes: [{ id: 'b1', x: 0, y: 0, w: 0.2, h: 0.2, label: '', accepted: ['Haus', 'Turm'] }],
+    },
+  });
+  const errors = validateItem(drag);
+  assert.ok(errors.some((e) => e.includes('not in the word bank')));
+  assert.ok(errors.some((e) => e.includes('every box needs at least one accepted word') || e.includes('not in the word bank')));
+
+  const dragOk = normalizeItem({
+    id: 'ib4',
+    type: 'image_boxes',
+    config: {
+      image: { assetId: 'a1', alt: '' },
+      inputMode: 'drag',
+      wordBank: ['Haus', 'Baum'],
+      boxes: [
+        { id: 'b1', x: 0, y: 0, w: 0.2, h: 0.2, label: '', accepted: ['haus'] }, // case-insensitive bank match
+        { id: 'b2', x: 0.3, y: 0, w: 0.2, h: 0.2, label: '', accepted: ['Baum'] },
+      ],
+    },
+  });
+  assert.deepEqual(validateItem(dragOk), []);
+
+  const dragNoBank = normalizeItem({
+    id: 'ib5',
+    type: 'image_boxes',
+    config: { image: { assetId: 'a1', alt: '' }, inputMode: 'drag', wordBank: [], boxes: [{ id: 'b1', x: 0, y: 0, w: 0.2, h: 0.2, label: '', accepted: ['x'] }] },
+  });
+  assert.ok(validateItem(dragNoBank).some((e) => e.includes('word bank')));
+});
+
+test('image_boxes: score splits points across boxes; sanitize never leaks accepted words', () => {
+  const item = normalizeItem({
+    id: 'ib6',
+    type: 'image_boxes',
+    points: 4,
+    config: {
+      image: { assetId: 'a1', alt: 'Karte' },
+      boxes: [
+        { id: 'b1', x: 0.1, y: 0.1, w: 0.2, h: 0.2, label: 'A', accepted: [SECRET] },
+        { id: 'b2', x: 0.5, y: 0.5, w: 0.2, h: 0.2, label: 'B', accepted: ['zwei', '2'] },
+      ],
+    },
+  });
+  const response =getType(item.type).normalizeResponse(item, { answers: { b1: ` ${SECRET} `, b2: 'ZWEI' } });
+  const result = scoreItem(item, response);
+  assert.equal(result.correct, true);
+  assert.equal(result.autoScore, 4);
+  assert.equal(result.detail.boxes.b1.correct, true);
+
+  const half = scoreItem(item,getType(item.type).normalizeResponse(item, { answers: { b1: SECRET } }));
+  assert.equal(half.correctParts, 1);
+  assert.equal(half.totalParts, 2);
+  assert.equal(half.autoScore, 2);
+  assert.equal(half.correct, false);
+
+  const safe = sanitizeItem(item);
+  assert.ok(!JSON.stringify(safe).includes(SECRET));
+  assert.deepEqual(safe.config.boxes[0], { id: 'b1', x: 0.1, y: 0.1, w: 0.2, h: 0.2, label: 'A' });
+  assert.deepEqual(safe.config.wordBank, []); // type mode: bank stays hidden
+  assert.equal(safe.config.image.assetId, 'a1');
+
+  const zones = getType('image_boxes').answerZones(item);
+  assert.equal(zones.length, 2);
+  assert.deepEqual(zones[0].accepted, [SECRET]);
+  assert.equal(zones[0].x, 0.1);
+
+  assert.deepEqual(answerKey(item), { answers: { b1: SECRET, b2: 'zwei' } });
+  assert.throws(() =>getType(item.type).normalizeResponse(item, { answers: 'nope' }), /answers/);
+});
+
+test('image_boxes: drag mode exposes the word bank but still hides accepted words', () => {
+  const item = normalizeItem({
+    id: 'ib7',
+    type: 'image_boxes',
+    config: {
+      image: { assetId: 'a1', alt: '' },
+      inputMode: 'drag',
+      wordBank: ['Haus', SECRET],
+      boxes: [{ id: 'b1', x: 0, y: 0, w: 0.3, h: 0.3, label: 'Wohnen', accepted: [SECRET] }],
+    },
+  });
+  const safe = sanitizeItem(item);
+  assert.deepEqual(safe.config.wordBank, ['Haus', SECRET]); // bank is shown by design
+  assert.ok(!JSON.stringify(safe.config.boxes).includes(SECRET));
+  assert.equal(safe.config.inputMode, 'drag');
+});
+
+test('image_boxes: regenerateItemIds re-issues box ids', () => {
+  const item = normalizeItem({
+    id: 'ib8',
+    type: 'image_boxes',
+    config: {
+      image: { assetId: 'a1', alt: '' },
+      boxes: [{ id: 'b1', x: 0, y: 0, w: 0.2, h: 0.2, label: 'x', accepted: ['a'] }],
+    },
+  });
+  const copy = regenerateItemIds(item);
+  assert.notEqual(copy.id, item.id);
+  assert.notEqual(copy.config.boxes[0].id, 'b1');
+  assert.equal(copy.config.boxes[0].accepted[0], 'a');
+});
+
+test('match: legacy string sides normalize to text; media sides keep kind + assetId', () => {
+  assert.deepEqual(normalizeSide('Hallo'), { kind: 'text', text: 'Hallo' });
+  assert.deepEqual(normalizeSide({ kind: 'image', assetId: 'a9', alt: 'Dom' }), { kind: 'image', assetId: 'a9', alt: 'Dom' });
+  assert.deepEqual(normalizeSide({ kind: 'audio', assetId: 'a10' }), { kind: 'audio', assetId: 'a10' });
+  assert.deepEqual(normalizeSide({ kind: 'bogus', text: 'x' }), { kind: 'text', text: 'x' });
+  assert.equal(sideLabel({ kind: 'image', assetId: 'a', alt: '' }, 2), '[Bild 3]');
+  assert.equal(sideLabel({ kind: 'audio', assetId: 'a' }, 0), '[Audio 1]');
+  assert.equal(sideLabel({ kind: 'text', text: 'T' }), 'T');
+
+  const item = normalizeItem({
+    id: 'm1',
+    type: 'match',
+    points: 3,
+    config: {
+      pairs: [
+        { id: 'p1', left: 'Hund', right: { kind: 'image', assetId: 'a1', alt: 'Foto' } },
+        { id: 'p2', left: { kind: 'audio', assetId: 'a2' }, right: 'bellt' },
+      ],
+    },
+  });
+  assert.deepEqual(validateItem(item), []);
+  assert.equal(item.config.pairs[0].left.kind, 'text');
+  assert.equal(item.config.pairs[0].right.kind, 'image');
+  assert.equal(item.config.pairs[1].left.kind, 'audio');
+
+  const noAsset = normalizeItem({
+    id: 'm2',
+    type: 'match',
+    config: { pairs: [{ id: 'p1', left: { kind: 'image', assetId: '', alt: '' }, right: 'x' }, { id: 'p2', left: 'a', right: 'b' }] },
+  });
+  assert.ok(validateItem(noAsset).some((e) => e.includes('assetId')));
+});
+
+test('match: sanitize emits lefts/rights with media kinds and never leaks pair structure', () => {
+  const item = normalizeItem({
+    id: 'm3',
+    type: 'match',
+    points: 2,
+    config: {
+      pairs: [
+        { id: 'p1', left: 'Hund', right: { kind: 'image', assetId: 'a1', alt: 'Foto' } },
+        { id: 'p2', left: { kind: 'audio', assetId: 'a2' }, right: 'bellt' },
+      ],
+    },
+  });
+  const safe = sanitizeItem(item);
+  assert.ok(Array.isArray(safe.config.lefts));
+  assert.ok(Array.isArray(safe.config.rights));
+  assert.deepEqual(safe.config.lefts.map((s) => s.kind), ['text', 'audio']);
+  assert.deepEqual(safe.config.rights.map((s) => s.kind).sort(), ['image', 'text']);
+  // right side is shuffled deterministically per item id
+  const safeAgain = sanitizeItem(item);
+  assert.deepEqual(safeAgain.config.rights, safe.config.rights);
+  // scoring still works on the normalized item
+  const result = scoreItem(item,getType(item.type).normalizeResponse(item, { matches: { p1: 'p1', p2: 'p2' } }));
+  assert.equal(result.correct, true);
+  assert.equal(result.autoScore, 2);
 });

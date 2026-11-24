@@ -146,21 +146,22 @@ Assignment delivery: `POST /api/activities/:id/publish` copies the activity `set
 
 | type | scoreable | meta.label (de) | config |
 | --- | --- | --- | --- |
-| `text` | no | Textblock | `{ "text": "..." }` |
+| `text` | no (yes with `<<gaps>>`) | Textblock | `{ "text": "... <<answer|alt>> ...", "caseSensitive": false, "trim": true, "collapseSpaces": true, "ignorePunctuation": true }` — markdown-lite (`**bold**`, `*italic*`, `- ` lists), tables (`| a | b |` + `| --- |` header), inline images `![alt](/assets/…)`, gaps `<<answer|alternative>>`; ≥1 gap + points>0 ⇒ scoreable |
 | `multiple_choice` | yes | Multiple Choice | `{ "multi": false, "choices": [{"id":"c1","text":"...","correct":true}], "shuffle": false, "partialCredit": true }` |
 | `short_answer` | yes | Kurze Antwort | `{ "accepted": ["antwort", "..."], "caseSensitive": false, "trim": true, "collapseSpaces": true, "ignorePunctuation": true }` |
 | `numeric` | yes | Numerische Antwort | `{ "answer": 3.5, "tolerance": 0.01, "toleranceType": "absolute" \| "percent" }` |
 | `fill_blanks` | yes | Lückentext | `{ "text": "Platten gleiten an {{1}} Grenzen. {{2}} ...", "blanks": { "1": { "accepted": ["transform"] }, "2": { "accepted": ["divergent"] } }, "caseSensitive": false }` |
-| `match` | yes | Zuordnen | `{ "pairs": [{"id":"p1","left":"...","right":"..."}], "shuffle": true }` |
+| `match` | yes | Zuordnen | `{ "pairs": [{"id":"p1","left": side, "right": side}], "shuffle": true }` where `side` = `"text"` (legacy) or `{ "kind": "text", "text": "..." }` \| `{ "kind": "image", "assetId": "...", "alt": "..." }` \| `{ "kind": "audio", "assetId": "..." }` |
 | `ordering` | yes | Reihenfolge | `{ "items": [{"id":"i1","text":"..."}], "mode": "positions" \| "exact" }` |
 | `pins` | yes | Bild markieren | `{ "image": {"assetId": "...", "alt": ""}, "zones": [{"id":"z1","label":"Transform-Rand","x":0.32,"y":0.44,"r":0.05}] }` |
+| `image_boxes` | yes | Kästchen im Bild | `{ "image": {"assetId": "...", "alt": ""}, "boxes": [{"id":"b1","x":0.1,"y":0.1,"w":0.2,"h":0.15,"label":"...","accepted":["..."]}], "inputMode": "type" \| "drag", "wordBank": ["..."], "caseSensitive": false, "trim": true, "collapseSpaces": true, "ignorePunctuation": true }` — box geometry in normalized 0..1 coords; drag mode requires every accepted word ∈ wordBank |
 | `long_answer` | yes (manual) | Freitext | `{ "hints": [{"text":"photosynthese","alternatives":[],"points":1}], "rubric": [{"criterion":"Fachliche Richtigkeit","levels":[{"label":"...","points":0}]}], "minWords": 0, "maxWords": 3000 }` |
 
 **Canonical responses** (what the client sends, stored as-is after `normalizeResponse`):
 
 | type | response |
 | --- | --- |
-| `text` | `{}` |
+| `text` | `{ "gaps": { "g1": "...", "g2": "..." } }` (gap ids `g1..gN` in order of appearance; `{}` when the text has no gaps) |
 | `multiple_choice` | `{ "selected": ["c2"] }` (array; single choice ⇒ length ≤ 1) |
 | `short_answer` | `{ "text": "..." }` |
 | `numeric` | `{ "value": "3,5" }` (raw string; parsed server-side, localized comma/dot accepted) |
@@ -168,6 +169,7 @@ Assignment delivery: `POST /api/activities/:id/publish` copies the activity `set
 | `match` | `{ "matches": { "p1": "p3", "p2": "p1" } }` (leftPairId → rightPairId; right side shown shuffled) |
 | `ordering` | `{ "order": ["i3", "i1", "i2"] }` (all item ids) |
 | `pins` | `{ "points": { "z1": {"x": 0.31, "y": 0.42} } }` (normalized 0..1 coordinates) |
+| `image_boxes` | `{ "answers": { "b1": "...", "b2": "..." } }` (boxId → word; type mode and drag mode share this shape) |
 | `long_answer` | `{ "text": "..." }` |
 
 **Scoring semantics per type:**
@@ -175,10 +177,12 @@ Assignment delivery: `POST /api/activities/:id/publish` copies the activity `set
 - `multiple_choice`: single → full points iff selected id is the unique correct choice. Multi: `partialCredit` true → `clamp((correctSelected - wrongSelected) / correctCount, 0, 1) * points`; false → points only for exact set match. `correct` = full credit. `detail = {selected, correctIds, missingIds, wrongIds}` (teacher-only; NEVER sent to students).
 - `short_answer`: normalize (trim / collapse spaces / optional lowercase / optional punctuation stripping) both response and each accepted value; full points on first match. `detail = {normalized}`.
 - `numeric`: parse localized number (`"1.234,5"`→1234.5, `"3,5"`→3.5, `"4.2e3"`, strip currency symbols/spaces/unit letters). Full points iff `|given-answer| <= tolerance` (percent: `|answer|*tolerance/100`). Unparseable/empty ⇒ 0.
+- `text` (with gaps): per-gap equal weight; gap correct iff normalized response equals one of the gap's accepted alternatives (`<<a|b>>`). `autoScore = round(points * correct/total, 4)`. Without gaps the item is content-only (`maxScore = 0`). `detail = {hit, miss, gaps: {gN: {given, correct}}}`. Sanitized text masks gaps to `<<>>`.
 - `fill_blanks`: per-blank equal weight; blank correct iff normalized response equals one of `accepted` (normalization: trim, collapse spaces, case-insensitive unless `caseSensitive`). Unfilled/missing blank ⇒ wrong. `autoScore = round(points * correct/total, 4)`. `correct` = all blanks.
-- `match`: per-pair equal weight; correct iff `matches[leftId] === leftId`'s own pair id (a pair pairs with itself). Missing/wrong ⇒ 0 for that pair. `correct` = all pairs.
+- `match`: per-pair equal weight; correct iff `matches[leftId] === leftId`'s own pair id (a pair pairs with itself). Missing/wrong ⇒ 0 for that pair. `correct` = all pairs. Sides may be text/image/audio; sanitize emits `{lefts:[{id,...side}], rights:[...]}` (rights seeded-shuffled; server fills `url` from the assets table).
 - `ordering`: `mode:"positions"` → `points * (correctPositions/total)`, all positions correct ⇒ full; `mode:"exact"` → full only or 0. `correct` = full. `detail = {correctPositions, total}`.
 - `pins`: each zone's point correct iff Euclidean distance in normalized coordinates `<= r` (compare on `x`,`y` in 0..1). `points * correct/total`. `correct` = all zones. `detail = {hit:[ids],miss:[ids]}`.
+- `image_boxes`: per-box equal weight; box correct iff normalized response equals one of `box.accepted`. `autoScore = round(points * correct/total, 4)`. `correct` = all boxes. `detail = {hit, miss, boxes: {boxId: {given, correct}}}`. Sanitize keeps geometry+label (+ wordBank in drag mode) but strips `accepted`; `answerZones` returns rects+accepted for review (gated by showAnswers).
 - `long_answer`: `autoScore = min(points, sum(hint.points for matched hints))`, matching is case-insensitive substring of the student text (including `alternatives`); `needsManual = true` **always** (rubric/teacher decision); `correct = false` until a teacher sets a manual score ≥ points. Hints and rubric never reach the student.
 
 **`shared/items/<type>.js` exports** (all pure, importable from browser and Node):
@@ -368,7 +372,7 @@ Uploads in authoring (pins image): `POST /api/assets?filename=...` raw body via 
 - Student token: per-assignment random 24-byte token; only SHA-256 stored; comparisons via `timingSafeEqual`.
 - Rate-limit login (in-memory) and asset uploads (per user, 60/min).
 - No directory traversal in static/asset serving (resolve + prefix check).
-- The student payload omits: all answer keys, `long_answer.hints`, `long_answer.rubric`, `pins.zones[].r`, per-answer `feedback`, and teacher-only data. `sanitizeActivity()` is the only place that strips; do not hand-roll elsewhere.
+- The student payload omits: all answer keys, `long_answer.hints`, `long_answer.rubric`, `pins.zones[].r`, `image_boxes.boxes[].accepted`, text gap answers (masked to `<<>>`), per-answer `feedback`, and teacher-only data. `sanitizeActivity()` is the only place that strips; do not hand-roll elsewhere. Media `url`s (pins image, `image_boxes.image`, match image/audio sides) are enriched from the assets table server-side.
 
 ## 8. Testing & definition of done
 

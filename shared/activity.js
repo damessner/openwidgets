@@ -192,7 +192,7 @@ export function activityStats(definition) {
   let maxScore = 0;
   for (const item of normalized.items) {
     const module = getType(item.type);
-    if (module && isScoreable(module)) {
+    if (module && isScoreable(module, item)) {
       scoreableCount += 1;
       maxScore += Number(item.points) || 0;
     }
@@ -204,8 +204,20 @@ export function activityStats(definition) {
   };
 }
 
-function isScoreable(module) {
-  return !!(module && module.meta && module.meta.scoreable);
+function isScoreable(module, item) {
+  if (!module || !module.meta) return false;
+  if (module.meta.scoreable) return true;
+  // text blocks become scoreable when they contain <<gap>> markers
+  if (module.type === 'text' && item && Number(item.points) > 0) {
+    return String((item.config && item.config.text) || '').includes('<<');
+  }
+  return false;
+}
+
+/** Item-level scoreable check (used by server helpers and the student player). */
+export function itemIsScoreable(item) {
+  const module = item && getType(item.type);
+  return isScoreable(module, item);
 }
 
 /** Palette metadata passthrough (re-exported for convenience). */

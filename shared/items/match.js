@@ -1,5 +1,11 @@
-// Item type: match — pair left items with right options. Correct answer for a
-// pair is its own id, so the pairing never needs to be listed for students.
+// Item type: match — pair left items with right options. Each side can be
+// text, an image or an audio file:
+//   { kind: 'text',  text }
+//   { kind: 'image', assetId, alt }
+//   { kind: 'audio', assetId }
+// Legacy string sides ("left": "Haus") are treated as { kind: 'text', text }.
+// The correct answer for a pair is its own id, so the pairing never needs to
+// be listed for students.
 import { seededShuffle } from '../util.js';
 import {
   asArray,
@@ -20,10 +26,12 @@ export const meta = {
   category: 'assessment',
 };
 
+export const SIDE_KINDS = ['text', 'image', 'audio'];
+
 function defaultPairs() {
   return [
-    { id: 'p1', left: '', right: '' },
-    { id: 'p2', left: '', right: '' },
+    { id: 'p1', left: { kind: 'text', text: '' }, right: { kind: 'text', text: '' } },
+    { id: 'p2', left: { kind: 'text', text: '' }, right: { kind: 'text', text: '' } },
   ];
 }
 
@@ -35,6 +43,27 @@ export function defaultPoints() {
   return 2;
 }
 
+/** Normalize one side: legacy string → text; object → validated kind. */
+export function normalizeSide(raw, fallbackText = '') {
+  if (typeof raw === 'string') return { kind: 'text', text: raw };
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const kind = SIDE_KINDS.includes(src.kind) ? src.kind : 'text';
+  if (kind === 'text') return { kind, text: asString(src.text ?? fallbackText).slice(0, 1000) };
+  return {
+    kind,
+    assetId: asString(src.assetId).trim(),
+    ...(kind === 'image' ? { alt: asString(src.alt).slice(0, 500) } : {}),
+  };
+}
+
+/** Short human label for select options / answer text. */
+export function sideLabel(side, index = 0) {
+  if (!side || typeof side !== 'object') return '';
+  if (side.kind === 'image') return side.alt || `[Bild ${index + 1}]`;
+  if (side.kind === 'audio') return `[Audio ${index + 1}]`;
+  return side.text || '';
+}
+
 function normalizeConfig(rawConfig) {
   const src = rawConfig && typeof rawConfig === 'object' && !Array.isArray(rawConfig) ? rawConfig : {};
   const rawPairs = asArray(src.pairs);
@@ -44,8 +73,8 @@ function normalizeConfig(rawConfig) {
     const p = pair && typeof pair === 'object' ? pair : {};
     return {
       id: uniqueId(p.id, 'p', used, index),
-      left: asString(p.left),
-      right: asString(p.right),
+      left: normalizeSide(p.left),
+      right: normalizeSide(p.right),
     };
   });
   return { pairs, shuffle: asBool(src.shuffle, true) };
@@ -58,6 +87,26 @@ export function normalizeItem(item) {
 
 export function createItem({ id, points } = {}) {
   return normalizeItem({ id, type, points, config: defaultConfig() });
+}
+
+function validateSide(side, path, errors) {
+  if (typeof side === 'string') return; // legacy text side
+  if (!side || typeof side !== 'object' || Array.isArray(side)) {
+    errors.push(`${path}: must be a string or an object`);
+    return;
+  }
+  if (!SIDE_KINDS.includes(side.kind)) {
+    errors.push(`${path}.kind: must be "text", "image" or "audio"`);
+    return;
+  }
+  if (side.kind === 'text') {
+    if (typeof side.text !== 'string') errors.push(`${path}.text: must be a string`);
+    else if (side.text.length > 1000) errors.push(`${path}.text: at most 1000 characters`);
+  } else {
+    if (typeof side.assetId !== 'string' || !side.assetId.trim()) errors.push(`${path}.assetId: an uploaded asset is required`);
+    if (side.kind === 'image' && typeof side.alt !== 'string') errors.push(`${path}.alt: must be a string`);
+    else if (side.kind === 'image' && side.alt && side.alt.length > 500) errors.push(`${path}.alt: at most 500 characters`);
+  }
 }
 
 export function validateItem(item) {
@@ -75,17 +124,11 @@ export function validateItem(item) {
       errors.push(`config.pairs[${index}]: must be an object`);
       return;
     }
-    if (typeof pair.id !== 'string' || !pair.id) {
-      errors.push(`config.pairs[${index}].id: must be a non-empty string`);
-    } else if (ids.has(pair.id)) {
-      errors.push(`config.pairs[${index}].id: duplicate pair id "${pair.id}"`);
-    } else {
-      ids.add(pair.id);
-    }
-    if (typeof pair.left !== 'string') errors.push(`config.pairs[${index}].left: must be a string`);
-    else if (pair.left.length > 1000) errors.push(`config.pairs[${index}].left: at most 1000 characters`);
-    if (typeof pair.right !== 'string') errors.push(`config.pairs[${index}].right: must be a string`);
-    else if (pair.right.length > 1000) errors.push(`config.pairs[${index}].right: at most 1000 characters`);
+    if (typeof pair.id !== 'string' || !pair.id) errors.push(`config.pairs[${index}].id: must be a non-empty string`);
+    else if (ids.has(pair.id)) errors.push(`config.pairs[${index}].id: duplicate pair id "${pair.id}"`);
+    else ids.add(pair.id);
+    validateSide(pair.left, `config.pairs[${index}].left`, errors);
+    validateSide(pair.right, `config.pairs[${index}].right`, errors);
   });
   if (typeof config.shuffle !== 'boolean') errors.push('config.shuffle: must be a boolean');
   return errors;
@@ -137,9 +180,11 @@ export function score(item, response) {
 
 export function sanitizeItem(item) {
   const normalized = normalizeItem(item);
-  const lefts = normalized.config.pairs.map((pair) => ({ id: pair.id, text: pair.left }));
+  // `url` for image/audio sides is filled in by the server API layer from the
+  // assets table (see enrichAssetUrls in server/api/_helpers.js).
+  const lefts = normalized.config.pairs.map((pair) => ({ id: pair.id, ...pair.left }));
   const rights = seededShuffle(
-    normalized.config.pairs.map((pair) => ({ id: pair.id, text: pair.right })),
+    normalized.config.pairs.map((pair) => ({ id: pair.id, ...pair.right })),
     `match-rights:${normalized.id}`,
   );
   return {
@@ -176,10 +221,12 @@ export function answerKey(item) {
 
 export function answerText(item) {
   const normalized = normalizeItem(item);
-  return normalized.config.pairs.map((pair) => `${pair.left} → ${pair.right}`);
+  return normalized.config.pairs.map((pair, index) => `${sideLabel(pair.left, index)} → ${sideLabel(pair.right, index)}`);
 }
 
 export function editSchema() {
+  // The real editor supports media sides (renderMatchEditor in
+  // public/teacher/lib/fields.js); this schema is the fallback.
   return [
     {
       key: 'pairs',
@@ -188,8 +235,8 @@ export function editSchema() {
       min: 2,
       max: 30,
       itemSchema: [
-        { key: 'left', kind: 'text', label: { en: 'Left item', de: 'Linke Seite' } },
-        { key: 'right', kind: 'text', label: { en: 'Matching right item', de: 'Passende rechte Seite' } },
+        { key: 'left', kind: 'text', label: { en: 'Left item (text)', de: 'Linke Seite (Text)' } },
+        { key: 'right', kind: 'text', label: { en: 'Matching right item (text)', de: 'Passende rechte Seite (Text)' } },
       ],
     },
     {
