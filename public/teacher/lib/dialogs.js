@@ -185,3 +185,142 @@ export function openPublishDialog({ activityId, defaultTitle, onPublished } = {}
     titleInput.select();
   });
 }
+
+// ---------------------------------------------------------------------------
+// Login-credential sheets. Plaintext passwords exist only at creation/reset
+// time, so the sheet can be copied or printed right from the dialog — but is
+// never stored or shown again later.
+// ---------------------------------------------------------------------------
+
+export function credentialsCsv(credentials) {
+  const header = 'name;username;password';
+  const rows = credentials
+    .map((c) => [c.name, c.username, c.password].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';'));
+  return ['﻿' + header, ...rows].join('\r\n');
+}
+
+function escHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
+function sheetHtml({ title, subtitle, head, rows, footnote }) {
+  const headCells = head.map((cell) => `<th>${escHtml(cell)}</th>`).join('');
+  const bodyRows = rows
+    .map((row) => `<tr>${row.map((cell) => `<td${cell && cell.mono ? ' class="mono"' : ''}>${escHtml(cell && cell.text !== undefined ? cell.text : cell)}</td>`).join('')}</tr>`)
+    .join('\n');
+  return `<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>${escHtml(title)}</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #17202b; margin: 32px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .subtitle { color: #5b6572; font-size: 13px; margin: 0 0 20px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border: 1px solid #c9d2dd; padding: 8px 12px; text-align: left; }
+  th { background: #eef2f7; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .footnote { color: #5b6572; font-size: 12px; margin-top: 16px; }
+  @media print { body { margin: 0; } }
+</style>
+</head>
+<body>
+<h1>${escHtml(title)}</h1>
+${subtitle ? `<p class="subtitle">${escHtml(subtitle)}</p>` : ''}
+<table>
+<thead><tr>${headCells}</tr></thead>
+<tbody>
+${bodyRows}
+</tbody>
+</table>
+${footnote ? `<p class="footnote">${escHtml(footnote)}</p>` : ''}
+</body>
+</html>`;
+}
+
+/** Opens a self-contained print window and triggers the print dialog. */
+export function printSheet(html) {
+  const win = window.open('', '_blank', 'width=960,height=720');
+  if (!win) {
+    toast(t('teacher.popup_blocked'), 'warning');
+    return false;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { try { win.print(); } catch { /* ignore */ } }, 300);
+  return true;
+}
+
+/** Printable sheet with the initial login credentials (shown only once). */
+export function printCredentialsSheet(credentials, { className = '' } = {}) {
+  return printSheet(sheetHtml({
+    title: t('teacher.roster_credentials_print_title'),
+    subtitle: `${className ? `${className} — ` : ''}${t('teacher.roster_credentials_print_subtitle')}`,
+    head: [t('teacher.roster_name'), t('teacher.roster_username'), t('teacher.roster_password')],
+    rows: credentials.map((c) => [{ text: c.name }, { text: c.username, mono: true }, { text: c.password, mono: true }]),
+    footnote: t('teacher.roster_credentials_note'),
+  }));
+}
+
+/** Printable class roster (names + usernames, no passwords). */
+export function printRosterSheet(className, students) {
+  return printSheet(sheetHtml({
+    title: t('teacher.roster_print_title'),
+    subtitle: className || '',
+    head: [t('teacher.roster_name'), t('teacher.roster_username'), t('teacher.roster_print_login')],
+    rows: students.map((s) => [
+      { text: s.name },
+      { text: s.username || '—', mono: true },
+      { text: s.username ? `${window.location.origin}/` : '—' },
+    ]),
+    footnote: t('teacher.roster_print_note'),
+  }));
+}
+
+/**
+ * Dialog listing freshly generated login credentials with copy (CSV) and
+ * print actions. Used after roster creation and after a password reset.
+ */
+export function openCredentialsDialog(credentials, { className = '' } = {}) {
+  const table = h(
+    'table.roster-cred-table',
+    h('thead', h('tr', h('th', t('teacher.roster_name')), h('th', t('teacher.roster_username')), h('th', t('teacher.roster_password')))),
+    h('tbody', ...credentials.map((c) => h(
+      'tr',
+      h('td', { text: c.name }),
+      h('td', h('span.mono', { text: c.username })),
+      h('td', h('span.mono.strong', { text: c.password })),
+    ))),
+  );
+  const note = h('p.small.muted', t('teacher.roster_credentials_note'));
+  modal({
+    title: t('teacher.roster_credentials_title'),
+    size: 'lg',
+    body: h('div', note, table),
+    actions: [
+      {
+        label: t('teacher.roster_copy_csv'),
+        kind: 'secondary',
+        onClick: async () => {
+          const ok = await copyText(credentialsCsv(credentials));
+          toast(ok ? t('common.copied') : t('teacher.copy_manual'), ok ? 'success' : 'warning');
+          return false; // keep open so the list can be copied/printed again
+        },
+      },
+      {
+        label: t('common.print'),
+        kind: 'secondary',
+        onClick: () => {
+          printCredentialsSheet(credentials, { className });
+          return false;
+        },
+      },
+      { label: t('common.close'), kind: 'primary' },
+    ],
+  });
+}

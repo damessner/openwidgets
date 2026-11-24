@@ -35,6 +35,7 @@ import {
 } from './_helpers.js';
 import {
   classLinkForParticipant,
+  classParticipantByToken,
   classParticipantOfStudent,
   enforceClassUnlock,
   enforceClassUnlockForParticipant,
@@ -189,6 +190,31 @@ export function register(router) {
         throw new HttpError(403, 'class_required', 'This assignment is part of a class — join it through the class link', {
           classCode: seqClasses[0].code,
         });
+      }
+    }
+    if (!classParticipant) {
+      // Free-order classes don't gate the join, but attempts made through the
+      // class lobby (class token) or by a rostered student account should still
+      // be linked to the roster entry — otherwise class statistics would miss
+      // them.
+      const freeClasses = all(
+        `SELECT c.* FROM classes c JOIN class_items ci ON ci.class_id = c.id
+         WHERE ci.assignment_id = ? AND c.status = 'published' AND c.order_mode = 'free'`,
+        assignment.id,
+      );
+      if (freeClasses.length > 0) {
+        const tokenCp = body.classToken ? classParticipantByToken(body.classToken) : null;
+        if (tokenCp && freeClasses.some((cls) => cls.id === tokenCp.class_id)) {
+          classParticipant = tokenCp;
+        } else if (student) {
+          for (const cls of freeClasses) {
+            const cp = classParticipantOfStudent(cls.id, student.id);
+            if (cp) {
+              classParticipant = cp;
+              break;
+            }
+          }
+        }
       }
     }
 

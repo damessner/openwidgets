@@ -1,10 +1,11 @@
 // Teacher view: edit one class — settings (name/order mode/unlock threshold),
 // ordered assignment items, publish (join code + link).
 import { get, post, put, del, errorMessage } from '/lib/api.js';
-import { h, qs, clear, toast, copyText, modal } from '/lib/dom.js';
+import { h, qs, clear, toast, copyText } from '/lib/dom.js';
 import { t } from '/lib/i18n.js';
 import { icon } from '/lib/icons.js';
 import { navigate, statusBadge, templateLabel } from '../lib/core.js';
+import { openCredentialsDialog, printRosterSheet } from '../lib/dialogs.js';
 import { qrSvg } from '/lib/qr.js';
 
 function classUrl(code) {
@@ -44,6 +45,7 @@ export async function mount(root, ctx) {
     assignments = Array.isArray(assignmentsData.assignments) ? assignmentsData.assignments : [];
     roster = Array.isArray(rosterData.students) ? rosterData.students : [];
     itemIds = (cls.items || []).map((item) => item.assignmentId);
+    statsCache = null; // item list may have changed — refetch stats on next render
     ctx.setTitle(cls.name || t('teacher.edit_class'));
     renderAll();
   }
@@ -69,6 +71,7 @@ export async function mount(root, ctx) {
       const data = await put(`/api/classes/${encodeURIComponent(classId)}/items`, { assignmentIds: itemIds });
       cls = data.class;
       itemIds = (cls.items || []).map((item) => item.assignmentId);
+      statsCache = null; // item list changed — refetch stats on next render
       toast(t('teacher.items_saved'), 'success');
       renderAll();
     } catch (error) {
@@ -213,48 +216,19 @@ export async function mount(root, ctx) {
       h('div.row.gap-2.mt-3.wrap',
         available.length > 0
           ? h('div.row.gap-2', select, h('button.btn.btn-secondary', { type: 'button', on: { click: () => { if (select.value) { itemIds = [...itemIds, select.value]; saveItems(); } } } }, h('span', { html: icon('plus', { size: 15 }) }), ' ', t('teacher.add_assignment')))
-          : h('span.small.muted', t('teacher.no_assignments_available')),
+          : h('div.row.gap-2.wrap',
+              h('span.small.muted', t('teacher.no_assignments_available')),
+              h('a.btn.btn-secondary.btn-sm', { href: '/teacher/' }, t('teacher.go_publish_assignment')),
+            ),
       ),
     );
     host.appendChild(itemsCard);
 
     // --- roster card (student accounts) --------------------------------------
     host.appendChild(renderRosterCard());
-  }
 
-  function credentialsCsv(credentials) {
-    const header = 'name;username;password';
-    const rows = credentials.map((c) => [c.name, c.username, c.password].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';'));
-    return ['﻿' + header, ...rows].join('\r\n');
-  }
-
-  function showCredentialsDialog(credentials) {
-    const table = h('table.roster-cred-table',
-      h('thead', h('tr', h('th', t('teacher.roster_name')), h('th', t('teacher.roster_username')), h('th', t('teacher.roster_password')))),
-      h('tbody', ...credentials.map((c) => h('tr',
-        h('td', { text: c.name }),
-        h('td', h('span.mono', { text: c.username })),
-        h('td', h('span.mono.strong', { text: c.password })),
-      ))),
-    );
-    const note = h('p.small.muted', t('teacher.roster_credentials_note'));
-    modal({
-      title: t('teacher.roster_credentials_title'),
-      size: 'lg',
-      body: h('div', note, table),
-      actions: [
-        {
-          label: t('teacher.roster_copy_csv'),
-          kind: 'secondary',
-          onClick: async () => {
-            const ok = await copyText(credentialsCsv(credentials));
-            toast(ok ? t('common.copied') : t('teacher.copy_manual'), ok ? 'success' : 'warning');
-            return false; // keep the dialog open so the list can be copied/printed twice
-          },
-        },
-        { label: t('common.close'), kind: 'primary' },
-      ],
-    });
+    // --- statistics card ------------------------------------------------------
+    host.appendChild(renderStatsCard());
   }
 
   async function addStudents(namesText) {
@@ -262,7 +236,7 @@ export async function mount(root, ctx) {
     if (names.length === 0) return;
     try {
       const data = await post(`/api/classes/${encodeURIComponent(classId)}/students`, { names });
-      if (Array.isArray(data.credentials) && data.credentials.length > 0) showCredentialsDialog(data.credentials);
+      if (Array.isArray(data.credentials) && data.credentials.length > 0) openCredentialsDialog(data.credentials, { className: cls.name });
       else toast(t('teacher.roster_added_existing'), 'success');
       await load();
     } catch (error) {
@@ -273,7 +247,7 @@ export async function mount(root, ctx) {
   async function resetPassword(student) {
     try {
       const data = await post(`/api/classes/${encodeURIComponent(classId)}/students/${encodeURIComponent(student.id)}/reset`);
-      showCredentialsDialog([{ name: student.name, username: data.username, password: data.password }]);
+      openCredentialsDialog([{ name: student.name, username: data.username, password: data.password }], { className: cls.name });
       await load();
     } catch (error) {
       toast(errorMessage(error), 'error');
@@ -292,7 +266,14 @@ export async function mount(root, ctx) {
 
   function renderRosterCard() {
     const card = h('div.card.mt-4');
-    card.appendChild(h('h2.card-title', t('teacher.roster_title')));
+    card.appendChild(h('div.row.between.wrap.gap-2',
+      h('h2.card-title', t('teacher.roster_title')),
+      h('button.btn.btn-secondary.btn-sm', {
+        type: 'button',
+        disabled: roster.length === 0,
+        on: { click: () => printRosterSheet(cls.name, roster) },
+      }, h('span', { html: icon('printer', { size: 15 }) }), ' ', t('teacher.roster_print')),
+    ));
     card.appendChild(h('p.card-subtitle', t('teacher.roster_hint')));
 
     const list = h('ul.item-order-list.roster-list');
@@ -325,6 +306,112 @@ export async function mount(root, ctx) {
       namesInput,
     ));
     card.appendChild(h('div.row.gap-2.mt-2', addBtn));
+    return card;
+  }
+
+  // --- class statistics (students x assignments matrix) ----------------------
+  let statsCache = null;
+  let statsBody = null;
+  let statsLoading = false;
+
+  function statCellClass(percent, state) {
+    if (state === 'locked') return 'stat-locked';
+    if (state !== 'done' || percent === null || percent === undefined) return 'stat-open';
+    if (percent >= 75) return 'stat-good';
+    if (percent >= 40) return 'stat-mid';
+    return 'stat-low';
+  }
+
+  function renderStats() {
+    if (!statsBody || !statsCache) return;
+    clear(statsBody);
+    const items = Array.isArray(statsCache.items) ? statsCache.items : [];
+    const students = Array.isArray(statsCache.students) ? statsCache.students : [];
+    if (items.length === 0) {
+      statsBody.appendChild(h('p.small.muted', t('teacher.stats_no_items')));
+      return;
+    }
+    if (students.length === 0) {
+      statsBody.appendChild(h('p.small.muted', t('teacher.stats_no_students')));
+      return;
+    }
+    statsBody.appendChild(h('div.table-scroll',
+      h('table.class-stats-table',
+        h('thead', h('tr',
+          h('th', t('teacher.stats_student')),
+          ...items.map((item) => h('th',
+            h('div.strong.stats-item-title', { text: `${item.position}. ${item.title}` }),
+            h('div.small.muted.mono', { text: item.code || '' }),
+          )),
+          h('th', t('teacher.stats_total')),
+        )),
+        h('tbody', ...students.map((s) => h('tr',
+          h('th.stats-student-cell',
+            h('div.strong', { text: s.name }),
+            s.username ? h('div.small.muted.mono', { text: s.username }) : null,
+          ),
+          ...items.map((item) => {
+            const cell = (s.cells || {})[item.assignmentId] || null;
+            const clsName = statCellClass(cell && cell.percent, cell && cell.state);
+            const label = !cell
+              ? '–'
+              : cell.state === 'locked'
+                ? t('teacher.stats_locked')
+                : cell.state === 'done' && cell.percent !== null && cell.percent !== undefined
+                  ? `${String(cell.percent).replace('.', ',')}%`
+                  : cell.state === 'done'
+                    ? '✓'
+                    : '–';
+            return h(`td.${clsName}`, {
+              text: label,
+              title: cell && cell.submittedAt ? new Date(cell.submittedAt).toLocaleString() : '',
+            });
+          }),
+          h(`td.${statCellClass(s.total && s.total.percent, s.total && s.total.maxScore > 0 ? 'done' : 'open')}.strong`, {
+            text: s.total && s.total.percent !== null && s.total.percent !== undefined ? `${String(s.total.percent).replace('.', ',')}%` : '–',
+          }),
+        ))),
+      ),
+    ));
+  }
+
+  async function loadStats(force = false) {
+    if (statsLoading) return;
+    if (statsCache && !force) {
+      renderStats();
+      return;
+    }
+    statsLoading = true;
+    if (statsBody) {
+      clear(statsBody);
+      statsBody.appendChild(h('p.small.muted', t('common.loading')));
+    }
+    try {
+      statsCache = await get(`/api/classes/${encodeURIComponent(classId)}/stats`, { signal: ctx.signal });
+      if (disposed) return;
+      renderStats();
+    } catch (error) {
+      if (error && error.name === 'AbortError') return;
+      if (statsBody) {
+        clear(statsBody);
+        statsBody.appendChild(h('p.error-text', errorMessage(error)));
+      }
+    } finally {
+      statsLoading = false;
+    }
+  }
+
+  function renderStatsCard() {
+    const card = h('div.card.mt-4');
+    card.appendChild(h('div.row.between.wrap.gap-2',
+      h('h2.card-title', t('teacher.stats_title')),
+      h('button.btn.btn-secondary.btn-sm', { type: 'button', on: { click: () => loadStats(true) } },
+        h('span', { html: icon('refresh', { size: 15 }) }), ' ', t('teacher.stats_refresh')),
+    ));
+    card.appendChild(h('p.card-subtitle', t('teacher.stats_hint')));
+    statsBody = h('div.mt-2');
+    card.appendChild(statsBody);
+    loadStats();
     return card;
   }
 

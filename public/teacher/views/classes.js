@@ -4,6 +4,7 @@ import { h, qs, clear, toast, confirmDialog, modal, emptyState, copyText } from 
 import { t } from '/lib/i18n.js';
 import { icon } from '/lib/icons.js';
 import { navigate, statusBadge } from '../lib/core.js';
+import { openCredentialsDialog } from '../lib/dialogs.js';
 
 function modeBadge(orderMode) {
   return h(
@@ -20,6 +21,7 @@ function openCreateClassDialog({ onCreated } = {}) {
   return new Promise((resolve) => {
     const nameInput = h('input.input', { type: 'text', maxlength: 120, value: t('teacher.new_class') });
     const descriptionInput = h('textarea.textarea', { maxlength: 2000, rows: 3 });
+    const namesInput = h('textarea.textarea#new-class-names', { rows: 4, placeholder: t('teacher.roster_names_placeholder') });
     const percentInput = h('input.input', { type: 'number', min: '0', max: '100', step: '5', value: '0', style: 'max-width:110px' });
     percentInput.id = 'new-class-percent';
 
@@ -45,6 +47,12 @@ function openCreateClassDialog({ onCreated } = {}) {
       'form',
       h('div.field', h('label.label', { for: 'new-class-name' }, t('teacher.class_name')), nameInput),
       h('div.field', h('label.label', { for: 'new-class-desc' }, t('teacher.class_description')), descriptionInput),
+      h(
+        'div.field',
+        h('label.label', { for: 'new-class-names' }, t('teacher.roster_add_names_optional')),
+        namesInput,
+        h('p.help', { text: t('teacher.roster_names_help') }),
+      ),
       h('div.field', h('label.label', { for: 'new-class-mode' }, t('teacher.class_order_mode')), segmented, help),
       h(
         'div.field',
@@ -76,7 +84,22 @@ function openCreateClassDialog({ onCreated } = {}) {
           unlockMinPercent: Number(percentInput.value) || 0,
         });
         const cls = data && data.class;
-        if (cls) { if (typeof onCreated === 'function') onCreated(cls); close(cls); } else close(null);
+        if (cls) {
+          // Optional: create student accounts right away from the name list.
+          const names = namesInput.value.split('\n').map((line) => line.trim()).filter(Boolean);
+          let credentials = null;
+          if (names.length > 0) {
+            try {
+              const studentData = await post(`/api/classes/${encodeURIComponent(cls.id)}/students`, { names });
+              if (Array.isArray(studentData.credentials) && studentData.credentials.length > 0) credentials = studentData.credentials;
+            } catch { /* roster can be added later in the class view */ }
+          }
+          if (typeof onCreated === 'function') onCreated(cls);
+          close(cls);
+          // Route changes close all open modals (app.js) and only one modal can
+          // be open at a time — show the credentials dialog after both settled.
+          if (credentials) setTimeout(() => openCredentialsDialog(credentials, { className: cls.name }), 400);
+        } else close(null);
       } catch (error) {
         errorBox.textContent = errorMessage(error);
         errorBox.hidden = false;

@@ -4,7 +4,7 @@
 // EventSource(/api/assignments/:id/stream). SSE event shapes: see CONTRACT §5.6.
 // States are never communicated by colour alone: every cell carries an icon,
 // a screen-reader label and a title; a legend explains the symbols.
-import { get, post, patch, del, ApiError, errorMessage } from '/lib/api.js';
+import { get, post, put, patch, del, ApiError, errorMessage } from '/lib/api.js';
 import { h, clear, toast, confirmDialog, copyText } from '/lib/dom.js';
 import { t, formatDateTime, getLocale } from '/lib/i18n.js';
 import { icon } from '/lib/icons.js';
@@ -413,6 +413,7 @@ export async function mount(root, ctx) {
     }
     renderHeader();
     renderShare();
+    renderClasses();
     renderStats();
     renderBoard();
     startStreamOnce();
@@ -559,6 +560,56 @@ export async function mount(root, ctx) {
       shareHost.appendChild(h('p.small.muted.mt-2.mb-0', t('teacher.due_short', { date: formatDateTime(assignment.dueAt) })));
     }
     wrapper.appendChild(shareHost);
+  }
+
+  // --- classes card: add/remove this assignment from classes -----------------
+  let classesCache = null;
+
+  async function renderClasses() {
+    const host = h('div.card.compact.mb-4');
+    host.appendChild(h('h2.card-title', t('teacher.assignment_classes_title')));
+    host.appendChild(h('p.card-subtitle.mb-0', t('teacher.assignment_classes_hint')));
+    const listBox = h('div.row.wrap.gap-2.mt-2');
+    host.appendChild(listBox);
+    wrapper.appendChild(host);
+    if (!classesCache) {
+      listBox.appendChild(h('span.small.muted', t('common.loading')));
+      try {
+        const data = await get('/api/classes');
+        if (disposed) return;
+        classesCache = Array.isArray(data && data.classes) ? data.classes : [];
+      } catch {
+        if (disposed) return;
+        classesCache = [];
+      }
+    }
+    clear(listBox);
+    if (classesCache.length === 0) {
+      listBox.appendChild(h('span.small.muted', t('teacher.assignment_classes_empty')));
+      return;
+    }
+    const assignmentId = state.assignment && state.assignment.id;
+    for (const cls of classesCache) {
+      const checkbox = h('input', { type: 'checkbox', checked: Array.isArray(cls.assignmentIds) && cls.assignmentIds.includes(assignmentId) });
+      const label = h('label.checkbox-row', checkbox, h('span', { text: `${cls.name}${cls.code ? ` (${cls.code})` : ''}` }));
+      checkbox.addEventListener('change', async () => {
+        const want = checkbox.checked;
+        const current = Array.isArray(cls.assignmentIds) ? [...cls.assignmentIds] : [];
+        const next = want ? [...new Set([...current, assignmentId])] : current.filter((id) => id !== assignmentId);
+        checkbox.disabled = true;
+        try {
+          const data = await put(`/api/classes/${encodeURIComponent(cls.id)}/items`, { assignmentIds: next });
+          cls.assignmentIds = ((data && data.class && data.class.items) || []).map((item) => item.assignmentId);
+          toast(want ? t('teacher.assignment_added_to_class', { name: cls.name }) : t('teacher.assignment_removed_from_class', { name: cls.name }), 'success');
+        } catch (error) {
+          checkbox.checked = !want;
+          toast(errorMessage(error), 'error');
+        } finally {
+          checkbox.disabled = false;
+        }
+      });
+      listBox.appendChild(label);
+    }
   }
 
   function renderStats() {

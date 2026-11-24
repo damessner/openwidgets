@@ -995,3 +995,16 @@
 .roster-cred-table thead th { color: var(--text-muted); font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.04em; }
 .roster-list .mono { font-size: 0.85em; }
 
+/* class statistics matrix */
+.table-scroll { overflow-x: auto; }
+.class-stats-table { border-collapse: collapse; width: 100%; font-size: 0.9em; }
+.class-stats-table th, .class-stats-table td { border-bottom: 1px solid var(--border); padding: 7px 10px; text-align: center; }
+.class-stats-table thead th { color: var(--text-muted); font-size: 0.8em; vertical-align: bottom; max-width: 180px; }
+.class-stats-table .stats-item-title { font-size: 1.05em; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+.class-stats-table .stats-student-cell { text-align: left; min-width: 140px; }
+.class-stats-table td.stat-good { background: var(--success-soft); color: var(--success); font-weight: 600; }
+.class-stats-table td.stat-mid { background: var(--warning-soft); color: var(--warning); font-weight: 600; }
+.class-stats-table td.stat-low { background: var(--danger-soft); color: var(--danger); font-weight: 600; }
+.class-stats-table td.stat-open { color: var(--text-muted); }
+.class-stats-table td.stat-locked { color: var(--text-muted); background: var(--surface-3); }
+

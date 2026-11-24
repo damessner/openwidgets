@@ -81,6 +81,9 @@ export function generateClassCode() {
 function classListItem(row) {
   const itemCount = one('SELECT COUNT(*) AS c FROM class_items WHERE class_id = ?', row.id);
   const participantCount = one('SELECT COUNT(*) AS c FROM class_participants WHERE class_id = ?', row.id);
+  const assignmentIds = all('SELECT assignment_id FROM class_items WHERE class_id = ? ORDER BY position ASC', row.id).map(
+    (r) => r.assignment_id,
+  );
   return {
     id: row.id,
     code: row.code,
@@ -91,6 +94,7 @@ function classListItem(row) {
     status: row.status,
     itemCount: itemCount ? itemCount.c : 0,
     participantCount: participantCount ? participantCount.c : 0,
+    assignmentIds,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -639,6 +643,75 @@ export function register(router) {
     if (!cp) throw notFound('student_not_found');
     run('DELETE FROM class_participants WHERE id = ?', cp.id);
     noContent(res);
+  });
+
+  // -------------------------------------------------------------------------
+  // Teacher: class statistics — matrix of roster participants x items
+  // -------------------------------------------------------------------------
+  router.get('/api/classes/:id/stats', async (req, res, params) => {
+    requireUser(req);
+    const row = requireOwnedClass(req, params.id);
+    const items = itemRowsFor(row.id);
+    const itemRows = all('SELECT * FROM class_items WHERE class_id = ? ORDER BY position ASC', row.id);
+    const cps = all(
+      `SELECT cp.id AS cp_id, cp.name AS name, cp.created_at AS added_at, cp.last_seen_at AS last_seen_at,
+              s.id AS student_id, s.username AS username, s.last_login_at AS last_login_at
+       FROM class_participants cp LEFT JOIN students s ON s.id = cp.student_id
+       WHERE cp.class_id = ? ORDER BY lower(cp.name) ASC`,
+      row.id,
+    );
+    const students = cps.map((cp) => {
+      const participantRows = all('SELECT * FROM participants WHERE class_participant_id = ?', cp.cp_id);
+      const submittedAt = new Map(
+        participantRows
+          .filter((p) => p.status === 'submitted' || p.status === 'graded')
+          .map((p) => [p.assignment_id, p.submitted_at || null]),
+      );
+      const states = computeItemStates(row, itemRows, participantRows);
+      const cells = {};
+      let scoreSum = 0;
+      let maxSum = 0;
+      for (const state of states) {
+        const percent = state.maxScore > 0 ? Math.round((state.score / state.maxScore) * 1000) / 10 : null;
+        cells[state.assignmentId] = {
+          state: state.state,
+          status: state.status,
+          score: roundScore(state.score),
+          maxScore: roundScore(state.maxScore),
+          percent,
+          submittedAt: submittedAt.get(state.assignmentId) || null,
+        };
+        if (state.state === 'done') {
+          scoreSum += state.score;
+          maxSum += state.maxScore;
+        }
+      }
+      return {
+        participantId: cp.cp_id,
+        studentId: cp.student_id || null,
+        name: cp.name,
+        username: cp.username || null,
+        hasAccount: !!cp.student_id,
+        lastLoginAt: cp.last_login_at || null,
+        cells,
+        total: {
+          score: roundScore(scoreSum),
+          maxScore: roundScore(maxSum),
+          percent: maxSum > 0 ? Math.round((scoreSum / maxSum) * 1000) / 10 : null,
+        },
+      };
+    });
+    json(res, 200, {
+      class: classListItem(row),
+      items: items.map((item) => ({
+        assignmentId: item.assignment_id,
+        position: Number(item.position),
+        title: item.assignment_title || item.activity_title || '',
+        code: item.assignment_code,
+        status: item.assignment_status,
+      })),
+      students,
+    });
   });
 }
 

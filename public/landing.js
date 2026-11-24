@@ -54,6 +54,9 @@ registerMessages({
     'landing.state_done': 'erledigt',
     'landing.open_class': 'Öffnen',
     'landing.score_label': '{score} / {max} Punkte',
+    'landing.mode_sequence': 'Reihenfolge',
+    'landing.class_progress': 'Fortschritt in {name}',
+    'landing.item_progress': 'Fortschritt: {title}',
   },
   en: {
     'landing.eyebrow': 'Open source · Built for schools',
@@ -105,6 +108,9 @@ registerMessages({
     'landing.state_done': 'done',
     'landing.open_class': 'Open',
     'landing.score_label': '{score} / {max} points',
+    'landing.mode_sequence': 'Sequence',
+    'landing.class_progress': 'Progress in {name}',
+    'landing.item_progress': 'Progress: {title}',
   },
 });
 
@@ -185,23 +191,67 @@ applyI18n(document);
   if (classes.length === 0) {
     card.appendChild(h('p.small.muted.mt-2', t('landing.student_empty')));
   }
+
+  // Progress bar colour: by correctness once the item is done.
+  const progressClass = (item) => {
+    if (item.state === 'locked') return 'is-locked';
+    if (item.state !== 'done') return 'is-open';
+    const pct = item.maxScore > 0 ? (Number(item.score) || 0) / Number(item.maxScore) * 100 : 100;
+    if (pct >= 75) return 'is-good';
+    if (pct >= 40) return 'is-mid';
+    return 'is-low';
+  };
+  const progressWidth = (item) => {
+    if (item.state === 'locked' || item.state === 'open') return 0;
+    if (!item.maxScore) return 100;
+    return Math.max(0, Math.min(100, Math.round(((Number(item.score) || 0) / Number(item.maxScore)) * 100)));
+  };
+
   for (const cls of classes) {
-    const box = h('div.mt-3',
+    const items = Array.isArray(cls.items) ? cls.items : [];
+    const doneItems = items.filter((it) => it.state === 'done');
+    const scoreSum = doneItems.reduce((sum, it) => sum + (Number(it.score) || 0), 0);
+    const maxSum = doneItems.reduce((sum, it) => sum + (Number(it.maxScore) || 0), 0);
+    const classPercent = maxSum > 0 ? Math.round((scoreSum / maxSum) * 100) : doneItems.length > 0 ? 100 : 0;
+    const classBarClass = doneItems.length === 0 ? 'is-open' : classPercent >= 75 ? 'is-good' : classPercent >= 40 ? 'is-mid' : 'is-low';
+    const box = h('div.landing-class.mt-3',
       h('div.row.between.wrap.gap-2',
-        h('div.strong', cls.name || cls.code),
+        h('div.grow.min-w-0',
+          h('div.row.gap-2.wrap',
+            h('div.strong', cls.name || cls.code),
+            cls.orderMode === 'sequence' ? h('span.badge.badge-info', t('landing.mode_sequence')) : null,
+          ),
+          h('div.student-progress', {
+            role: 'progressbar',
+            'aria-valuenow': String(classPercent),
+            'aria-valuemin': '0',
+            'aria-valuemax': '100',
+            'aria-label': t('landing.class_progress', { name: cls.name || cls.code || '' }),
+          }, h(`div.student-progress-bar.${classBarClass}`, { style: `width:${classPercent}%` })),
+        ),
         h('a.btn.btn-secondary.btn-sm', { href: `/c/${encodeURIComponent(String(cls.code || '').toUpperCase())}` }, t('landing.open_class')),
       ),
     );
     const list = h('ul.landing-student-items');
-    for (const item of cls.items || []) {
+    for (const item of items) {
       const stateKey = item.state === 'locked' ? 'landing.state_locked' : item.state === 'passed' || item.state === 'done' ? 'landing.state_done' : 'landing.state_open';
-      list.appendChild(h('li.row.between.wrap.gap-2',
-        h('span', { text: `${item.position}. ${item.title || ''}` }),
-        h('span.row.gap-2',
-          item.maxScore ? h('span.small.muted', t('landing.score_label', { score: item.score || 0, max: item.maxScore })) : null,
-          h('span.badge', { text: t(stateKey) }),
-          item.code ? h('a.btn.btn-primary.btn-sm', { href: `/a/${encodeURIComponent(item.code)}${cls.code ? `?c=${encodeURIComponent(cls.code)}` : ''}` }, t('landing.open_class')) : null,
+      const width = progressWidth(item);
+      list.appendChild(h('li.landing-student-item',
+        h('div.row.between.wrap.gap-2',
+          h('span.grow.min-w-0', { text: `${item.position}. ${item.title || ''}` }),
+          h('span.row.gap-2',
+            item.maxScore ? h('span.small.muted', t('landing.score_label', { score: item.score || 0, max: item.maxScore })) : null,
+            h('span.badge', { text: t(stateKey) }),
+            item.code ? h('a.btn.btn-primary.btn-sm', { href: `/a/${encodeURIComponent(item.code)}${cls.code ? `?c=${encodeURIComponent(cls.code)}` : ''}` }, t('landing.open_class')) : null,
+          ),
         ),
+        h('div.student-progress.sm', {
+          role: 'progressbar',
+          'aria-valuenow': String(width),
+          'aria-valuemin': '0',
+          'aria-valuemax': '100',
+          'aria-label': t('landing.item_progress', { title: item.title || '' }),
+        }, h(`div.student-progress-bar.${progressClass(item)}`, { style: `width:${width}%` })),
       ));
     }
     box.appendChild(list);

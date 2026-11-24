@@ -310,6 +310,18 @@
 }
 
 /* logged-in student panel */
-.landing-student-items { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.landing-student-items { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .landing-student-items .badge { flex-shrink: 0; }
+.landing-student-item { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--border, #dbe2ec); border-radius: var(--radius-sm); background: var(--surface-2, #f8fafc); }
+.landing-class + .landing-class { border-top: 1px dashed var(--border, #dbe2ec); padding-top: 12px; }
+
+/* progress bars — colour encodes correctness, fill encodes done-ness */
+.student-progress { height: 10px; border-radius: 999px; background: var(--surface-3, #e6eaf1); overflow: hidden; margin-top: 8px; }
+.student-progress.sm { height: 7px; margin-top: 0; }
+.student-progress-bar { height: 100%; border-radius: 999px; transition: width 0.35s ease; }
+.student-progress-bar.is-good { background: var(--success); }
+.student-progress-bar.is-mid { background: var(--warning); }
+.student-progress-bar.is-low { background: var(--danger); }
+.student-progress-bar.is-locked { background: repeating-linear-gradient(45deg, #9aa5b5, #9aa5b5 6px, #c3cad6 6px, #c3cad6 12px); }
+.student-progress-bar.is-open { background: transparent; }
 
