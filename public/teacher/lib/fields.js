@@ -1448,6 +1448,820 @@ function renderMatchEditor(container, { item, onChange }) {
 }
 
 // ---------------------------------------------------------------------------
+// hotspot editor (TipToi): image + drawable zones + per-zone feedback/link
+// ---------------------------------------------------------------------------
+
+const IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif';
+const AUDIO_ACCEPT = 'audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/webm';
+
+async function pickAssetFile(file) {
+  const result = await uploadAsset(file);
+  if (result && result.asset) {
+    rememberAssetUrl(result.asset);
+    return result.asset;
+  }
+  return null;
+}
+
+async function pickAssetOrToast(file) {
+  try {
+    return await pickAssetFile(file);
+  } catch (error) {
+    const { toast } = await import('/lib/dom.js');
+    const { errorMessage } = await import('/lib/api.js');
+    toast(errorMessage(error), 'error');
+    return null;
+  }
+}
+
+function zoneEditorStyle(zone) {
+  if (zone.shape === 'circle') {
+    const r = Math.max(0.02, Number(zone.r) || 0.08);
+    return {
+      left: `${(Number(zone.x) - r) * 100}%`,
+      top: `${(Number(zone.y) - r) * 100}%`,
+      width: `${r * 2 * 100}%`,
+      height: `${r * 2 * 100}%`,
+      borderRadius: '50%',
+    };
+  }
+  return {
+    left: `${(Number(zone.x) || 0) * 100}%`,
+    top: `${(Number(zone.y) || 0) * 100}%`,
+    width: `${Math.max(0.02, Number(zone.w) || 0.2) * 100}%`,
+    height: `${Math.max(0.02, Number(zone.h) || 0.15) * 100}%`,
+  };
+}
+
+function renderHotspotEditor(container, { item, onChange }) {
+  const config = item.config;
+  if (!config.image || typeof config.image !== 'object') config.image = { assetId: '', alt: '' };
+  if (!config.prompt || typeof config.prompt !== 'object') config.prompt = { text: '', audioAssetId: '' };
+  if (!Array.isArray(config.zones)) config.zones = [];
+  let selectedZoneId = null;
+
+  const imageHost = h('div.pins-image-wrap');
+  const zonesHost = h('div.hs-zones');
+  const fileInput = h('input', { type: 'file', accept: IMAGE_ACCEPT, class: 'sr-only' });
+  const audioInput = h('input', { type: 'file', accept: AUDIO_ACCEPT, class: 'sr-only' });
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files && fileInput.files[0];
+    fileInput.value = '';
+    if (!file) return;
+    const asset = await pickAssetOrToast(file);
+    if (asset) {
+      config.image = { assetId: asset.id, alt: config.image.alt || asset.filename || '' };
+      renderImage();
+      onChange();
+    }
+  });
+  audioInput.addEventListener('change', async () => {
+    const file = audioInput.files && audioInput.files[0];
+    audioInput.value = '';
+    if (!file) return;
+    const asset = await pickAssetOrToast(file);
+    if (asset) {
+      config.prompt.audioAssetId = asset.id;
+      renderPrompt();
+      onChange();
+    }
+  });
+
+  function renderPrompt() {
+    clear(promptHost);
+    const textId = uid('hs-prompt-text');
+    promptHost.appendChild(h('div.field.field-sm',
+      h('label.label', { for: textId }, t('teacher.hs_prompt_text')),
+      h('input.input', {
+        id: textId,
+        type: 'text',
+        value: config.prompt.text || '',
+        placeholder: t('teacher.hs_prompt_text_ph'),
+        on: { input: (event) => { config.prompt.text = event.target.value; onChange(); } },
+      }),
+    ));
+    const row = h('div.row.gap-2.wrap.align-center');
+    if (config.prompt.audioAssetId) {
+      row.appendChild(h('audio', { controls: true, preload: 'metadata', src: assetUrl(config.prompt.audioAssetId), class: 'match-audio-preview' }));
+      row.appendChild(h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => audioInput.click() } }, t('teacher.pins_replace')));
+      row.appendChild(h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => { config.prompt.audioAssetId = ''; renderPrompt(); onChange(); } } }, t('common.remove')));
+    } else {
+      row.appendChild(h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => audioInput.click() } }, t('teacher.hs_upload_prompt_audio')));
+    }
+    row.appendChild(audioInput);
+    promptHost.appendChild(h('div.field.field-sm', h('label.label', t('teacher.hs_prompt_audio')), row));
+  }
+
+  const promptHost = h('div.hs-prompt');
+  renderPrompt();
+  container.appendChild(promptHost);
+
+  function zoneElFor(id) {
+    return imageHost.querySelector(`[data-zone-id="${CSS.escape(String(id))}"]`);
+  }
+
+  function refreshZone(zone) {
+    const el = zoneElFor(zone.id);
+    if (!el) return;
+    Object.assign(el.style, zoneEditorStyle(zone));
+    el.classList.toggle('is-selected', selectedZoneId === zone.id);
+    el.classList.toggle('is-correct', zone.correct === true);
+    const num = el.querySelector('.hs-edit-zone-num');
+    if (num) num.textContent = String(config.zones.indexOf(zone) + 1);
+  }
+
+  function renderImage() {
+    clear(imageHost);
+    const assetId = config.image && config.image.assetId;
+    if (!assetId) {
+      imageHost.appendChild(h('div.pins-placeholder',
+        h('p.small.muted', t('teacher.pins_no_image')),
+        h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => fileInput.click() } }, t('teacher.pins_upload')),
+        fileInput,
+      ));
+      return;
+    }
+    const image = h('img.pins-image', { src: assetUrl(assetId), alt: config.image.alt || t('teacher.pins_image_alt'), draggable: false });
+    const layer = h('div.pins-layer');
+    for (const zone of config.zones) {
+      const el = h('div.hs-edit-zone', { dataset: { zoneId: String(zone.id) } });
+      el.appendChild(h('span.hs-edit-zone-num', { 'aria-hidden': 'true', text: '?' }));
+      el.addEventListener('pointerdown', (event) => beginZoneDrag(event, zone));
+      el.addEventListener('click', (event) => {
+        event.stopPropagation();
+        selectedZoneId = String(zone.id);
+        config.zones.forEach(refreshZone);
+        renderZones();
+      });
+      layer.appendChild(el);
+      refreshZone(zone);
+    }
+    imageHost.appendChild(h('div.pins-canvas', image, layer));
+    imageHost.appendChild(h('div.row.wrap.gap-2.mt-2',
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => fileInput.click() } }, t('teacher.pins_replace')),
+      h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => { config.image = { assetId: '', alt: config.image.alt || '' }; config.zones = []; renderImage(); renderZones(); onChange(); } } }, t('teacher.pins_remove_image')),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => addZone('rect') } }, t('teacher.hs_add_rect')),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => addZone('circle') } }, t('teacher.hs_add_circle')),
+      fileInput,
+    ));
+    // drag on empty canvas draws a new rectangle
+    imageHost.addEventListener('pointerdown', (event) => {
+      if (!(event.target instanceof Element)) return;
+      if (event.target.closest('.hs-edit-zone, button, input, label, a')) return;
+      const canvas = event.target.closest('.pins-canvas');
+      if (!canvas) return;
+      const img = canvas.querySelector('img');
+      if (!img) return;
+      const rect = img.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const startX = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+      const startY = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+      const ghost = h('div.ib-edit-ghost');
+      canvas.querySelector('.pins-layer').appendChild(ghost);
+      let moved = false;
+      const onMove = (moveEvent) => {
+        moved = true;
+        const x = Math.min(1, Math.max(0, (moveEvent.clientX - rect.left) / rect.width));
+        const y = Math.min(1, Math.max(0, (moveEvent.clientY - rect.top) / rect.height));
+        ghost.style.left = `${Math.min(startX, x) * 100}%`;
+        ghost.style.top = `${Math.min(startY, y) * 100}%`;
+        ghost.style.width = `${Math.abs(x - startX) * 100}%`;
+        ghost.style.height = `${Math.abs(y - startY) * 100}%`;
+      };
+      const onUp = (upEvent) => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
+        ghost.remove();
+        const x = Math.min(1, Math.max(0, (upEvent.clientX - rect.left) / rect.width));
+        const y = Math.min(1, Math.max(0, (upEvent.clientY - rect.top) / rect.height));
+        const w = Math.abs(x - startX);
+        const hh = Math.abs(y - startY);
+        if (moved && w > 0.01 && hh > 0.01) {
+          const zone = {
+            id: nextConfigId(config.zones, 'z'),
+            label: '',
+            shape: 'rect',
+            x: Math.round(Math.min(startX, x) * 1000) / 1000,
+            y: Math.round(Math.min(startY, y) * 1000) / 1000,
+            w: Math.round(Math.max(w, 0.04) * 1000) / 1000,
+            h: Math.round(Math.max(hh, 0.04) * 1000) / 1000,
+            correct: false,
+            feedback: { text: '', imageAssetId: '', audioAssetId: '' },
+            link: { type: 'none', value: '' },
+          };
+          config.zones.push(zone);
+          selectedZoneId = String(zone.id);
+          renderImage();
+          renderZones();
+          onChange();
+        }
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
+    });
+  }
+
+  function addZone(shape) {
+    const zone = {
+      id: nextConfigId(config.zones, 'z'),
+      label: '',
+      shape,
+      x: 0.4,
+      y: 0.4,
+      w: shape === 'rect' ? 0.2 : undefined,
+      h: shape === 'rect' ? 0.15 : undefined,
+      r: shape === 'circle' ? 0.08 : undefined,
+      correct: false,
+      feedback: { text: '', imageAssetId: '', audioAssetId: '' },
+      link: { type: 'none', value: '' },
+    };
+    config.zones.push(zone);
+    selectedZoneId = String(zone.id);
+    renderImage();
+    renderZones();
+    onChange();
+  }
+
+  function beginZoneDrag(event, zone) {
+    event.preventDefault();
+    event.stopPropagation();
+    selectedZoneId = String(zone.id);
+    const canvas = imageHost.querySelector('.pins-canvas');
+    const img = canvas && canvas.querySelector('img');
+    if (!img) return;
+    const rect = img.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const startClientX = event.clientX;
+    const startClientY = event.clientY;
+    const origX = Number(zone.x) || 0;
+    const origY = Number(zone.y) || 0;
+    let moved = false;
+    const onMove = (moveEvent) => {
+      moved = true;
+      const dx = (moveEvent.clientX - startClientX) / rect.width;
+      const dy = (moveEvent.clientY - startClientY) / rect.height;
+      zone.x = Math.min(1, Math.max(0, origX + dx));
+      zone.y = Math.min(1, Math.max(0, origY + dy));
+      refreshZone(zone);
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      if (moved) {
+        zone.x = Math.round(zone.x * 1000) / 1000;
+        zone.y = Math.round(zone.y * 1000) / 1000;
+        config.zones.forEach(refreshZone);
+        onChange();
+      }
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  }
+
+  function renderZones() {
+    clear(zonesHost);
+    zonesHost.appendChild(h('p.help', t('teacher.hs_hint')));
+    config.zones.forEach((zone, index) => {
+      if (!zone.feedback || typeof zone.feedback !== 'object') zone.feedback = { text: '', imageAssetId: '', audioAssetId: '' };
+      if (!zone.link || typeof zone.link !== 'object') zone.link = { type: 'none', value: '' };
+      const card = h('div.list-row.hs-zone-card', { dataset: { zoneId: String(zone.id) } });
+      if (selectedZoneId === String(zone.id)) card.classList.add('is-selected');
+      const head = h('div.list-row-head',
+        h('span.list-index', String(index + 1)),
+        h('button.btn.btn-sm.btn-ghost.ml-auto', {
+          type: 'button',
+          on: {
+            click: () => {
+              if (selectedZoneId === String(zone.id)) selectedZoneId = null;
+              else selectedZoneId = String(zone.id);
+              config.zones.forEach(refreshZone);
+              renderZones();
+            },
+          },
+        }, zone.label || t('teacher.hs_zone_n', { n: index + 1 })),
+        h('button.btn.btn-icon.btn-sm.btn-ghost', {
+          type: 'button',
+          'aria-label': t('common.remove'),
+          title: t('common.remove'),
+          on: {
+            click: () => {
+              config.zones.splice(index, 1);
+              if (selectedZoneId === String(zone.id)) selectedZoneId = null;
+              renderImage();
+              renderZones();
+              onChange();
+            },
+          },
+        }, h('span', { html: '✕' })),
+      );
+      card.appendChild(head);
+      if (selectedZoneId === String(zone.id)) {
+        const labelId = uid('hs-label');
+        const shapeId = uid('hs-shape');
+        const correctId = uid('hs-correct');
+        const fbTextId = uid('hs-fbtext');
+        const linkTypeId = uid('hs-linktype');
+        const linkValueId = uid('hs-linkvalue');
+        const shapeSelect = h('select.select.select-sm', { id: shapeId });
+        for (const [value, key] of [['rect', 'teacher.hs_shape_rect'], ['circle', 'teacher.hs_shape_circle']]) {
+          shapeSelect.appendChild(h('option', { value, selected: zone.shape === value }, t(key)));
+        }
+        shapeSelect.addEventListener('change', () => {
+          zone.shape = shapeSelect.value === 'circle' ? 'circle' : 'rect';
+          if (zone.shape === 'rect') {
+            if (!Number(zone.w)) zone.w = 0.2;
+            if (!Number(zone.h)) zone.h = 0.15;
+            delete zone.r;
+          } else {
+            if (!Number(zone.r)) zone.r = 0.08;
+            delete zone.w;
+            delete zone.h;
+          }
+          renderImage();
+          renderZones();
+          onChange();
+        });
+        const sizeInput = h('input.input.input-sm', {
+          type: 'number',
+          min: '0.02',
+          max: zone.shape === 'circle' ? '0.5' : '1',
+          step: '0.01',
+          value: String(zone.shape === 'circle' ? zone.r : zone.w),
+          style: 'max-width:90px',
+          'aria-label': t('teacher.hs_size'),
+          on: {
+            input: (event) => {
+              const n = Number(event.target.value);
+              if (!Number.isFinite(n)) return;
+              if (zone.shape === 'circle') zone.r = Math.min(0.5, Math.max(0.02, n));
+              else zone.w = Math.min(1, Math.max(0.02, n));
+              refreshZone(zone);
+              onChange();
+            },
+          },
+        });
+        const correctCheck = h('input', { id: correctId, type: 'checkbox' });
+        correctCheck.checked = zone.correct === true;
+        correctCheck.addEventListener('change', () => { zone.correct = correctCheck.checked; refreshZone(zone); onChange(); });
+
+        card.appendChild(h('div.grid.grid-2.gap-2.mt-1',
+          h('div.field.field-sm.mb-0', h('label.label', { for: labelId }, t('teacher.hs_zone_label')),
+            h('input.input', { id: labelId, type: 'text', value: zone.label || '', placeholder: t('teacher.hs_zone_label_ph'), on: { input: (e) => { zone.label = e.target.value; renderZones(); onChange(); } } })),
+          h('div.field.field-sm.mb-0', h('label.label', { for: shapeId }, t('teacher.hs_shape')), h('div.row.gap-2', shapeSelect, sizeInput)),
+        ));
+        card.appendChild(h('div.field.field-sm.mt-2', h('label.label.check-label', { for: correctId }, correctCheck, h('span', { text: t('teacher.hs_correct') }))));
+
+        // feedback
+        card.appendChild(h('div.field.field-sm.mt-2', h('label.label', { for: fbTextId }, t('teacher.hs_feedback_text')),
+          h('textarea.textarea', {
+            id: fbTextId,
+            rows: 2,
+            placeholder: t('teacher.hs_feedback_text_ph'),
+            on: { input: (e) => { zone.feedback.text = e.target.value; onChange(); } },
+          }, zone.feedback.text || ''),
+        ));
+        const fbRow = h('div.row.gap-2.wrap.align-center');
+        const fbImgInput = h('input', { type: 'file', accept: IMAGE_ACCEPT, class: 'sr-only' });
+        const fbAudioInput = h('input', { type: 'file', accept: AUDIO_ACCEPT, class: 'sr-only' });
+        fbImgInput.addEventListener('change', async () => {
+          const file = fbImgInput.files && fbImgInput.files[0];
+          fbImgInput.value = '';
+          if (!file) return;
+          const asset = await pickAssetOrToast(file);
+          if (asset) { zone.feedback.imageAssetId = asset.id; renderZones(); onChange(); }
+        });
+        fbAudioInput.addEventListener('change', async () => {
+          const file = fbAudioInput.files && fbAudioInput.files[0];
+          fbAudioInput.value = '';
+          if (!file) return;
+          const asset = await pickAssetOrToast(file);
+          if (asset) { zone.feedback.audioAssetId = asset.id; renderZones(); onChange(); }
+        });
+        if (zone.feedback.imageAssetId) {
+          fbRow.appendChild(h('img.media-thumb', { src: assetUrl(zone.feedback.imageAssetId), alt: '' }));
+          fbRow.appendChild(h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => { zone.feedback.imageAssetId = ''; renderZones(); onChange(); } } }, t('common.remove')));
+        }
+        fbRow.appendChild(h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => fbImgInput.click() } }, zone.feedback.imageAssetId ? t('teacher.pins_replace') : t('teacher.hs_feedback_image')));
+        fbRow.appendChild(fbImgInput);
+        if (zone.feedback.audioAssetId) {
+          fbRow.appendChild(h('audio', { controls: true, preload: 'metadata', src: assetUrl(zone.feedback.audioAssetId), class: 'match-audio-preview' }));
+          fbRow.appendChild(h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => { zone.feedback.audioAssetId = ''; renderZones(); onChange(); } } }, t('common.remove')));
+        }
+        fbRow.appendChild(h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => fbAudioInput.click() } }, zone.feedback.audioAssetId ? t('teacher.pins_replace') : t('teacher.hs_feedback_audio')));
+        fbRow.appendChild(fbAudioInput);
+        card.appendChild(h('div.field.field-sm.mt-2', h('label.label', t('teacher.hs_feedback_media')), fbRow));
+
+        // link (learning path)
+        const linkTypeSelect = h('select.select.select-sm', { id: linkTypeId });
+        for (const [value, key] of [['none', 'teacher.hs_link_none'], ['assignment', 'teacher.hs_link_assignment'], ['url', 'teacher.hs_link_url']]) {
+          linkTypeSelect.appendChild(h('option', { value, selected: zone.link.type === value }, t(key)));
+        }
+        linkTypeSelect.addEventListener('change', () => { zone.link.type = linkTypeSelect.value; renderZones(); onChange(); });
+        const linkValue = h('input.input.input-sm', {
+          id: linkValueId,
+          type: 'text',
+          value: zone.link.value || '',
+          placeholder: zone.link.type === 'assignment' ? t('teacher.hs_link_assignment_ph') : zone.link.type === 'url' ? t('teacher.hs_link_url_ph') : '',
+          on: { input: (e) => { zone.link.value = e.target.value; onChange(); } },
+        });
+        card.appendChild(h('div.field.field-sm.mt-2', h('label.label', { for: linkTypeId }, t('teacher.hs_link')), h('div.row.gap-2', linkTypeSelect, linkValue)));
+      }
+      zonesHost.appendChild(card);
+    });
+  }
+
+  renderImage();
+  container.appendChild(imageHost);
+  renderZones();
+  container.appendChild(zonesHost);
+}
+
+// ---------------------------------------------------------------------------
+// table editor (fill gaps / matrix choice)
+// ---------------------------------------------------------------------------
+
+function renderTableEditor(container, { item, onChange }) {
+  const config = item.config;
+  if (!['fill', 'choice'].includes(config.mode)) config.mode = 'fill';
+  if (typeof config.multi !== 'boolean') config.multi = false;
+  if (!Array.isArray(config.columns) || config.columns.length === 0) config.columns = [{ id: nextConfigId([], 'c'), label: '' }];
+  if (!Array.isArray(config.rows) || config.rows.length === 0) config.rows = [{ id: nextConfigId([], 'r'), label: '', cells: {} }];
+  for (const row of config.rows) {
+    if (!row.cells || typeof row.cells !== 'object' || Array.isArray(row.cells)) row.cells = {};
+    for (const col of config.columns) {
+      if (!row.cells[col.id] || typeof row.cells[col.id] !== 'object') row.cells[col.id] = { kind: 'static', text: '', answers: [], correct: false };
+    }
+  }
+
+  function rerender() {
+    clear(host);
+    const modeId = uid('tbl-mode');
+    const multiId = uid('tbl-multi');
+    const modeSelect = h('select.select.select-sm', { id: modeId });
+    modeSelect.appendChild(h('option', { value: 'fill', selected: config.mode === 'fill' }, t('teacher.tbl_mode_fill')));
+    modeSelect.appendChild(h('option', { value: 'choice', selected: config.mode === 'choice' }, t('teacher.tbl_mode_choice')));
+    modeSelect.addEventListener('change', () => { config.mode = modeSelect.value; if (config.mode !== 'choice') config.multi = false; rerender(); onChange(); });
+    const multiCheck = h('input', { id: multiId, type: 'checkbox' });
+    multiCheck.checked = config.multi === true;
+    multiCheck.addEventListener('change', () => { config.multi = multiCheck.checked; onChange(); });
+    host.appendChild(h('div.row.gap-3.wrap.align-center.mb-2',
+      h('div.field.field-sm.mb-0', h('label.label', { for: modeId }, t('teacher.tbl_mode')), modeSelect),
+      config.mode === 'choice' ? h('label.label.check-label', { for: multiId }, multiCheck, h('span', { text: t('teacher.tbl_multi') })) : null,
+    ));
+
+    // columns
+    host.appendChild(h('div.row.between.wrap.gap-2',
+      h('span.label', t('teacher.tbl_columns')),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', disabled: config.columns.length >= 12, on: { click: () => { config.columns.push({ id: nextConfigId(config.columns, 'c'), label: '' }); rerender(); onChange(); } } }, t('teacher.tbl_add_column')),
+    ));
+    const colRow = h('div.row.gap-2.wrap');
+    config.columns.forEach((col, index) => {
+      colRow.appendChild(h('div.row.gap-1.align-center',
+        h('input.input.input-sm', {
+          type: 'text',
+          value: col.label || '',
+          placeholder: t('teacher.tbl_col_ph', { n: index + 1 }),
+          style: 'max-width:180px',
+          on: { input: (e) => { col.label = e.target.value; onChange(); } },
+        }),
+        h('button.btn.btn-icon.btn-sm.btn-ghost', {
+          type: 'button',
+          'aria-label': t('common.remove'),
+          disabled: config.columns.length <= 1,
+          on: { click: () => { config.columns.splice(index, 1); for (const row of config.rows) delete row.cells[col.id]; rerender(); onChange(); } },
+        }, h('span', { html: '✕' })),
+      ));
+    });
+    host.appendChild(colRow);
+
+    // grid
+    host.appendChild(h('div.row.between.wrap.gap-2.mt-3',
+      h('span.label', t('teacher.tbl_rows')),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', disabled: config.rows.length >= 30, on: { click: () => {
+        const row = { id: nextConfigId(config.rows, 'r'), label: '', cells: {} };
+        for (const col of config.columns) row.cells[col.id] = { kind: config.mode === 'choice' ? 'option' : 'gap', text: '', answers: [], correct: false };
+        config.rows.push(row);
+        rerender();
+        onChange();
+      } } }, t('teacher.tbl_add_row')),
+    ));
+    const table = h('table.tbl-editor-table');
+    const thead = h('thead');
+    const headRow = h('tr', h('th', { text: '' }));
+    config.columns.forEach((col) => headRow.appendChild(h('th', { text: col.label || col.id })));
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = h('tbody');
+    config.rows.forEach((row, rowIndex) => {
+      const tr = h('tr');
+      const labelCell = h('th.tbl-row-head',
+        h('input.input.input-sm', {
+          type: 'text',
+          value: row.label || '',
+          placeholder: t('teacher.tbl_row_ph', { n: rowIndex + 1 }),
+          on: { input: (e) => { row.label = e.target.value; onChange(); } },
+        }),
+        h('button.btn.btn-icon.btn-sm.btn-ghost', {
+          type: 'button',
+          'aria-label': t('common.remove'),
+          disabled: config.rows.length <= 1,
+          on: { click: () => { config.rows.splice(rowIndex, 1); rerender(); onChange(); } },
+        }, h('span', { html: '✕' })),
+      );
+      tr.appendChild(labelCell);
+      for (const col of config.columns) {
+        const cell = row.cells[col.id];
+        const td = h('td.tbl-cell');
+        const kindSelect = h('select.select.select-sm.tbl-kind', { 'aria-label': t('teacher.tbl_cell_kind') });
+        for (const [value, key] of [['static', 'teacher.tbl_kind_static'], ['gap', 'teacher.tbl_kind_gap'], ['option', 'teacher.tbl_kind_option']]) {
+          kindSelect.appendChild(h('option', { value, selected: cell.kind === value }, t(key)));
+        }
+        kindSelect.addEventListener('change', () => {
+          cell.kind = kindSelect.value;
+          if (cell.kind === 'gap' && !Array.isArray(cell.answers)) cell.answers = [];
+          rerender();
+          onChange();
+        });
+        td.appendChild(kindSelect);
+        if (cell.kind === 'static') {
+          td.appendChild(h('input.input.input-sm.tbl-cell-input', {
+            type: 'text',
+            value: cell.text || '',
+            placeholder: t('teacher.tbl_static_ph'),
+            on: { input: (e) => { cell.text = e.target.value; onChange(); } },
+          }));
+        } else if (cell.kind === 'gap') {
+          td.appendChild(h('textarea.textarea.tbl-cell-input', {
+            rows: 2,
+            placeholder: t('teacher.tbl_answers_ph'),
+            on: { input: (e) => { cell.answers = e.target.value.split('\n').map((v) => v.trim()).filter(Boolean); onChange(); } },
+          }, (cell.answers || []).join('\n')));
+        } else {
+          const cid = uid('tbl-correct');
+          const check = h('input', { id: cid, type: 'checkbox' });
+          check.checked = cell.correct === true;
+          check.addEventListener('change', () => { cell.correct = check.checked; onChange(); });
+          td.appendChild(h('label.label.check-label', { for: cid }, check, h('span', { text: t('teacher.tbl_correct') })));
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    host.appendChild(h('div.table-scroll.mt-2', table));
+  }
+
+  const host = h('div.tbl-editor');
+  rerender();
+  container.appendChild(host);
+}
+
+// ---------------------------------------------------------------------------
+// groups editor (drag & drop into zones)
+// ---------------------------------------------------------------------------
+
+function renderGroupsEditor(container, { item, onChange }) {
+  const config = item.config;
+  if (!Array.isArray(config.zones) || config.zones.length === 0) config.zones = [{ id: nextConfigId([], 'z'), label: '' }];
+  if (!Array.isArray(config.items)) config.items = [];
+  if (typeof config.shuffle !== 'boolean') config.shuffle = true;
+  for (const entry of config.items) {
+    if (typeof entry.side === 'string') entry.side = { kind: 'text', text: entry.side };
+    if (!entry.side || typeof entry.side !== 'object') entry.side = { kind: 'text', text: '' };
+    if (!config.zones.some((z) => z.id === entry.zoneId)) entry.zoneId = config.zones[0].id;
+  }
+
+  function sideEditor(entry, index) {
+    const side = entry.side;
+    const wrap = h('div.match-side');
+    const kindSelect = h('select.select.select-sm');
+    for (const [value, key] of [['text', 'teacher.match_kind_text'], ['image', 'teacher.match_kind_image'], ['audio', 'teacher.match_kind_audio']]) {
+      kindSelect.appendChild(h('option', { value, selected: side.kind === value }, t(key)));
+    }
+    kindSelect.addEventListener('change', () => {
+      const kind = kindSelect.value;
+      entry.side = kind === 'text' ? { kind, text: side.text || '' } : { kind, assetId: '', ...(kind === 'image' ? { alt: '' } : {}) };
+      rerender();
+      onChange();
+    });
+    const body = h('div.match-side-body');
+    if (side.kind !== 'image' && side.kind !== 'audio') {
+      body.appendChild(h('input.input', {
+        type: 'text',
+        value: side.text || '',
+        placeholder: t('teacher.grp_item_text_ph'),
+        on: { input: (e) => { entry.side = { kind: 'text', text: e.target.value }; onChange(); } },
+      }));
+    } else {
+      const fileInput = h('input', { type: 'file', accept: side.kind === 'image' ? IMAGE_ACCEPT : AUDIO_ACCEPT, class: 'sr-only' });
+      fileInput.addEventListener('change', async () => {
+        const file = fileInput.files && fileInput.files[0];
+        fileInput.value = '';
+        if (!file) return;
+        const asset = await pickAssetOrToast(file);
+        if (asset) {
+          entry.side = side.kind === 'image' ? { kind: 'image', assetId: asset.id, alt: side.alt || asset.filename || '' } : { kind: 'audio', assetId: asset.id };
+          rerender();
+          onChange();
+        }
+      });
+      if (side.assetId) {
+        if (side.kind === 'image') body.appendChild(h('img.media-thumb', { src: assetUrl(side.assetId), alt: side.alt || '' }));
+        else body.appendChild(h('audio', { controls: true, preload: 'metadata', src: assetUrl(side.assetId), class: 'match-audio-preview' }));
+        body.appendChild(h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => { entry.side = { kind: side.kind, assetId: '', ...(side.kind === 'image' ? { alt: '' } : {}) }; rerender(); onChange(); } } }, t('common.remove')));
+      }
+      body.appendChild(h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => fileInput.click() } }, side.assetId ? t('teacher.pins_replace') : (side.kind === 'image' ? t('teacher.pins_upload') : t('teacher.upload_audio'))));
+      body.appendChild(fileInput);
+    }
+    wrap.appendChild(kindSelect);
+    wrap.appendChild(body);
+    return wrap;
+  }
+
+  function rerender() {
+    clear(host);
+    // zones
+    host.appendChild(h('div.row.between.wrap.gap-2',
+      h('span.label', t('teacher.grp_zones')),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', disabled: config.zones.length >= 12, on: { click: () => { config.zones.push({ id: nextConfigId(config.zones, 'z'), label: '' }); rerender(); onChange(); } } }, t('teacher.grp_add_zone')),
+    ));
+    const zoneRow = h('div.row.gap-2.wrap');
+    config.zones.forEach((zone, index) => {
+      zoneRow.appendChild(h('div.row.gap-1.align-center',
+        h('input.input.input-sm', {
+          type: 'text',
+          value: zone.label || '',
+          placeholder: t('teacher.grp_zone_ph', { n: index + 1 }),
+          style: 'max-width:200px',
+          on: { input: (e) => { zone.label = e.target.value; onChange(); } },
+        }),
+        h('button.btn.btn-icon.btn-sm.btn-ghost', {
+          type: 'button',
+          'aria-label': t('common.remove'),
+          disabled: config.zones.length <= 1,
+          on: {
+            click: () => {
+              config.zones.splice(index, 1);
+              for (const entry of config.items) if (entry.zoneId === zone.id) entry.zoneId = config.zones[0].id;
+              rerender();
+              onChange();
+            },
+          },
+        }, h('span', { html: '✕' })),
+      ));
+    });
+    host.appendChild(zoneRow);
+
+    // shuffle
+    const shuffleId = uid('grp-shuffle');
+    const shuffle = h('input', { id: shuffleId, type: 'checkbox' });
+    shuffle.checked = config.shuffle === true;
+    shuffle.addEventListener('change', () => { config.shuffle = shuffle.checked; onChange(); });
+    host.appendChild(h('div.field.field-sm.mt-2', h('label.label.check-label', { for: shuffleId }, shuffle, h('span', { text: t('teacher.shuffle_right') }))));
+
+    // items
+    host.appendChild(h('div.row.between.wrap.gap-2.mt-3',
+      h('span.label', t('teacher.grp_items')),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', disabled: config.items.length >= 40, on: { click: () => { config.items.push({ id: nextConfigId(config.items, 'i'), side: { kind: 'text', text: '' }, zoneId: config.zones[0].id }); rerender(); onChange(); } } }, t('teacher.grp_add_item')),
+    ));
+    config.items.forEach((entry, index) => {
+      const zoneSelect = h('select.select.select-sm', { 'aria-label': t('teacher.grp_correct_zone') });
+      for (const zone of config.zones) zoneSelect.appendChild(h('option', { value: String(zone.id), selected: entry.zoneId === zone.id }, zone.label || zone.id));
+      zoneSelect.addEventListener('change', () => { entry.zoneId = zoneSelect.value; onChange(); });
+      const row = h('div.list-row.grp-item-row',
+        h('div.list-row-head',
+          h('span.list-index', String(index + 1)),
+          h('div.row.gap-2.ml-auto.align-center',
+            h('span.small.muted', t('teacher.grp_correct_zone')),
+            zoneSelect,
+            h('button.btn.btn-icon.btn-sm.btn-ghost', {
+              type: 'button',
+              'aria-label': t('common.remove'),
+              title: t('common.remove'),
+              on: { click: () => { config.items.splice(index, 1); rerender(); onChange(); } },
+            }, h('span', { html: '✕' })),
+          ),
+        ),
+        sideEditor(entry, index),
+      );
+      host.appendChild(row);
+    });
+    if (config.items.length === 0) host.appendChild(h('p.help', t('teacher.list_empty')));
+  }
+
+  const host = h('div.grp-editor');
+  rerender();
+  container.appendChild(host);
+}
+
+// ---------------------------------------------------------------------------
+// mark_sentence editor (word chips)
+// ---------------------------------------------------------------------------
+
+function renderMarkSentenceEditor(container, { item, onChange }) {
+  const config = item.config;
+  if (!['mark', 'correct'].includes(config.mode)) config.mode = 'mark';
+  if (!Array.isArray(config.words)) config.words = [];
+
+  function rerender() {
+    clear(host);
+    const modeId = uid('ms-mode');
+    const modeSelect = h('select.select.select-sm', { id: modeId });
+    modeSelect.appendChild(h('option', { value: 'mark', selected: config.mode === 'mark' }, t('teacher.ms_mode_mark')));
+    modeSelect.appendChild(h('option', { value: 'correct', selected: config.mode === 'correct' }, t('teacher.ms_mode_correct')));
+    modeSelect.addEventListener('change', () => { config.mode = modeSelect.value; rerender(); onChange(); });
+    host.appendChild(h('div.field.field-sm', h('label.label', { for: modeId }, t('teacher.ms_mode')), modeSelect));
+
+    // sentence input + take-words
+    const textId = uid('ms-text');
+    const currentSentence = config.words.map((w) => w.text).join(' ');
+    const textarea = h('textarea.textarea', { id: textId, rows: 2 });
+    textarea.value = currentSentence;
+    const takeBtn = h('button.btn.btn-sm.btn-secondary', { type: 'button' }, t('teacher.ms_take_words'));
+    takeBtn.addEventListener('click', () => {
+      const parts = textarea.value.split(/\s+/).filter(Boolean).slice(0, 120);
+      const old = config.words || [];
+      config.words = parts.map((text, index) => {
+        const prev = old[index] && old[index].text === text ? old[index] : null;
+        return { text, target: prev ? prev.target : 'none', fix: prev && prev.target === 'wrong' ? prev.fix || '' : '' };
+      });
+      rerender();
+      onChange();
+    });
+    host.appendChild(h('div.field.field-sm', h('label.label', { for: textId }, t('teacher.ms_sentence')), textarea));
+    host.appendChild(h('div.row.gap-2.mt-1', takeBtn));
+
+    // chips
+    host.appendChild(h('div.row.wrap.gap-2.mt-2',
+      ...config.words.map((word, index) => {
+        const chip = h('span.ms-chip', { dataset: { target: word.target } },
+          h('button.btn.btn-sm.btn-ghost.ms-chip-word', {
+            type: 'button',
+            title: t(`teacher.ms_target_${word.target}`),
+            'aria-pressed': word.target !== 'none' ? 'true' : 'false',
+            on: {
+              click: () => {
+                const cycle = config.mode === 'mark' ? ['none', 'mark'] : ['none', 'wrong'];
+                const next = cycle[(cycle.indexOf(word.target) + 1) % cycle.length];
+                word.target = next;
+                if (next !== 'wrong') word.fix = '';
+                rerender();
+                onChange();
+              },
+            },
+          }, word.text),
+          h('button.btn.btn-icon.btn-sm.btn-ghost', {
+            type: 'button',
+            'aria-label': t('common.remove'),
+            on: { click: () => { config.words.splice(index, 1); rerender(); onChange(); } },
+          }, h('span', { html: '✕' })),
+        );
+        if (config.mode === 'correct' && word.target === 'wrong') {
+          chip.appendChild(h('input.input.input-sm.ms-fix-input', {
+            type: 'text',
+            value: word.fix || '',
+            placeholder: t('teacher.ms_fix_ph'),
+            'aria-label': t('teacher.ms_fix_label', { word: word.text }),
+            on: { input: (e) => { word.fix = e.target.value; onChange(); } },
+          }));
+        }
+        return chip;
+      }),
+    ));
+    if (config.words.length === 0) host.appendChild(h('p.help', t('teacher.ms_empty')));
+
+    // add word
+    const wordId = uid('ms-newword');
+    const wordInput = h('input.input.input-sm', { id: wordId, type: 'text', placeholder: t('teacher.ms_word_ph'), style: 'max-width:200px' });
+    host.appendChild(h('div.row.gap-2.mt-2.align-center',
+      h('label.label.mb-0', { for: wordId }, t('teacher.ms_add_word')),
+      wordInput,
+      h('button.btn.btn-sm.btn-secondary', {
+        type: 'button',
+        on: {
+          click: () => {
+            const text = wordInput.value.trim();
+            if (!text) return;
+            config.words.push({ text: text.slice(0, 200), target: 'none', fix: '' });
+            rerender();
+            onChange();
+          },
+        },
+      }, t('teacher.list_add')),
+    ));
+  }
+
+  const host = h('div.ms-editor');
+  rerender();
+  container.appendChild(host);
+}
+
+// ---------------------------------------------------------------------------
 // Public entry point
 // ---------------------------------------------------------------------------
 
@@ -1478,6 +2292,22 @@ export function renderConfigForm(container, { item, schema, onChange }) {
   }
   if (item.type === 'text') {
     renderTextEditor(container, { item, onChange: change });
+    return;
+  }
+  if (item.type === 'hotspot') {
+    renderHotspotEditor(container, { item, onChange: change });
+    return;
+  }
+  if (item.type === 'table') {
+    renderTableEditor(container, { item, onChange: change });
+    return;
+  }
+  if (item.type === 'groups') {
+    renderGroupsEditor(container, { item, onChange: change });
+    return;
+  }
+  if (item.type === 'mark_sentence') {
+    renderMarkSentenceEditor(container, { item, onChange: change });
     return;
   }
 

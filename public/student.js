@@ -43,6 +43,7 @@ import {
   getClassName,
   setClassName,
   classHeaders,
+  uploadParticipantAsset,
 } from './lib/api.js';
 import { icon } from './lib/icons.js';
 import { mountItem, getRenderer } from './render/index.js';
@@ -1453,6 +1454,10 @@ function createItemCard(item, index, options = {}) {
     answerText: mode === 'review' && state.showAnswers ? (storedResult && storedResult.answerText) || null : null,
     reviewZones: mode === 'review' && state.showAnswers ? (storedResult && storedResult.zones) || null : null,
     result: ctxResult,
+    // audio_answer renderer uploads recordings through this callback
+    uploadAudio: state.token
+      ? (blob, mime) => uploadParticipantAsset(blob, state.token, `aufnahme.${String(mime || 'audio/webm').split('/')[1]?.split(';')[0] || 'webm'}`)
+      : undefined,
   });
 
   const view = {

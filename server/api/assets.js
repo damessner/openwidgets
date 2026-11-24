@@ -7,6 +7,8 @@ import { pipeline } from 'node:stream/promises';
 import { config } from '../config.js';
 import { now, one, run, uid } from '../db.js';
 import { requireUser } from '../lib/auth.js';
+import { getStudent } from '../lib/students.js';
+import { tokenHash } from './_helpers.js';
 import {
   assertSameOrigin,
   badRequest,
@@ -17,6 +19,7 @@ import {
   rateLimited,
   readRaw,
   safeJoin,
+  unauthorized,
 } from '../lib/http.js';
 
 // Allowlist from the contract. A few common browser aliases are mapped onto the
@@ -120,6 +123,67 @@ export function register(router) {
       'INSERT INTO assets (id, owner_id, filename, mime, size, sha256, created_at) VALUES (?,?,?,?,?,?,?)',
       id,
       user.id,
+      filename,
+      mime,
+      bytes.length,
+      sha256,
+      now(),
+    );
+    json(res, 201, { asset: assetJson(one('SELECT * FROM assets WHERE id = ?', id)) });
+  });
+
+  // -------------------------------------------------------------------------
+  // Participant upload (student audio answers): participant token header or
+  // student session. Audio only, smaller cap, rate limited per participant.
+  // owner_id stays NULL for anonymous participants (admin can delete those).
+  // -------------------------------------------------------------------------
+  const PARTICIPANT_AUDIO_LIMIT_PER_MINUTE = 20;
+  const PARTICIPANT_UPLOAD_MAX_BYTES = 15 * 1024 * 1024;
+  const participantUploadWindows = new Map();
+
+  function assertParticipantUploadAllowed(key) {
+    const nowMs = Date.now();
+    const entry = participantUploadWindows.get(key);
+    if (!entry || entry.resetAt < nowMs) {
+      participantUploadWindows.set(key, { count: 1, resetAt: nowMs + 60000 });
+      return;
+    }
+    if (entry.count >= PARTICIPANT_AUDIO_LIMIT_PER_MINUTE) throw rateLimited();
+    entry.count += 1;
+  }
+
+  router.post('/api/participant/assets', async (req, res, params, url) => {
+    assertSameOrigin(req);
+    const header = req.headers['x-participant-token'];
+    const token = Array.isArray(header) ? header[0] : header;
+    const participant =
+      typeof token === 'string' && token.trim().length >= 16
+        ? one('SELECT * FROM participants WHERE token_hash = ?', tokenHash(token.trim()))
+        : null;
+    const student = getStudent(req);
+    if (!participant && !student) throw unauthorized('Authentication required');
+    assertParticipantUploadAllowed(participant ? `p:${participant.id}` : `s:${student.id}`);
+
+    const mime = normalizeMime(req);
+    if (!mime.startsWith('audio/')) {
+      throw badRequest('unsupported_type', 'Participant uploads are limited to audio recordings (MP3, M4A, OGG, WAV, WebM).');
+    }
+    const requested = url && url.searchParams ? url.searchParams.get('filename') : '';
+    const ext = mime === 'audio/webm' ? 'webm' : mime === 'audio/ogg' ? 'ogg' : mime === 'audio/wav' ? 'wav' : mime === 'audio/mpeg' ? 'mp3' : 'm4a';
+    const filename = sanitizeFilename(requested || `aufnahme-${Date.now()}.${ext}`);
+
+    const bytes = await readRaw(req, Math.min(config.maxUploadBytes, PARTICIPANT_UPLOAD_MAX_BYTES));
+    if (!bytes || bytes.length === 0) throw badRequest('empty_file', 'The uploaded file is empty');
+
+    const id = uid();
+    const target = assetFile(id);
+    if (!target) throw badRequest('invalid_asset', 'Could not store the asset');
+    await fs.promises.writeFile(target, bytes);
+    const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
+    run(
+      'INSERT INTO assets (id, owner_id, filename, mime, size, sha256, created_at) VALUES (?,?,?,?,?,?,?)',
+      id,
+      student ? student.id : null,
       filename,
       mime,
       bytes.length,

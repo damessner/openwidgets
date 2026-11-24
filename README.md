@@ -78,7 +78,7 @@ join codes. Safe to run repeatedly; it only creates new activities.
 
 - **Dashboard** — create, duplicate, delete, import and export activities; list and manage assignments.
 - **Authoring editor** — declarative block editor with live preview, per-type forms generated from item metadata, autosave, and optimistic-concurrency conflict detection.
-- **10 item types** with deterministic auto-grading (see table below).
+- **15 item types** with deterministic auto-grading (see table below).
 - **Publish** — creates an assignment with a 6-character join code and URL (printable, copyable, iframe-embeddable).
 - **Classes (Lernpfade)** — bundle assignments into a class with its own join link (`/c/<CODE>`, also as QR code). Choose **free order** (everything open) or **fixed sequence** where each worksheet unlocks the next once the previous one is submitted — optionally requiring a minimum score percent. Students join the class with just a name and see a lobby with locked/open/done states. Assignments can be added to/removed from classes directly from the assignment page ("In Klassen").
 - **Class statistics** — per class, a matrix of students × assignments with score percentages (color-coded), including locked/open/done states and per-student totals.
@@ -98,6 +98,7 @@ join codes. Safe to run repeatedly; it only creates new activities.
 - Worksheet (single scroll) or Quiz (one question per screen) layouts.
 - Responsive, touch-friendly, keyboard-operable — tablets, Chromebooks, phones, desktops.
 - Autosave per answer + offline retry queue (answers survive a dropped Wi-Fi connection and are re-sent when it returns; grading happens on the server).
+- Audio answers — record straight from the browser microphone (no upload needed); the recording is stored as a server asset and played back in the teacher's grading view.
 - Instant feedback per question (optional), question starring, text-to-speech, font-size control.
 - Result and review screen after submit — visibility controlled by the teacher (`showResults`, `allowReview`, `showAnswers`).
 
@@ -114,6 +115,11 @@ join codes. Safe to run repeatedly; it only creates new activities.
 | Ordering | ✅ | Up/down buttons (no drag required); exact or per-position credit |
 | Image pins | ✅ | Click targets on an uploaded image, tolerance radius |
 | Label boxes on image | ✅ | Draw editable rectangles on an image (paste with Ctrl+V); students type the word into each box or drag words from a word bank; partial credit per box |
+| Hotspot image (TipToi) | ✅ | Tap regions drawn on an image (rect/circle). Optional audio prompt ("tippe den Vogel an"); per-zone feedback popup (text/image/audio) and optional link to the next assignment (learning path) or a URL. Zones flagged `correct` are the answer key and never reach the student |
+| Table (fill / matrix) | ✅ | Fill gap cells (accepted answers, normalization like short answer) or pick option cells per row (single or multi); partial credit per cell/row |
+| Group into zones (drag & drop) | ✅ | Drag items (text, image or audio) into zones; each item has one correct zone; partial credit per item |
+| Mark sentence | ✅ | Mark words in a sentence, or strike wrong words and type the correction; partial credit per word |
+| Audio answer (record) | Manual | Student records audio in the browser (mic, max length configurable); the recording is uploaded to the server and the teacher listens + grades in the grading view |
 | Long answer | Manual (+ keyword hint) | Keyword hints suggest points; teacher decides |
 
 ## Production deployment (single LXC)

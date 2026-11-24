@@ -156,6 +156,11 @@ Assignment delivery: `POST /api/activities/:id/publish` copies the activity `set
 | `pins` | yes | Bild markieren | `{ "image": {"assetId": "...", "alt": ""}, "zones": [{"id":"z1","label":"Transform-Rand","x":0.32,"y":0.44,"r":0.05}] }` |
 | `image_boxes` | yes | Kästchen im Bild | `{ "image": {"assetId": "...", "alt": ""}, "boxes": [{"id":"b1","x":0.1,"y":0.1,"w":0.2,"h":0.15,"label":"...","accepted":["..."]}], "inputMode": "type" \| "drag", "wordBank": ["..."], "caseSensitive": false, "trim": true, "collapseSpaces": true, "ignorePunctuation": true }` — box geometry in normalized 0..1 coords; drag mode requires every accepted word ∈ wordBank |
 | `long_answer` | yes (manual) | Freitext | `{ "hints": [{"text":"photosynthese","alternatives":[],"points":1}], "rubric": [{"criterion":"Fachliche Richtigkeit","levels":[{"label":"...","points":0}]}], "minWords": 0, "maxWords": 3000 }` |
+| `hotspot` | yes | Hotspot-Bild (TipToi) | `{ "image": {"assetId","alt"}, "prompt": {"text","audioAssetId"}, "zones": [{"id","label","shape":"rect"\|"circle","x","y","w","h" (rect) \| "r" (circle),"correct":bool,"feedback":{"text","imageAssetId","audioAssetId"},"link":{"type":"none"\|"assignment"\|"url","value"}}] }` — zone geometry in normalized 0..1 coords; ≤30 zones; sanitize strips only `correct` |
+| `table` | yes | Tabelle (ausfüllen / Matrix) | `{ "mode": "fill"\|"choice", "multi": bool, "columns": [{"id","label"}], "rows": [{"id","label","cells": {"<colId>": {"kind":"static","text"} \| {"kind":"gap","answers":[...]} \| {"kind":"option","text","correct":bool}}}] }` — ≤12 columns, ≤30 rows |
+| `groups` | yes | In Zonen gruppieren | `{ "zones": [{"id","label"}], "items": [{"id","side": side, "zoneId": "<correct zone id>"}], "shuffle": bool }` — `side` same as `match` (text/image/audio); sanitize strips `zoneId` |
+| `mark_sentence` | yes | Satz markieren / Wörter streichen | `{ "mode": "mark"\|"correct", "words": [{"text","target":"none"\|"mark"\|"wrong","fix":""}] }` — ≤120 words; ≥1 word with target ≠ none |
+| `audio_answer` | yes (manual) | Audio-Antwort (Aufnahme) | `{ "maxDurationSec": 120 }` (5..3600); response references an uploaded audio asset; `needsManual = true` always |
 
 **Canonical responses** (what the client sends, stored as-is after `normalizeResponse`):
 
@@ -171,6 +176,11 @@ Assignment delivery: `POST /api/activities/:id/publish` copies the activity `set
 | `pins` | `{ "points": { "z1": {"x": 0.31, "y": 0.42} } }` (normalized 0..1 coordinates) |
 | `image_boxes` | `{ "answers": { "b1": "...", "b2": "..." } }` (boxId → word; type mode and drag mode share this shape) |
 | `long_answer` | `{ "text": "..." }` |
+| `hotspot` | `{ "tapped": ["z1", ...] }` (zone ids; ≤30) |
+| `table` | fill: `{ "cells": { "<rowId>|<colId>": "..." } }`; choice: `{ "choices": { "<rowId>": "<colId>" }` or `[...ids]` when `multi` |
+| `groups` | `{ "placement": { "<itemId>": "<zoneId>" } }` (every item placed) |
+| `mark_sentence` | `{ "selected": [wordIndex, ...], "fixes": { "<wordIndex>": "correction" } }` |
+| `audio_answer` | `{ "assetId": "...", "durationMs": 12345, "mime": "audio/webm" }` — mime must be in the audio allowlist |
 
 **Scoring semantics per type:**
 
@@ -184,6 +194,11 @@ Assignment delivery: `POST /api/activities/:id/publish` copies the activity `set
 - `pins`: each zone's point correct iff Euclidean distance in normalized coordinates `<= r` (compare on `x`,`y` in 0..1). `points * correct/total`. `correct` = all zones. `detail = {hit:[ids],miss:[ids]}`.
 - `image_boxes`: per-box equal weight; box correct iff normalized response equals one of `box.accepted`. `autoScore = round(points * correct/total, 4)`. `correct` = all boxes. `detail = {hit, miss, boxes: {boxId: {given, correct}}}`. Sanitize keeps geometry+label (+ wordBank in drag mode) but strips `accepted`; `answerZones` returns rects+accepted for review (gated by showAnswers).
 - `long_answer`: `autoScore = min(points, sum(hint.points for matched hints))`, matching is case-insensitive substring of the student text (including `alternatives`); `needsManual = true` **always** (rubric/teacher decision); `correct = false` until a teacher sets a manual score ≥ points. Hints and rubric never reach the student.
+- `hotspot`: `autoScore = round(points * max(0, hit - wrong) / correctCount, 4)` where hit = correct zones tapped, wrong = tapped non-correct zones; `correct` iff all correct zones tapped and none wrong. Sanitize strips `correct` per zone (geometry/label/feedback/link stay visible); `answerZones` returns correct-zone geometry for review when `showAnswers`.
+- `table`: fill mode — per gap cell equal weight, normalized text match against `cell.answers`; choice mode — per row, the picked option set must equal the row's correct option set (`multi`) or its single correct option. `autoScore = round(points * correct/total, 4)`; `correct` = all cells/rows. Sanitize strips gap `answers` and option `correct`.
+- `groups`: per item equal weight; correct iff `placement[itemId] === item.zoneId`. `autoScore = round(points * correct/total, 4)`; `correct` = all placed correctly. Sanitize strips `zoneId` from items.
+- `mark_sentence`: mode `mark` — per target word (`target==="mark"`) equal weight; selected set must equal the target set (wrong selections cancel hits). Mode `correct` — additionally every `target==="wrong"` word needs `fixes[idx]` matching `fix` after normalization. `autoScore = round(points * correct/total, 4)`. Sanitize strips `target` and `fix`.
+- `audio_answer`: `autoScore = 0`, `needsManual = true` always; the response asset is an audio upload via `POST /api/participant/assets` (audio-only); the grading view plays it back (`/assets/<id>/<id>`).
 
 **`shared/items/<type>.js` exports** (all pure, importable from browser and Node):
 
@@ -262,6 +277,9 @@ Base path `/api`. JSON in/out (`Content-Type: application/json`), UTF-8. Errors 
 | POST | `/api/participant/flags` | `{flags:[itemId...]}` | `{flags}`; publishes SSE `flags` event |
 | POST | `/api/participant/submit` | `{confirm:true}` | `{participant:{status,score,maxScore}, result:{showResults,showAnswers,items:[{itemId,correct,autoScore,maxScore,needsManual,response?,answer?}]}}`; 409 if already submitted |
 | GET | `/api/participant/result` | token header | same result payload; 403 `not_submitted` before submit |
+| POST | `/api/participant/assets?filename=<name>` | raw audio bytes (`audio/webm|ogg|mpeg|mp4|wav`), token header **or** student session cookie | 201 `{asset:{id,url,filename,mime,size}}`; 400 `unsupported_type` (audio only), 413 too large (cap `min(maxUploadBytes, 15 MB)`), 429 after 20 uploads/min per participant. Used by the `audio_answer` renderer (MediaRecorder) so students can record answers from the mic; stored with `owner_id` = student id or NULL |
+
+Asset `url` enrichment: server-side, the student payload (join + participant) walks every item recursively and fills `url` next to every `assetId` (generic — covers `pins.image`, `image_boxes.image`, `match` sides, `hotspot.config.image` / prompt & feedback audio, `groups` item sides, media). Never hand-roll per-type enrichment.
 
 Time limit: `started_at + timeLimitMinutes`; a 60 s grace applies on save. Past grace: mark submitted server-side, return 409 `time_expired` (client shows result if `showResults`).
 
@@ -373,7 +391,7 @@ Uploads in authoring (pins image): `POST /api/assets?filename=...` raw body via 
 - Student token: per-assignment random 24-byte token; only SHA-256 stored; comparisons via `timingSafeEqual`.
 - Rate-limit login (in-memory) and asset uploads (per user, 60/min).
 - No directory traversal in static/asset serving (resolve + prefix check).
-- The student payload omits: all answer keys, `long_answer.hints`, `long_answer.rubric`, `pins.zones[].r`, `image_boxes.boxes[].accepted`, text gap answers (masked to `<<>>`), per-answer `feedback`, and teacher-only data. `sanitizeActivity()` is the only place that strips; do not hand-roll elsewhere. Media `url`s (pins image, `image_boxes.image`, match image/audio sides) are enriched from the assets table server-side.
+- The student payload omits: all answer keys, `long_answer.hints`, `long_answer.rubric`, `pins.zones[].r`, `image_boxes.boxes[].accepted`, text gap answers (masked to `<<>>`), per-answer `feedback`, `hotspot.zones[].correct`, `table` gap `answers` + option `correct`, `groups.items[].zoneId`, `mark_sentence.words[].target/fix`, and teacher-only data. `sanitizeActivity()` is the only place that strips; do not hand-roll elsewhere. Media `url`s are enriched from the assets table server-side, generically for every `assetId` found in an item.
 - `/api/capabilities` is **minimal for anonymous callers** (feature flags, maxUploadMb, demoMode only). Version, baseUrl and the item-type list require a teacher session. `/api/health` stays public for the updater/monitoring.
 - **Student accounts (schema v3):** table `students` (owner teacher, name, unique `username`, scrypt `password_hash`; plaintext generated passwords are returned exactly once at creation/reset and never stored) + `student_sessions` (separate `ow_student` cookie). `class_participants.student_id` links roster entries to accounts; `participants.student_id` links assignment attempts. A logged-in student joining a class or assignment is linked automatically (name taken from the account; class unlock rules enforced). Teacher roster endpoints: `GET/POST /api/classes/:id/students`, `POST .../students/:studentId/reset`, `DELETE .../students/:studentId`, `GET .../stats`; student: `POST /api/auth/student-login`, `POST /api/auth/student-logout`, `GET /api/student/me`. Initial passwords are one-time only (returned at creation/reset) — the UI offers copy-as-CSV and a printable sheet at that moment.
 - **Practice mode:** `settings.practice: true` on an activity/assignment. Practice attempts are flagged (`participants.flags` contains `"practice"`) and excluded from results, CSV export, grading and the live dashboard; `POST /api/participant/reopen` allows retrying (practice only).

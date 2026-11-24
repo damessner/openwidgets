@@ -197,6 +197,27 @@ export async function uploadAsset(file) {
   return data;
 }
 
+/**
+ * Upload a student's audio recording (participant token or student session).
+ * Returns {asset}. Used by the audio_answer renderer via ctx.uploadAudio.
+ */
+export async function uploadParticipantAsset(blob, token, filename = 'aufnahme.webm') {
+  const headers = { 'Content-Type': blob.type || 'audio/webm' };
+  if (token) headers['X-Participant-Token'] = token;
+  const response = await fetch(`/api/participant/assets?filename=${encodeURIComponent(filename)}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers,
+    body: blob,
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = (data && data.error) || {};
+    throw new ApiError(response.status, error.code || 'upload_failed', error.message || 'Upload failed', error.details);
+  }
+  return data;
+}
+
 const ERROR_MESSAGE_KEYS = {
   network_error: 'errors.network_error',
   invalid_credentials: 'errors.invalid_credentials',

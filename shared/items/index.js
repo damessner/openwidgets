@@ -13,6 +13,11 @@ import * as ordering from './ordering.js';
 import * as pins from './pins.js';
 import * as imageBoxes from './image_boxes.js';
 import * as longAnswer from './long_answer.js';
+import * as hotspot from './hotspot.js';
+import * as table from './table.js';
+import * as groups from './groups.js';
+import * as markSentence from './mark_sentence.js';
+import * as audioAnswer from './audio_answer.js';
 
 export const itemTypes = [
   text,
@@ -25,6 +30,11 @@ export const itemTypes = [
   pins,
   imageBoxes,
   longAnswer,
+  hotspot,
+  table,
+  groups,
+  markSentence,
+  audioAnswer,
 ];
 
 const byType = new Map(itemTypes.map((module) => [module.type, module]));
@@ -190,6 +200,31 @@ export function regenerateItemIds(item) {
     case 'image_boxes':
       out.config = { ...normalized.config, boxes: freshIds(normalized.config.boxes, 'b') };
       break;
+    case 'hotspot':
+      out.config = { ...normalized.config, zones: freshIds(normalized.config.zones, 'z') };
+      break;
+    case 'table': {
+      const colMap = new Map();
+      const columns = freshIds(normalized.config.columns, 'c');
+      normalized.config.columns.forEach((oldCol, index) => colMap.set(oldCol.id, columns[index].id));
+      const rows = freshIds(normalized.config.rows, 'r').map((row) => {
+        const cells = {};
+        for (const [oldColId, cell] of Object.entries(row.cells || {})) {
+          cells[colMap.get(oldColId) || oldColId] = cell;
+        }
+        return { ...row, cells };
+      });
+      out.config = { ...normalized.config, columns, rows };
+      break;
+    }
+    case 'groups': {
+      const zoneMap = new Map();
+      const zones = freshIds(normalized.config.zones, 'z');
+      normalized.config.zones.forEach((oldZone, index) => zoneMap.set(oldZone.id, zones[index].id));
+      const items = freshIds(normalized.config.items, 'i').map((entry) => ({ ...entry, zoneId: zoneMap.get(entry.zoneId) || entry.zoneId }));
+      out.config = { ...normalized.config, zones, items };
+      break;
+    }
     default:
       break;
   }

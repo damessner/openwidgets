@@ -21,7 +21,13 @@ export const CANONICAL_TYPE_ORDER = [
   'match',
   'ordering',
   'pins',
+  'image_boxes',
   'long_answer',
+  'hotspot',
+  'table',
+  'groups',
+  'mark_sentence',
+  'audio_answer',
 ];
 
 const FALLBACK_META = {
@@ -33,7 +39,13 @@ const FALLBACK_META = {
   match: { label: { de: 'Zuordnen', en: 'Matching' }, scoreable: true, category: 'interactive', points: 1 },
   ordering: { label: { de: 'Reihenfolge', en: 'Ordering' }, scoreable: true, category: 'interactive', points: 1 },
   pins: { label: { de: 'Bild markieren', en: 'Mark on image' }, scoreable: true, category: 'interactive', points: 1 },
+  image_boxes: { label: { de: 'Kästchen im Bild', en: 'Label boxes on image' }, scoreable: true, category: 'assessment', points: 2 },
   long_answer: { label: { de: 'Freitext', en: 'Long answer' }, scoreable: true, category: 'manual', points: 3 },
+  hotspot: { label: { de: 'Hotspot-Bild (TipToi)', en: 'Hotspot image (TipToi)' }, scoreable: true, category: 'interactive', points: 2 },
+  table: { label: { de: 'Tabelle (ausfüllen / Matrix)', en: 'Table (fill / matrix question)' }, scoreable: true, category: 'assessment', points: 2 },
+  groups: { label: { de: 'In Zonen gruppieren (Drag & Drop)', en: 'Group into zones (drag & drop)' }, scoreable: true, category: 'interactive', points: 2 },
+  mark_sentence: { label: { de: 'Satz markieren / Wörter streichen', en: 'Mark / correct words in a sentence' }, scoreable: true, category: 'assessment', points: 2 },
+  audio_answer: { label: { de: 'Audio-Antwort (Aufnahme)', en: 'Audio answer (record)' }, scoreable: true, category: 'manual', points: 3 },
 };
 
 const CATEGORY_LABELS = {
@@ -104,6 +116,7 @@ function normalizeMeta(entry) {
 }
 
 let palettePromise = null;
+let paletteByType = null; // normalized palette entries by type, set by loadPalette()
 
 /** Palette entries: [{type,label:{en,de},scoreable,category}] in canonical order. */
 export function loadPalette() {
@@ -141,6 +154,7 @@ export function loadPalette() {
         }
       }
       for (const meta of byType.values()) ordered.push(meta);
+      paletteByType = new Map(ordered.map((meta) => [meta.type, meta]));
       return ordered;
     })();
   }
@@ -148,8 +162,18 @@ export function loadPalette() {
 }
 
 export function paletteEntry(type) {
-  const fallback = normalizeMeta({ type, ...(FALLBACK_META[type] || {}) });
-  return fallback;
+  // Prefer the real registry/capabilities meta once the palette has loaded;
+  // fall back to the local table so labels work even before loadPalette() ran.
+  if (paletteByType && paletteByType.has(type)) return paletteByType.get(type);
+  if (registry && typeof registry.itemTypeMeta === 'function') {
+    try {
+      const meta = registry.itemTypeMeta().find((entry) => entry && entry.type === type);
+      if (meta) return normalizeMeta(meta);
+    } catch {
+      /* fall through to local fallback */
+    }
+  }
+  return normalizeMeta({ type, ...(FALLBACK_META[type] || {}) });
 }
 
 export function typeLabel(type) {

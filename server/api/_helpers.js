@@ -467,17 +467,31 @@ export function finalizeSubmission(participantRow) {
 // Student payloads
 // ---------------------------------------------------------------------------
 
-/** Collect every asset id referenced by an item's sanitized config. */
-function collectAssetIds(item, into) {
-  const config = item && item.config;
-  if (!config || typeof config !== 'object') return;
-  if ((item.type === 'pins' || item.type === 'image_boxes') && config.image && typeof config.image.assetId === 'string' && config.image.assetId) {
-    into.add(config.image.assetId);
+/** Collect every asset id referenced anywhere in a sanitized item (media + config, any depth). */
+function collectAssetIds(node, into) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (const value of node) collectAssetIds(value, into);
+    return;
   }
-  if (item.type === 'match') {
-    for (const side of [...(Array.isArray(config.lefts) ? config.lefts : []), ...(Array.isArray(config.rights) ? config.rights : [])]) {
-      if (side && (side.kind === 'image' || side.kind === 'audio') && typeof side.assetId === 'string' && side.assetId) into.add(side.assetId);
-    }
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'assetId' && typeof value === 'string' && value) into.add(value);
+    else if (value && typeof value === 'object') collectAssetIds(value, into);
+  }
+}
+
+function enrichAssetUrls(node, urlFor) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (const value of node) enrichAssetUrls(value, urlFor);
+    return;
+  }
+  if (typeof node.assetId === 'string' && node.assetId && !node.url) {
+    const url = urlFor(node.assetId);
+    if (url) node.url = url;
+  }
+  for (const value of Object.values(node)) {
+    if (value && typeof value === 'object') enrichAssetUrls(value, urlFor);
   }
 }
 
@@ -492,24 +506,7 @@ export function enrichPinImageUrls(items) {
   );
   const filenames = new Map(rows.map((row) => [row.id, row.filename]));
   const urlFor = (assetId) => (filenames.has(assetId) ? `/assets/${assetId}/${encodeURIComponent(filenames.get(assetId))}` : null);
-  for (const item of items) {
-    const config = item && item.config;
-    if (!config) continue;
-    if ((item.type === 'pins' || item.type === 'image_boxes') && config.image && typeof config.image.assetId === 'string') {
-      const url = urlFor(config.image.assetId);
-      if (url) config.image = { ...config.image, url };
-    }
-    if (item.type === 'match') {
-      for (const key of ['lefts', 'rights']) {
-        if (!Array.isArray(config[key])) continue;
-        config[key] = config[key].map((side) => {
-          if (!side || (side.kind !== 'image' && side.kind !== 'audio') || typeof side.assetId !== 'string') return side;
-          const url = urlFor(side.assetId);
-          return url ? { ...side, url } : side;
-        });
-      }
-    }
-  }
+  for (const item of items) enrichAssetUrls(item, urlFor);
   return items;
 }
 

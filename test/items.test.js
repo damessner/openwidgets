@@ -19,7 +19,7 @@ import {
 
 const SECRET = 'SENTINEL_SECRET_ANSWER';
 
-test('registry: ten types with palette metadata', () => {
+test('registry: fifteen types with palette metadata', () => {
   assert.deepEqual(
     itemTypes.map((module) => module.type),
     [
@@ -33,10 +33,15 @@ test('registry: ten types with palette metadata', () => {
       'pins',
       'image_boxes',
       'long_answer',
+      'hotspot',
+      'table',
+      'groups',
+      'mark_sentence',
+      'audio_answer',
     ],
   );
   const meta = itemTypeMeta();
-  assert.equal(meta.length, 10);
+  assert.equal(meta.length, 15);
   assert.equal(meta.find((entry) => entry.type === 'text').scoreable, false);
   assert.equal(meta.find((entry) => entry.type === 'multiple_choice').scoreable, true);
   for (const entry of meta) {
@@ -56,7 +61,7 @@ test('every type creates a valid default item with an editSchema', () => {
     const item = createItem(module.type);
     assert.equal(item.type, module.type);
     assert.match(item.id, /^it_/);
-    if (module.type === 'image_boxes') {
+    if (module.type === 'image_boxes' || module.type === 'hotspot') {
       // the default has no image yet — it only becomes valid once one is uploaded
       assert.ok(validateItem(item).some((e) => e.includes('config.image.assetId')));
       const withImage = normalizeItem({ ...item, config: { ...item.config, image: { assetId: 'a1', alt: '' } } });
