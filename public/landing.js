@@ -8,7 +8,7 @@ registerMessages({
     'landing.eyebrow': 'Open Source · Für Schulen',
     'landing.title_a': 'Interaktive Arbeitsblätter,',
     'landing.title_b': 'selbst gehostet.',
-    'landing.stat_types_value': '10+',
+    'landing.stat_types_value': '18',
     'landing.stat_types_label': 'Aufgabentypen',
     'landing.stat_hosting_value': '100 %',
     'landing.stat_hosting_label': 'auf Ihrem Server',
@@ -29,13 +29,22 @@ registerMessages({
     'landing.invalid_code': 'Bitte geben Sie einen gültigen Code ein (mindestens 4 Zeichen).',
     'landing.feature1_title': 'Schnelles Erstellen',
     'landing.feature1_text':
-      'Zehn Aufgabentypen, automatische Punktevergabe, Vorschau in Echtzeit und Import/Export als JSON.',
-    'landing.feature2_title': 'Live-Dashboard',
+      '18 Aufgabentypen — von Multiple Choice, Lückentext und Zuordnen über Tabellen, Hotspot-Bilder (TipToi-artig), Hangman bis Kreuzworträtsel. Automatische Punktevergabe, Vorschau in Echtzeit, JSON-Import/Export.',
+    'landing.feature2_title': 'Klassen & Lernpfade',
     'landing.feature2_text':
-      'Sehen Sie beim Bearbeiten zu: Anwesenheit, Punktestand und jede einzelne Antwort — ohne die Klasse in Echtzeit zu unterbrechen.',
-    'landing.feature3_title': 'Faire Bewertung',
+      'Arbeitsblätter zu Klassen bündeln — sequenziell (eine erledigte Aufgabe schaltet die nächste frei) oder in beliebiger Reihenfolge. Schüler:innen erhalten automatisch generierte Zugangsdaten zum Ausdrucken.',
+    'landing.feature3_title': 'Vokabeln & Multimedia',
     'landing.feature3_text':
-      'Lösungsschlüssel bleiben am Server, Freitext wird manuell bewertet. Rückmeldung und Ergebnisansicht steuern Sie selbst.',
+      'Vokabellisten mit Bild und Audio (CSV-Import) und Vokabel-Trainer mit Modi wie „Hören“ oder „Zuordnen“. Bilder per Strg+V einfügen, Audio-Antworten der Schüler:innen, anklickbare Hotspot-Bereiche im Bild.',
+    'landing.feature4_title': 'Live-Dashboard & Statistik',
+    'landing.feature4_text':
+      'Sehen Sie beim Bearbeiten zu: Anwesenheit, Punktestand und jede einzelne Antwort. Die Klassen-Statistik zeigt, wie jede:r Schüler:in abgeschnitten hat; Schüler:innen sehen ihre Aufgaben mit Fortschrittsbalken.',
+    'landing.feature5_title': 'Faire Bewertung & Datenschutz',
+    'landing.feature5_text':
+      'Lösungsschlüssel bleiben am Server, Freitext wird manuell bewertet. Rückmeldung und Ergebnisansicht steuern Sie selbst — alles auf Ihrem Schulserver, keine Cloud, keine Schülerdaten bei Dritten.',
+    'landing.feature6_title': 'Drucken, QR & Offline',
+    'landing.feature6_text':
+      'Arbeitsblätter als Druckansicht, Beitritt per QR-Code. Antworten werden lokal zwischengespeichert und bei erneuter Verbindung automatisch übertragen.',
     'landing.status_title': 'Systemstatus',
     'landing.status_text': 'Diese Instanz läuft auf einem eigenen Server. Version und verfügbare Aufgabentypen:',
     'landing.footer_license': 'quelloffen (AGPL-3.0)',
@@ -62,7 +71,7 @@ registerMessages({
     'landing.eyebrow': 'Open source · Built for schools',
     'landing.title_a': 'Interactive worksheets,',
     'landing.title_b': 'self-hosted.',
-    'landing.stat_types_value': '10+',
+    'landing.stat_types_value': '18',
     'landing.stat_types_label': 'question types',
     'landing.stat_hosting_value': '100%',
     'landing.stat_hosting_label': 'on your server',
@@ -83,13 +92,22 @@ registerMessages({
     'landing.invalid_code': 'Please enter a valid code (at least 4 characters).',
     'landing.feature1_title': 'Fast authoring',
     'landing.feature1_text':
-      'Ten question types, automatic scoring, live preview and JSON import/export.',
-    'landing.feature2_title': 'Live dashboard',
+      '18 question types — from multiple choice, fill-in-the-blanks and matching to tables, hotspot images (TipToi-style), hangman and crosswords. Automatic scoring, live preview, JSON import/export.',
+    'landing.feature2_title': 'Classes & learning paths',
     'landing.feature2_text':
-      'Watch the class work: presence, score and every single response — without interrupting anyone.',
-    'landing.feature3_title': 'Fair grading',
+      'Bundle worksheets into classes — in sequence (a completed task unlocks the next) or in any order. Students get auto-generated credentials you can print.',
+    'landing.feature3_title': 'Vocabulary & multimedia',
     'landing.feature3_text':
-      'Answer keys stay on the server, free text is graded manually. You decide on feedback and result visibility.',
+      'Vocabulary lists with images and audio (CSV import) plus a vocabulary trainer with modes like “listen” or “match”. Paste images with Ctrl+V, audio answers from students, clickable hotspot areas in images.',
+    'landing.feature4_title': 'Live dashboard & statistics',
+    'landing.feature4_text':
+      'Watch the class work: presence, scores and every single response. Class statistics show how each student did; students see their tasks with progress bars.',
+    'landing.feature5_title': 'Fair grading & privacy',
+    'landing.feature5_text':
+      'Answer keys stay on the server, free text is graded manually. You decide on feedback and result visibility — all on your school server, no cloud, no student data with third parties.',
+    'landing.feature6_title': 'Print, QR & offline',
+    'landing.feature6_text':
+      'Print view for worksheets, join via QR code. Answers are cached locally and synced automatically once back online.',
     'landing.status_title': 'System status',
     'landing.status_text': 'This instance runs on its own server. Version and available question types:',
     'landing.footer_license': 'open source (AGPL-3.0)',
