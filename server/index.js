@@ -128,24 +128,35 @@ function assetCacheControl(filePath) {
 // service records the deployed commit sha in <DATA_DIR>/.deployed-sha; fall
 // back to a content mtime stamp for local/dev runs.
 // ---------------------------------------------------------------------------
-const ASSET_V = (() => {
+// Read per request (short cache): the update service writes the sha *after*
+// restarting the app, so a boot-time read would lag one deploy behind.
+let assetVCache = { at: 0, value: '' };
+function assetVersion() {
+  const nowMs = Date.now();
+  if (nowMs - assetVCache.at < 5000) return assetVCache.value;
+  let value = '';
   try {
     const file = process.env.OW_DEPLOYED_SHA_FILE || path.join(config.dataDir, '.deployed-sha');
     const sha = fs.readFileSync(file, 'utf8').trim();
-    if (/^[0-9a-f]{7,40}$/i.test(sha)) return sha.slice(0, 10);
+    if (/^[0-9a-f]{7,40}$/i.test(sha)) value = sha.slice(0, 10);
   } catch { /* no state file */ }
-  try {
-    return `t${Math.floor(fs.statSync(path.join(config.publicDir, 'app.css')).mtimeMs / 1000)}`;
-  } catch {
-    return config.version.replace(/\W/g, '');
+  if (!value) {
+    try {
+      value = `t${Math.floor(fs.statSync(path.join(config.publicDir, 'app.css')).mtimeMs / 1000)}`;
+    } catch {
+      value = config.version.replace(/\W/g, '');
+    }
   }
-})();
+  assetVCache = { at: nowMs, value };
+  return value;
+}
 
-/** Append ?v=ASSET_V to local asset references in served HTML/JS text. */
+/** Append ?v=<deploy version> to local asset references in served HTML/JS text. */
 function versionAssetRefs(content) {
+  const v = assetVersion();
   return String(content)
-    .replace(/(href|src)="(\/[^"?]+\.(?:css|js))"/g, (m, attr, url) => `${attr}="${url}?v=${ASSET_V}"`)
-    .replace(/((?:from|import)\s*\(?\s*)(['"])(\/(?!api\/)[^'"]+\.js|\.\.?\/[^'"]+\.js)\2/g, (m, pre, q, url) => `${pre}${q}${url}?v=${ASSET_V}${q}`);
+    .replace(/(href|src)="(\/[^"?]+\.(?:css|js))"/g, (m, attr, url) => `${attr}="${url}?v=${v}"`)
+    .replace(/((?:from|import)\s*\(?\s*)(['"])(\/(?!api\/)[^'"]+\.js|\.\.?\/[^'"]+\.js)\2/g, (m, pre, q, url) => `${pre}${q}${url}?v=${v}${q}`);
 }
 
 const TEXT_TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8' };
