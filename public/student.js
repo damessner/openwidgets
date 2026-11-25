@@ -128,6 +128,14 @@ registerMessages({
     'student.result_manual_note': 'Einige Aufgaben werden von Ihrer Lehrkraft manuell bewertet.',
     'student.result_review': 'Antworten ansehen',
     'student.result_back': 'Zum Ergebnis',
+    'student.ai_title': 'Deine persönliche Zusammenfassung (KI)',
+    'student.ai_hint': 'Eine KI fasst zusammen, was du gut kannst, und erstellt passende Übungsaufgaben — ohne Wertung.',
+    'student.ai_load': 'Zusammenfassung erstellen',
+    'student.ai_loading': 'KI erstellt deine Zusammenfassung …',
+    'student.ai_tips': 'Tipps zum Weiterlernen',
+    'student.ai_exercises': 'Übungsaufgaben für dich',
+    'student.ai_exercise_solution': 'Lösung anzeigen',
+    'student.ai_error': 'Die Zusammenfassung konnte gerade nicht erstellt werden. Versuch es später noch einmal.',
     'student.switch_person': 'Als andere Person beitreten',
     'student.review_title': 'Ihre Antworten',
     'student.review_note': 'Schreibgeschützte Ansicht nach der Abgabe. Ihre Antworten können nicht mehr geändert werden.',
@@ -226,6 +234,14 @@ registerMessages({
     'student.result_manual_note': 'Some items will be graded manually by your teacher.',
     'student.result_review': 'View answers',
     'student.result_back': 'Back to result',
+    'student.ai_title': 'Your personal summary (AI)',
+    'student.ai_hint': 'An AI summarizes what you did well and creates matching practice tasks — unscored.',
+    'student.ai_load': 'Create summary',
+    'student.ai_loading': 'AI is creating your summary …',
+    'student.ai_tips': 'Tips for further practice',
+    'student.ai_exercises': 'Practice tasks for you',
+    'student.ai_exercise_solution': 'Show solution',
+    'student.ai_error': 'The summary could not be created right now. Please try again later.',
     'student.switch_person': 'Join as someone else',
     'student.review_title': 'Your answers',
     'student.review_note': 'Read-only view after submission. Your answers can no longer be changed.',
@@ -1988,7 +2004,92 @@ function buildResultScreen() {
 
   wrap.appendChild(hero);
   if (showResults) wrap.appendChild(buildBreakdownCard());
+  wrap.appendChild(buildAiFeedbackCard());
   return wrap;
+}
+
+/**
+ * AI feedback card on the result screen. Hides itself when the LLM feature is
+ * disabled; otherwise shows the cached feedback or a button to generate it
+ * (pseudonymized — the server never sends the pupil's name).
+ */
+function buildAiFeedbackCard() {
+  const card = h('div.card.ai-feedback-card');
+  const head = h('div.row.gap-2', { style: 'align-items:center' });
+  head.appendChild(h('span.icon-tile', { html: icon('sparkle', { size: 18 }) }));
+  head.appendChild(h('h3.card-title.mb-0', { text: t('student.ai_title') }));
+  card.appendChild(head);
+  const body = h('div.ai-feedback-body.mt-2');
+  card.appendChild(body);
+
+  const renderFeedback = (feedback) => {
+    clear(body);
+    if (feedback.summary) body.appendChild(h('p', { text: feedback.summary }));
+    if (Array.isArray(feedback.tips) && feedback.tips.length) {
+      body.appendChild(h('p.strong', { text: t('student.ai_tips') }));
+      body.appendChild(h('ul', feedback.tips.map((tip) => h('li', { text: tip }))));
+    }
+    if (Array.isArray(feedback.exercises) && feedback.exercises.length) {
+      body.appendChild(h('p.strong', { text: t('student.ai_exercises') }));
+      for (const exercise of feedback.exercises) {
+        const item = exercise.item || {};
+        const exCard = h('div.ai-exercise');
+        exCard.appendChild(
+          h('div.row.between.wrap',
+            h('span.badge.badge-info.tiny', { text: item.type || '' }),
+            null,
+          ),
+        );
+        const stemBox = h('div.mt-1');
+        renderRichText(stemBox, String(item.stem || ''));
+        exCard.appendChild(stemBox);
+        if (Array.isArray(exercise.solution) && exercise.solution.length) {
+          const details = h('details.mt-1');
+          details.appendChild(h('summary', { text: t('student.ai_exercise_solution') }));
+          details.appendChild(h('ul.mb-0', exercise.solution.map((line) => h('li', { text: line }))));
+          exCard.appendChild(details);
+        }
+        body.appendChild(exCard);
+      }
+    }
+  };
+
+  (async () => {
+    try {
+      const caps = await get('/api/capabilities');
+      if (!caps || !caps.features || !caps.features.llm) {
+        card.remove();
+        return;
+      }
+      const headers = { headers: participantHeaders(state.token) };
+      const cached = await get('/api/llm/feedback', headers);
+      if (cached && cached.feedback) {
+        card.appendChild(h('p.small.muted', { text: t('student.ai_hint') }));
+        renderFeedback(cached.feedback);
+        return;
+      }
+      card.appendChild(h('p.small.muted', { text: t('student.ai_hint') }));
+      const button = h('button.btn.btn-secondary.btn-sm', { type: 'button' }, h('span', { html: icon('sparkle', { size: 16 }) }), t('student.ai_load'));
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        button.textContent = t('student.ai_loading');
+        try {
+          const data = await post('/api/llm/feedback', {}, headers);
+          if (data && data.feedback) renderFeedback(data.feedback);
+          else button.remove();
+        } catch (error) {
+          body.appendChild(h('p.error-text', { role: 'alert', text: t('student.ai_error') }));
+          button.disabled = false;
+          button.textContent = t('student.ai_load');
+        }
+      });
+      body.appendChild(button);
+    } catch {
+      card.remove();
+    }
+  })();
+
+  return card;
 }
 
 /** Practice mode: reopen the attempt so the student can try again. */

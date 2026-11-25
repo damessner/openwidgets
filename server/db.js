@@ -210,7 +210,7 @@ CREATE INDEX IF NOT EXISTS idx_vocab_entries_list ON vocab_entries(list_id, posi
 
 export const db = new DatabaseSync(config.dbPath);
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 /**
  * Migration ladder. When the schema changes in v0.2+, append
@@ -296,6 +296,17 @@ const MIGRATIONS = [
       )`);
       db.exec('CREATE INDEX IF NOT EXISTS idx_vocab_lists_owner ON vocab_lists(owner_id, updated_at DESC)');
       db.exec('CREATE INDEX IF NOT EXISTS idx_vocab_entries_list ON vocab_entries(list_id, position)');
+    },
+  },
+  {
+    version: 5,
+    up() {
+      // Cached LLM feedback (summary + revision exercises) per participant.
+      // Guarded so fresh installs do not fail on a duplicate column.
+      const cols = db.prepare('PRAGMA table_info(participants)').all().map((col) => col.name);
+      if (!cols.includes('ai_feedback')) {
+        db.exec('ALTER TABLE participants ADD COLUMN ai_feedback TEXT');
+      }
     },
   },
 ];

@@ -5,6 +5,7 @@ import { t, formatDateTime } from '/lib/i18n.js';
 import { icon } from '/lib/icons.js';
 import { joinUrlForCode, downloadResponse, navigate, templateLabel, statusBadge } from '../lib/core.js';
 import { openCreateActivityDialog, openPublishDialog } from '../lib/dialogs.js';
+import { openAiWizard } from '../lib/ai-wizard.js';
 
 function iconButton(iconName, label, { kind = 'ghost', onClick, href, extraClass = '' } = {}) {
   const content = h('span', { html: icon(iconName, { size: 16 }) });
@@ -36,6 +37,7 @@ export async function mount(root, ctx) {
   let assignments = [];
   let loading = true;
   let loadError = null;
+  let llmEnabled = false;
 
   ctx.onLocaleChange(() => {
     if (!disposed) renderContent();
@@ -48,13 +50,15 @@ export async function mount(root, ctx) {
       renderContent();
     }
     try {
-      const [activitiesData, assignmentsData] = await Promise.all([
+      const [activitiesData, assignmentsData, llmConfig] = await Promise.all([
         get('/api/activities', { signal: ctx.signal }),
         get('/api/assignments', { signal: ctx.signal }),
+        get('/api/llm/config', { signal: ctx.signal }).catch(() => null),
       ]);
       if (disposed) return;
       activities = Array.isArray(activitiesData && activitiesData.activities) ? activitiesData.activities : [];
       assignments = Array.isArray(assignmentsData && assignmentsData.assignments) ? assignmentsData.assignments : [];
+      llmEnabled = !!(llmConfig && llmConfig.enabled);
       loadError = null;
     } catch (error) {
       if (error && error.name === 'AbortError') return;
@@ -76,6 +80,11 @@ export async function mount(root, ctx) {
   async function createActivity() {
     const activity = await openCreateActivityDialog();
     if (activity && activity.id) navigate(`/teacher/edit?id=${encodeURIComponent(activity.id)}`);
+  }
+
+  async function createWithAi() {
+    const activity = await openAiWizard();
+    if (activity && activity.id) load({ silent: true });
   }
 
   async function importActivity(file) {
@@ -421,6 +430,14 @@ export async function mount(root, ctx) {
         ),
         h(
           'div.row.gap-2',
+          llmEnabled
+            ? h(
+                'button.btn.btn-secondary.ai-wizard-button',
+                { type: 'button', on: { click: createWithAi } },
+                h('span', { html: icon('sparkle', { size: 18 }) }),
+                t('teacher.ai_wizard_button'),
+              )
+            : null,
           h(
             'button.btn.btn-secondary',
             { type: 'button', on: { click: () => triggerImport() } },

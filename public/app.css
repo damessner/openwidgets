@@ -1007,3 +1007,10 @@ dialog.modal::backdrop {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* AI wizard + feedback (v0.9) */
+.radio-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; font-size: 0.875rem; }
+.radio-pill input { accent-color: var(--primary); }
+.radio-pill:has(input:checked) { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+.ai-exercise { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem; margin-top: 0.5rem; background: var(--bg); }
+.ai-feedback-card .card-title { margin: 0; }

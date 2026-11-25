@@ -1,5 +1,5 @@
 // #/admin — instance administration: users + stats.
-import { get, post, patch, del, ApiError, errorMessage } from '/lib/api.js';
+import { get, post, patch, put, del, ApiError, errorMessage } from '/lib/api.js';
 import { h, clear, toast, confirmDialog, modal, emptyState } from '/lib/dom.js';
 import { t, formatDateTime } from '/lib/i18n.js';
 import { icon } from '/lib/icons.js';
@@ -110,7 +110,7 @@ export async function mount(root, ctx) {
     return () => {};
   }
 
-  const state = { users: [], stats: null, loading: true, error: null };
+  const state = { users: [], stats: null, llm: null, loading: true, error: null };
   let disposed = false;
   const wrapper = h('div.admin-view');
   clear(root);
@@ -127,13 +127,15 @@ export async function mount(root, ctx) {
       render();
     }
     try {
-      const [usersData, statsData] = await Promise.all([
+      const [usersData, statsData, llmConfig] = await Promise.all([
         get('/api/admin/users', { signal: ctx.signal }),
         get('/api/admin/stats', { signal: ctx.signal }),
+        get('/api/llm/config', { signal: ctx.signal }).catch(() => null),
       ]);
       if (disposed) return;
       state.users = (usersData && Array.isArray(usersData.users) ? usersData.users : []).slice();
       state.stats = (statsData && statsData.stats) || statsData || null;
+      state.llm = llmConfig || null;
       state.error = null;
     } catch (error) {
       if (error && error.name === 'AbortError') return;
@@ -376,6 +378,103 @@ export async function mount(root, ctx) {
     return card;
   }
 
+  function renderLlmCard() {
+    const llm = state.llm || {};
+    const providers = llm.providers || {};
+    const providerSelect = h(
+      'select.select',
+      Object.entries(providers).map(([id, p]) =>
+        h('option', { value: id, selected: id === (llm.provider || 'gemini') }, `${p.label} (${id})`),
+      ),
+    );
+    const keyInput = h('input.input', {
+      type: 'password',
+      autocomplete: 'off',
+      placeholder: llm.apiKeyMasked || '',
+    });
+    const modelInput = h('input.input', { type: 'text', list: 'admin-llm-models', value: llm.model || '', placeholder: (providers[llm.provider || 'gemini'] || {}).defaultModel || '' });
+    const modelList = h(
+      'datalist',
+      { id: 'admin-llm-models' },
+      ((providers[llm.provider || 'gemini'] || {}).models || []).map((m) => h('option', { value: m })),
+    );
+    const baseUrlInput = h('input.input', { type: 'text', value: llm.baseUrl || '', placeholder: 'https://…' });
+    const enabledInput = h('input', { type: 'checkbox' });
+    if (llm.active !== false) enabledInput.checked = true;
+
+    const statusBadgeEl = h(
+      'span.badge.tiny',
+      { class: llm.enabled ? 'badge-success' : 'badge-warning', text: llm.enabled ? t('teacher.llm_enabled') : t('teacher.llm_disabled') },
+    );
+    const saveButton = h('button.btn.btn-primary.btn-sm', { type: 'button' }, t('common.save'));
+    const testButton = h('button.btn.btn-secondary.btn-sm', { type: 'button' }, t('teacher.llm_test'));
+    const note = h('p.help', { text: t('teacher.llm_privacy_note') });
+    const resultBox = h('p.small.muted', { role: 'status' });
+
+    saveButton.addEventListener('click', async () => {
+      saveButton.disabled = true;
+      resultBox.textContent = '';
+      try {
+        const saved = await put('/api/llm/config', {
+          provider: providerSelect.value,
+          apiKey: keyInput.value.trim(), // empty keeps the stored key
+          model: modelInput.value.trim(),
+          baseUrl: baseUrlInput.value.trim(),
+          enabled: enabledInput.checked,
+        });
+        state.llm = saved;
+        keyInput.value = '';
+        keyInput.placeholder = saved.apiKeyMasked || '';
+        toast(t('teacher.llm_saved'), 'success');
+        render();
+      } catch (error) {
+        resultBox.textContent = errorMessage(error);
+      } finally {
+        saveButton.disabled = false;
+      }
+    });
+
+    testButton.addEventListener('click', async () => {
+      testButton.disabled = true;
+      resultBox.textContent = t('teacher.llm_testing');
+      try {
+        const res = await post('/api/llm/test', {});
+        resultBox.textContent = t('teacher.llm_test_ok', { model: res.model || '', ms: res.latencyMs || 0 });
+      } catch (error) {
+        resultBox.textContent = errorMessage(error);
+      } finally {
+        testButton.disabled = false;
+      }
+    });
+
+    providerSelect.addEventListener('change', () => {
+      const models = (providers[providerSelect.value] || {}).models || [];
+      modelList.replaceChildren(...models.map((m) => h('option', { value: m })));
+      modelInput.placeholder = (providers[providerSelect.value] || {}).defaultModel || '';
+    });
+
+    return h(
+      'div.card.compact',
+      h(
+        'div.card-header',
+        h('div', h('h2.card-title', t('teacher.llm_title')), h('p.card-subtitle', t('teacher.llm_subtitle'))),
+        statusBadgeEl,
+      ),
+      h('div.row.gap-2.wrap',
+        h('div.field', h('label.label', t('teacher.llm_provider')), providerSelect),
+        h('div.field', h('label.label', t('teacher.llm_enabled_label')), h('label.row.gap-1', enabledInput, h('span.small', t('teacher.llm_enabled_checkbox')))),
+      ),
+      h('div.row.gap-2.wrap',
+        h('div.field', h('label.label', t('teacher.llm_api_key')), keyInput, h('p.help', llm.keySource === 'env' ? t('teacher.llm_key_from_env') : t('teacher.llm_key_help'))),
+        h('div.field', h('label.label', t('teacher.llm_model')), modelInput, modelList),
+      ),
+      h('div.field', h('label.label', t('teacher.llm_base_url')), baseUrlInput, h('p.help', t('teacher.llm_base_url_help'))),
+      h('div.row.gap-2', saveButton, testButton),
+      resultBox,
+      note,
+    );
+  }
+
   function render() {
     if (disposed) return;
     clear(wrapper);
@@ -410,6 +509,7 @@ export async function mount(root, ctx) {
     }
     wrapper.appendChild(renderStats());
     wrapper.appendChild(renderUsersCard());
+    wrapper.appendChild(renderLlmCard());
   }
 
   render();

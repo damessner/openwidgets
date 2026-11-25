@@ -35,20 +35,36 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
-  webServer: {
-    // process.execPath is the exact Node binary running the tests (no `node` on PATH).
-    command: `"${process.execPath}" server/index.js`,
-    cwd: ROOT,
-    env: {
-      PORT: '4188',
-      HOST: '127.0.0.1',
-      DATA_DIR: 'tools/e2e/.data/e2e',
-      ADMIN_EMAIL: 'admin@e2e.test',
-      ADMIN_PASSWORD: 'e2e-admin-password',
-      NODE_ENV: 'test',
+  webServer: [
+    {
+      // Mock LLM endpoint (OpenRouter + Gemini dialects) for the LLM specs.
+      command: `"${process.execPath}" tools/e2e/mock-llm.mjs`,
+      cwd: ROOT,
+      env: { MOCK_LLM_PORT: '4189' },
+      url: 'http://127.0.0.1:4189/__health',
+      reuseExistingServer: false,
+      timeout: 30_000,
     },
-    url: `${BASE_URL}/api/health`,
-    reuseExistingServer: false,
-    timeout: 30_000,
-  },
+    {
+      // process.execPath is the exact Node binary running the tests (no `node` on PATH).
+      command: `"${process.execPath}" server/index.js`,
+      cwd: ROOT,
+      env: {
+        PORT: '4188',
+        HOST: '127.0.0.1',
+        DATA_DIR: 'tools/e2e/.data/e2e',
+        ADMIN_EMAIL: 'admin@e2e.test',
+        ADMIN_PASSWORD: 'e2e-admin-password',
+        NODE_ENV: 'test',
+        OW_LLM_PROVIDER: 'openrouter',
+        OW_LLM_API_KEY: 'e2e-mock-key-abcdef',
+        OW_LLM_BASE_URL: 'http://127.0.0.1:4189',
+        OW_LLM_MODEL: 'mock/free',
+        OW_LLM_ENABLED: '1',
+      },
+      url: `${BASE_URL}/api/health`,
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+  ],
 });

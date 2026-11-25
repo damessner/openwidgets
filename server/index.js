@@ -15,6 +15,8 @@ import { register as registerAdmin } from './api/admin.js';
 import { register as registerActivities } from './api/activities.js';
 import { register as registerAssets } from './api/assets.js';
 import { register as registerVocab } from './api/vocab.js';
+import { register as registerLlm } from './api/llm.js';
+import { isLlmEnabled } from './llm/core.js';
 import { register as registerAssignments } from './api/assignments.js';
 import { register as registerClasses } from './api/classes.js';
 import { register as registerGrading } from './api/grading.js';
@@ -52,6 +54,7 @@ registerGrading(router);
 registerAdmin(router);
 registerAssets(router);
 registerVocab(router);
+registerLlm(router);
 
 // ---------------------------------------------------------------------------
 // System endpoints
@@ -89,6 +92,7 @@ router.get('/api/capabilities', async (req, res) => {
       partialCredit: true,
       classes: true,
       studentAccounts: true,
+      llm: isLlmEnabled(),
     },
   };
   if (!user) {
