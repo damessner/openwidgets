@@ -1050,3 +1050,14 @@
 .vc-audio { height: 30px; max-width: 200px; }
 .vocab-editor .field-sm { margin-bottom: 8px; }
 
+
+/* crossword editor (v0.8) */
+.cw-word-list { display: flex; flex-direction: column; gap: 8px; }
+.cw-word-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.cw-word-row .cw-word { width: 130px; text-transform: uppercase; }
+.cw-word-row .cw-clue { flex: 1; min-width: 180px; }
+.cw-word-row .cw-pos { width: 64px; }
+.cw-preview-grid { border-collapse: collapse; }
+.cw-preview-grid td { width: 26px; height: 26px; border: 1px solid var(--border); text-align: center; font-weight: 700; }
+.cw-preview-block { background: var(--surface-3, #222); }
+

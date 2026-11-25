@@ -400,14 +400,21 @@ export function register(router) {
     publishResponseEvent(assignment, participant, item.id, stored, totals);
     touchLastSeen(participant, assignment, activity);
 
+    const result = {
+      correct: !!stored.correct,
+      autoScore: roundScore(stored.auto_score),
+      maxScore: roundScore(stored.max_score),
+      needsManual: !!stored.needs_manual,
+    };
+    // Some types expose a student-safe detail (e.g. hangman revealed letters,
+    // crossword per-cell flags) for instant feedback — never answer keys.
+    if (module && typeof module.safeDetail === 'function') {
+      const safe = module.safeDetail(scored.detail);
+      if (safe) result.detail = safe;
+    }
     json(res, 200, {
       saved: true,
-      result: {
-        correct: !!stored.correct,
-        autoScore: roundScore(stored.auto_score),
-        maxScore: roundScore(stored.max_score),
-        needsManual: !!stored.needs_manual,
-      },
+      result,
       score: totals.score,
       maxScore: totals.maxScore,
     });

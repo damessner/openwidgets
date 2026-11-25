@@ -78,7 +78,7 @@ join codes. Safe to run repeatedly; it only creates new activities.
 
 - **Dashboard** — create, duplicate, delete, import and export activities; list and manage assignments.
 - **Authoring editor** — declarative block editor with live preview, per-type forms generated from item metadata, autosave, and optimistic-concurrency conflict detection.
-- **16 item types** with deterministic auto-grading (see table below).
+- **18 item types** with deterministic auto-grading (see table below).
 - **Vocabulary lists (Vokabellisten)** — a teacher-managed word library (`/teacher/vocab`): entries with term, translation, alternative answers, example sentence, image and pronunciation audio; CSV import (`term;translation;example`). Load a list into any vocabulary item with one click — the item stores a snapshot, so later edits to the list never break saved worksheets.
 - **Publish** — creates an assignment with a 6-character join code and URL (printable, copyable, iframe-embeddable).
 - **Classes (Lernpfade)** — bundle assignments into a class with its own join link (`/c/<CODE>`, also as QR code). Choose **free order** (everything open) or **fixed sequence** where each worksheet unlocks the next once the previous one is submitted — optionally requiring a minimum score percent. Students join the class with just a name and see a lobby with locked/open/done states. Assignments can be added to/removed from classes directly from the assignment page ("In Klassen").
@@ -121,7 +121,9 @@ join codes. Safe to run repeatedly; it only creates new activities.
 | Group into zones (drag & drop) | ✅ | Drag items (text, image or audio) into zones; each item has one correct zone; partial credit per item |
 | Mark sentence | ✅ | Mark words in a sentence, or strike wrong words and type the correction; partial credit per word |
 | Audio answer (record) | Manual | Student records audio in the browser (mic, max length configurable); the recording is uploaded to the server and the teacher listens + grades in the grading view |
-| Vocabulary trainer | ✅ (typed modes) / self-rated (flashcards) | Modes: flashcards (flip card, rate known/unknown, unknown cards repeat once), translate (type the other side, direction configurable, alternates allowed), listen (play pronunciation audio, type the word), example sentence with gap. Entries can be loaded from a saved vocabulary list; answer side never reaches the student |
+| Vocabulary trainer | ✅ (typed modes) / self-rated (flashcards) | Modes: flashcards (flip card, rate known/unknown, unknown cards repeat once), translate (type the other side, direction configurable, alternates allowed), listen (play pronunciation audio, type the word), example sentence with gap, **match images to words** (dropdown per image; the pairing never reaches the student). Entries can be loaded from a saved vocabulary list; answer side never reaches the student |
+| Hangman | ✅ | Guess the word letter by letter (A–Z, ÄÖÜ); hint, max wrong guesses configurable; won = full points, otherwise partial credit by revealed letters. The word never reaches the student payload — revealed letters come back via a safe result detail |
+| Crossword | ✅ | Words with clues placed on a grid (editor has auto-layout that crosses words at shared letters + solution preview); students type one letter per cell; scoring per letter. Grid letters stay server-side |
 | Long answer | Manual (+ keyword hint) | Keyword hints suggest points; teacher decides |
 
 ## Production deployment (single LXC)

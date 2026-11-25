@@ -10,11 +10,15 @@
 //     alternates per entry). Auto-graded per entry.
 //   - listen:     play the entry's audio, type the word. Auto-graded.
 //   - example:    example sentence with the term masked, type the word.
+//   - match:      images on one side, terms as dropdown options on the other
+//     ("Bilder ↔ Vokabeln zuordnen"). Response maps entryId -> term text; the
+//     association never appears in the sanitized payload (images and terms are
+//     emitted as separate shuffled lists).
 //
 // Sanitize strips the answer side per mode/direction (translation+alternatives
 // or the term), so the student payload never leaks answers. Media that belongs
 // to the answer side is stripped as well; prompt-side media stays.
-import { normalizeText } from '../util.js';
+import { normalizeText, seededShuffle } from '../util.js';
 import {
   asArray,
   asBool,
@@ -35,7 +39,7 @@ export const meta = {
   category: 'assessment',
 };
 
-export const MODES = ['flashcards', 'translate', 'listen', 'example'];
+export const MODES = ['flashcards', 'translate', 'listen', 'example', 'match'];
 export const DIRECTIONS = ['term_to_translation', 'translation_to_term', 'both'];
 
 const MAX_ENTRIES = 60;
@@ -120,7 +124,7 @@ export function validateItem(item) {
   config.entries.forEach((entry, index) => {
     const label = `config.entries[${index}]`;
     if (!entry.term.trim()) errors.push(`${label}.term: must not be empty`);
-    if (config.mode !== 'listen' && !entry.translation.trim()) {
+    if (config.mode !== 'listen' && config.mode !== 'match' && !entry.translation.trim()) {
       errors.push(`${label}.translation: must not be empty (needed for mode "${config.mode}")`);
     }
     if (config.mode === 'listen' && !entry.audioAssetId) {
@@ -128,6 +132,9 @@ export function validateItem(item) {
     }
     if (config.mode === 'example' && !entry.example.trim()) {
       errors.push(`${label}.example: an example sentence is required in example mode`);
+    }
+    if (config.mode === 'match' && !entry.imageAssetId) {
+      errors.push(`${label}.imageAssetId: an image is required in match mode`);
     }
   });
   return errors;
@@ -184,6 +191,20 @@ export function normalizeResponse(item, raw) {
     return { ratings };
   }
 
+  if (config.mode === 'match') {
+    const rawMatches = source.matches && typeof source.matches === 'object' && !Array.isArray(source.matches) ? source.matches : {};
+    const matches = {};
+    for (const entry of config.entries) {
+      const value = rawMatches[entry.id];
+      if (value === undefined || value === null) matches[entry.id] = '';
+      else if (typeof value === 'string') {
+        matches[entry.id] = value.slice(0, 200);
+      } else if (typeof value === 'number' && Number.isFinite(value)) matches[entry.id] = String(value);
+      else throw new Error(`vocabulary match for entry "${entry.id}" must be a string`);
+    }
+    return { matches };
+  }
+
   const rawAnswers = source.answers && typeof source.answers === 'object' && !Array.isArray(source.answers) ? source.answers : {};
   const answers = {};
   for (const entry of config.entries) {
@@ -228,6 +249,30 @@ export function score(item, response) {
     collapseSpaces: true,
     ignorePunctuation: false,
   };
+  if (config.mode === 'match') {
+    const matches = response && response.matches && typeof response.matches === 'object' ? response.matches : {};
+    const options = { caseSensitive: config.caseSensitive, trim: true, collapseSpaces: true, ignorePunctuation: true };
+    const detail = { mode: 'match', matches: {} };
+    let correctCount = 0;
+    for (const entry of entries) {
+      const givenText = normalizeText(matches[entry.id] || '', options);
+      const correct = givenText !== '' && givenText === normalizeText(entry.term, options);
+      if (correct) correctCount += 1;
+      detail.matches[entry.id] = { given: givenText, correct };
+    }
+    const maxScore = normalized.points;
+    const autoScore = total > 0 ? roundScore((maxScore * correctCount) / total) : 0;
+    return makeResult({
+      autoScore,
+      maxScore,
+      correct: total > 0 && correctCount === total,
+      needsManual: false,
+      correctParts: correctCount,
+      totalParts: total,
+      detail,
+    });
+  }
+
   const given = response && response.answers && typeof response.answers === 'object' ? response.answers : {};
   const detail = { mode: config.mode, answers: {} };
   let correctCount = 0;
@@ -251,6 +296,24 @@ export function score(item, response) {
   });
 }
 
+/** Student-safe score detail: per-entry given/correct (never the answers). */
+export function safeDetail(detail) {
+  if (!detail || typeof detail !== 'object') return null;
+  const out = {};
+  for (const key of ['answers', 'matches']) {
+    if (detail[key] && typeof detail[key] === 'object') {
+      const per = {};
+      for (const [id, info] of Object.entries(detail[key])) {
+        if (!info || typeof info !== 'object') continue;
+        per[id] = { given: asString(info.given), correct: info.correct === true };
+      }
+      out[key] = per;
+    }
+  }
+  if (detail.ratings && typeof detail.ratings === 'object') out.ratings = detail.ratings;
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 /**
  * Student-safe config: keep the prompt side, strip the answer side per
  * mode/direction (see header comment).
@@ -265,6 +328,20 @@ export function sanitizeItem(item) {
     return {
       ...sanitizeBaseItem(normalized),
       config: { ...base, entries: config.entries.map((entry) => ({ ...entry, alternatives: [...entry.alternatives] })) },
+    };
+  }
+
+  if (config.mode === 'match') {
+    // images and terms are decoupled: images keep entry ids (response keys),
+    // terms go to a separate seeded-shuffled list — the pairing is the secret.
+    const images = config.entries.map((entry) => ({ id: entry.id, imageAssetId: entry.imageAssetId }));
+    const terms = seededShuffle(
+      config.entries.map((entry) => entry.term),
+      `vocab-match:${normalized.id}`,
+    );
+    return {
+      ...sanitizeBaseItem(normalized),
+      config: { ...base, entries: images, terms },
     };
   }
 
@@ -310,6 +387,10 @@ export function summarizeResponse(item, response) {
     const known = config.entries.filter((entry) => ratings[entry.id] === 'known').length;
     return `${known}/${config.entries.length} known`;
   }
+  if (config.mode === 'match') {
+    const matches = response && response.matches && typeof response.matches === 'object' ? response.matches : {};
+    return config.entries.map((entry) => String(matches[entry.id] === undefined ? '' : matches[entry.id]).trim() || '–').join(' | ').slice(0, 120);
+  }
   const answers = response && response.answers && typeof response.answers === 'object' ? response.answers : {};
   return config.entries.map((entry) => String(answers[entry.id] === undefined ? '' : answers[entry.id]).trim()).join(' | ').slice(0, 120);
 }
@@ -318,6 +399,13 @@ export function answerKey(item) {
   const normalized = normalizeItem(item);
   const config = normalized.config;
   if (isFlashcards(config)) return null;
+  if (config.mode === 'match') {
+    const matches = {};
+    config.entries.forEach((entry) => {
+      matches[entry.id] = entry.term;
+    });
+    return { matches };
+  }
   const answers = {};
   config.entries.forEach((entry, index) => {
     const accepted = acceptedOf(config, entry, index);
@@ -344,6 +432,7 @@ export function editSchema() {
         { value: 'translate', label: { en: 'Translate (type it)', de: 'Übersetzen (tippen)' } },
         { value: 'listen', label: { en: 'Listen and type', de: 'Hören und tippen' } },
         { value: 'example', label: { en: 'Example sentence with gap', de: 'Beispielsatz mit Lücke' } },
+        { value: 'match', label: { en: 'Match images to words', de: 'Bilder den Wörtern zuordnen' } },
       ],
     },
     {

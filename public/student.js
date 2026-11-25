@@ -398,6 +398,9 @@ function normalizeResult(result) {
     autoScore: Number(result.autoScore) || 0,
     maxScore: Number(result.maxScore) || 0,
     needsManual: result.needsManual === true,
+    // student-safe per-type detail (hangman reveal, crossword cells, …) — the
+    // server only sends this when the item type marks it safe via safeDetail
+    detail: result.detail && typeof result.detail === 'object' && !Array.isArray(result.detail) ? result.detail : undefined,
   };
 }
 

@@ -12,6 +12,7 @@ import { h, clear } from '/lib/dom.js';
 import { t, getLocale } from '/lib/i18n.js';
 import { uploadAsset, get } from '/lib/api.js';
 import { icon } from '/lib/icons.js';
+import { autoLayout, buildGrid, lettersOf } from '/shared/items/crossword.js';
 import { assetUrl, rememberAssetUrl } from './core.js';
 import { nextConfigId, newRandomId } from './items.js';
 
@@ -2263,11 +2264,112 @@ function renderMarkSentenceEditor(container, { item, onChange }) {
 }
 
 // ---------------------------------------------------------------------------
+// Crossword editor (v0.8): word rows + auto-layout + solution preview grid.
+// ---------------------------------------------------------------------------
+
+function renderCrosswordEditor(container, { item, onChange }) {
+  const config = item.config;
+  if (typeof config.title !== 'string') config.title = '';
+  if (!Array.isArray(config.words)) config.words = [];
+
+  function rerender() {
+    clear(host);
+
+    const titleId = uid('cw-title');
+    const titleInput = h('input.input.input-sm', { id: titleId, type: 'text', value: config.title, placeholder: t('teacher.cw_title_ph') });
+    titleInput.addEventListener('input', () => { config.title = titleInput.value; onChange(); });
+    host.appendChild(h('div.field.field-sm', h('label.label', { for: titleId }, t('teacher.cw_title')), titleInput));
+
+    // auto-layout button
+    const autoBtn = h('button.btn.btn-sm.btn-secondary', { type: 'button' }, t('teacher.cw_autolayout'));
+    autoBtn.addEventListener('click', () => {
+      const placed = autoLayout(config.words);
+      if (!placed) {
+        host.querySelector('.cw-error').textContent = t('teacher.cw_autolayout_failed');
+        return;
+      }
+      config.words = config.words.slice(0, placed.length).map((word, index) => ({
+        ...word,
+        row: placed[index].row,
+        col: placed[index].col,
+        direction: placed[index].direction,
+      }));
+      rerender();
+      onChange();
+    });
+    host.appendChild(h('div.row.gap-2.align-center.mb-2',
+      autoBtn,
+      h('p.error-text.cw-error', { role: 'alert', hidden: false, style: 'margin:0' }),
+    ));
+
+    // word rows
+    const list = h('div.cw-word-list');
+    config.words.forEach((word, index) => {
+      const row = h('div.list-row.cw-word-row', { dataset: { index: String(index) } });
+      const wordInput = h('input.input.input-sm.cw-word', { type: 'text', value: word.word, placeholder: t('teacher.cw_word_ph'), 'aria-label': t('teacher.cw_word_ph') });
+      wordInput.addEventListener('input', () => { word.word = wordInput.value; onChange(); });
+      const clueInput = h('input.input.input-sm.cw-clue', { type: 'text', value: word.clue, placeholder: t('teacher.cw_clue_ph'), 'aria-label': t('teacher.cw_clue_ph') });
+      clueInput.addEventListener('input', () => { word.clue = clueInput.value; onChange(); });
+      const rowInput = h('input.input.input-sm.cw-pos', { type: 'number', min: '0', max: '19', value: String(word.row), title: t('teacher.cw_row') });
+      rowInput.addEventListener('input', () => { word.row = Number(rowInput.value) || 0; onChange(); });
+      const colInput = h('input.input.input-sm.cw-pos', { type: 'number', min: '0', max: '19', value: String(word.col), title: t('teacher.cw_col') });
+      colInput.addEventListener('input', () => { word.col = Number(colInput.value) || 0; onChange(); });
+      const dirSelect = h('select.select.select-sm.cw-dir');
+      dirSelect.appendChild(h('option', { value: 'across', selected: word.direction !== 'down' }, t('teacher.cw_across')));
+      dirSelect.appendChild(h('option', { value: 'down', selected: word.direction === 'down' }, t('teacher.cw_down')));
+      dirSelect.addEventListener('change', () => { word.direction = dirSelect.value; rerender(); onChange(); });
+      const delBtn = h('button.btn.btn-icon.btn-sm.btn-ghost', {
+        type: 'button',
+        'aria-label': t('common.remove'),
+        on: { click: () => { config.words.splice(index, 1); rerender(); onChange(); } },
+      }, h('span', { html: '✕' }));
+      row.append(wordInput, clueInput, rowInput, colInput, dirSelect, delBtn);
+      list.appendChild(row);
+    });
+    host.appendChild(list);
+    host.appendChild(h('div.row.gap-2.mt-2',
+      h('button.btn.btn-sm.btn-secondary', {
+        type: 'button',
+        on: {
+          click: () => {
+            config.words.push({ id: nextConfigId(config.words, 'w'), word: '', clue: '', row: 0, col: 0, direction: 'across' });
+            rerender();
+            onChange();
+          },
+        },
+      }, t('teacher.cw_add_word')),
+    ));
+
+    // preview grid (teacher sees the solution)
+    const grid = buildGrid(config.words.filter((w) => lettersOf(w.word).length >= 2));
+    if (grid && grid.cells.size > 0) {
+      const table = h('table.cw-preview-grid');
+      for (let r = 0; r < grid.rows; r += 1) {
+        const tr = h('tr');
+        for (let c = 0; c < grid.cols; c += 1) {
+          const cell = grid.cells.get(`${r},${c}`);
+          const td = h('td', cell ? { text: cell.letter, class: 'cw-preview-cell' } : { class: 'cw-preview-block' });
+          tr.appendChild(td);
+        }
+        table.appendChild(tr);
+      }
+      host.appendChild(h('div.cw-preview.mt-2', h('p.help.mb-1', t('teacher.cw_preview')), table));
+    } else if (config.words.length > 0) {
+      host.appendChild(h('p.error-text', t('teacher.cw_conflict')));
+    }
+  }
+
+  const host = h('div.cw-editor');
+  rerender();
+  container.appendChild(host);
+}
+
+// ---------------------------------------------------------------------------
 // Vocabulary editor (v0.7): mode/direction switches + entry grid with media
 // pickers + "load from saved vocab list".
 // ---------------------------------------------------------------------------
 
-const VOCAB_MODES = ['flashcards', 'translate', 'listen', 'example'];
+const VOCAB_MODES = ['flashcards', 'translate', 'listen', 'example', 'match'];
 const VOCAB_DIRECTIONS = ['term_to_translation', 'translation_to_term', 'both'];
 
 function renderVocabularyEditor(container, { item, onChange }) {
@@ -2481,6 +2583,10 @@ export function renderConfigForm(container, { item, schema, onChange }) {
   }
   if (item.type === 'vocabulary') {
     renderVocabularyEditor(container, { item, onChange: change });
+    return;
+  }
+  if (item.type === 'crossword') {
+    renderCrosswordEditor(container, { item, onChange: change });
     return;
   }
 

@@ -19,6 +19,8 @@ import * as groups from './groups.js';
 import * as markSentence from './mark_sentence.js';
 import * as audioAnswer from './audio_answer.js';
 import * as vocabulary from './vocabulary.js';
+import * as hangman from './hangman.js';
+import * as crossword from './crossword.js';
 
 export const itemTypes = [
   text,
@@ -37,6 +39,8 @@ export const itemTypes = [
   markSentence,
   audioAnswer,
   vocabulary,
+  hangman,
+  crossword,
 ];
 
 const byType = new Map(itemTypes.map((module) => [module.type, module]));
@@ -229,6 +233,9 @@ export function regenerateItemIds(item) {
     }
     case 'vocabulary':
       out.config = { ...normalized.config, entries: freshIds(normalized.config.entries, 'e') };
+      break;
+    case 'crossword':
+      out.config = { ...normalized.config, words: freshIds(normalized.config.words, 'w') };
       break;
     default:
       break;

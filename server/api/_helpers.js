@@ -570,6 +570,14 @@ export function resultPayload(participantRow, assignmentRow, activityRow) {
     };
     if (row) entry.response = parseJson(row.response, {});
     else if (module.normalizeResponse) entry.response = {};
+    if (row && typeof module.safeDetail === 'function') {
+      try {
+        const safe = module.safeDetail(module.score(item, entry.response || {}).detail);
+        if (safe) entry.detail = safe;
+      } catch {
+        /* ignore */
+      }
+    }
     if (showAnswers) {
       const answerText = textAnswerFor(item);
       if (answerText.length > 0) entry.answerText = answerText;

@@ -34,10 +34,10 @@ function makeItem(configOverrides = {}) {
   return normalizeItem(item);
 }
 
-test('vocabulary: registered as 16th type with meta', () => {
+test('vocabulary: registered with meta', () => {
   const module = TYPES_ENTRY();
   assert.ok(module, 'vocabulary registered');
-  assert.equal(itemTypes.length, 16);
+  assert.equal(itemTypes.length, 18);
   const meta = itemTypeMeta().find((m) => m.type === 'vocabulary');
   assert.equal(meta.scoreable, true);
   assert.ok(meta.label.de && meta.label.en);

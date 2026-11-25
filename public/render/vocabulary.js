@@ -257,6 +257,89 @@ export function mount(container, rawCtx) {
   }
 
   // ---------------------------------------------------------------------
+  // Match mode: images with a term dropdown each ("Bilder ↔ Vokabeln")
+  // ---------------------------------------------------------------------
+  if (config.mode === 'match') {
+    const images = entriesOf(config); // sanitized: [{ id, imageAssetId }]
+    const terms = Array.isArray(config.terms) ? config.terms.map(String) : [];
+    const matches = {}; // entryId -> term text
+    const slots = new Map();
+
+    const wrap = h('div.item-vocab-match');
+    if (images.length === 0 || terms.length === 0) {
+      wrap.appendChild(h('p.small.muted', { text: '—' }));
+    }
+    const list = h('div.item-vocab-match-list');
+    const imgOrder = config.shuffle === false ? images.map((e, i) => i) : shuffled(images.map((e, i) => i), ctx, 'vocab-match');
+    for (const index of imgOrder) {
+      const imageEntry = images[index];
+      const row = h('div.item-vocab-match-row', { dataset: { entryId: String(imageEntry.id) } });
+      const imgUrl = assetUrlOf(imageEntry.imageAssetId);
+      const imgBox = h('div.item-vocab-match-img', imgUrl ? h('img', { src: imgUrl, alt: '' }) : h('span.muted', { text: '?' }));
+      const select = h('select.select.item-vocab-match-select', {
+        'aria-label': t('item.vocab.legend'),
+        disabled: readonly || undefined,
+      });
+      select.appendChild(h('option', { value: '' }, '—'));
+      for (const term of terms) select.appendChild(h('option', { value: term }, term));
+      select.addEventListener('change', () => {
+        matches[imageEntry.id] = select.value;
+      });
+      row.append(imgBox, select);
+      list.appendChild(row);
+      slots.set(imageEntry.id, { row, select });
+    }
+    wrap.appendChild(list);
+    root.appendChild(wrap);
+
+    function setResponse(response) {
+      const given = response && response.matches && typeof response.matches === 'object' ? response.matches : {};
+      for (const key of Object.keys(matches)) delete matches[key];
+      for (const imageEntry of images) {
+        const value = typeof given[imageEntry.id] === 'string' ? given[imageEntry.id] : '';
+        matches[imageEntry.id] = value;
+        const slot = slots.get(imageEntry.id);
+        if (slot) slot.select.value = value;
+      }
+    }
+
+    function setResult(result) {
+      applyResult(root, resultRegion, result);
+      const detail = result && result.detail && typeof result.detail === 'object' ? result.detail : {};
+      const perEntry = detail.matches && typeof detail.matches === 'object' ? detail.matches : {};
+      for (const imageEntry of images) {
+        const slot = slots.get(imageEntry.id);
+        if (!slot) continue;
+        const info = perEntry[imageEntry.id];
+        slot.row.classList.toggle('is-correct', !!(info && info.correct));
+        slot.row.classList.toggle('is-incorrect', !!(info && info.correct === false));
+      }
+    }
+
+    setResponse(ctx.response);
+    root.appendChild(live);
+    root.appendChild(resultRegion);
+    if (ctx.result) setResult(ctx.result);
+    const keyBlock = solutionBlock(item, ctx);
+    if (keyBlock) root.appendChild(keyBlock);
+    container.replaceChildren(root);
+
+    return {
+      getResponse() {
+        return { matches: { ...matches } };
+      },
+      setResponse,
+      setResult,
+      focus() {
+        if (!focusFirst(root, 'select:enabled')) focusRoot(root);
+      },
+      destroy() {
+        container.replaceChildren();
+      },
+    };
+  }
+
+  // ---------------------------------------------------------------------
   // Typed modes (translate / listen / example)
   // ---------------------------------------------------------------------
   const answers = {}; // entryId -> string
