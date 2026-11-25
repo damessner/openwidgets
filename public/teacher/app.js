@@ -16,6 +16,8 @@ import * as adminView from './views/admin.js';
 import * as printView from './views/print.js';
 import * as classesView from './views/classes.js';
 import * as classEditView from './views/class-edit.js';
+import * as vocabView from './views/vocab.js';
+import * as vocabEditView from './views/vocab-edit.js';
 
 const ROUTES = [
   { name: 'dashboard', pattern: /^\/teacher\/dashboard\/?$/, view: dashboardView },
@@ -24,6 +26,8 @@ const ROUTES = [
   { name: 'grade', pattern: /^\/teacher\/grade\/?$/, view: gradeView },
   { name: 'classes', pattern: /^\/teacher\/classes\/?$/, view: classesView },
   { name: 'class-edit', pattern: /^\/teacher\/class\/?$/, view: classEditView },
+  { name: 'vocab', pattern: /^\/teacher\/vocab\/?$/, view: vocabView },
+  { name: 'vocab-edit', pattern: /^\/teacher\/vocab-edit\/?$/, view: vocabEditView },
   { name: 'admin', pattern: /^\/teacher\/admin\/?$/, view: adminView, adminOnly: true },
   { name: 'print', pattern: /^\/teacher\/print\/?$/, view: printView, chrome: false },
 ];
@@ -53,6 +57,7 @@ function initialLetters(name) {
 const NAV_ITEMS = [
   { route: 'dashboard', href: '/teacher/dashboard', key: 'teacher.nav_dashboard', icon: 'grid' },
   { route: 'classes', href: '/teacher/classes', key: 'teacher.nav_classes', icon: 'list' },
+  { route: 'vocab', href: '/teacher/vocab', key: 'teacher.nav_vocab', icon: 'book' },
   { route: 'admin', href: '/teacher/admin', key: 'teacher.nav_admin', icon: 'settings', adminOnly: true },
 ];
 

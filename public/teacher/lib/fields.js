@@ -10,7 +10,8 @@
 // owns persistence.
 import { h, clear } from '/lib/dom.js';
 import { t, getLocale } from '/lib/i18n.js';
-import { uploadAsset } from '/lib/api.js';
+import { uploadAsset, get } from '/lib/api.js';
+import { icon } from '/lib/icons.js';
 import { assetUrl, rememberAssetUrl } from './core.js';
 import { nextConfigId, newRandomId } from './items.js';
 
@@ -2262,6 +2263,174 @@ function renderMarkSentenceEditor(container, { item, onChange }) {
 }
 
 // ---------------------------------------------------------------------------
+// Vocabulary editor (v0.7): mode/direction switches + entry grid with media
+// pickers + "load from saved vocab list".
+// ---------------------------------------------------------------------------
+
+const VOCAB_MODES = ['flashcards', 'translate', 'listen', 'example'];
+const VOCAB_DIRECTIONS = ['term_to_translation', 'translation_to_term', 'both'];
+
+function renderVocabularyEditor(container, { item, onChange }) {
+  const config = item.config;
+  if (!VOCAB_MODES.includes(config.mode)) config.mode = 'translate';
+  if (!VOCAB_DIRECTIONS.includes(config.direction)) config.direction = 'term_to_translation';
+  if (typeof config.shuffle !== 'boolean') config.shuffle = true;
+  if (typeof config.caseSensitive !== 'boolean') config.caseSensitive = false;
+  if (!Array.isArray(config.entries)) config.entries = [];
+
+  function rerender() {
+    clear(host);
+
+    // --- mode / direction / options --------------------------------------
+    const modeId = uid('vc-mode');
+    const modeSelect = h('select.select.select-sm', { id: modeId });
+    for (const value of VOCAB_MODES) {
+      modeSelect.appendChild(h('option', { value, selected: config.mode === value }, t(`teacher.vc_mode_${value}`)));
+    }
+    modeSelect.addEventListener('change', () => { config.mode = modeSelect.value; rerender(); onChange(); });
+
+    const dirId = uid('vc-dir');
+    const dirSelect = h('select.select.select-sm', { id: dirId });
+    for (const value of VOCAB_DIRECTIONS) {
+      dirSelect.appendChild(h('option', { value, selected: config.direction === value }, t(`teacher.vc_dir_${value}`)));
+    }
+    dirSelect.addEventListener('change', () => { config.direction = dirSelect.value; rerender(); onChange(); });
+
+    const shuffleId = uid('vc-shuf');
+    const shuffleBox = h('input', { id: shuffleId, type: 'checkbox', checked: config.shuffle === true });
+    shuffleBox.addEventListener('change', () => { config.shuffle = shuffleBox.checked; onChange(); });
+    const caseId = uid('vc-case');
+    const caseBox = h('input', { id: caseId, type: 'checkbox', checked: config.caseSensitive === true });
+    caseBox.addEventListener('change', () => { config.caseSensitive = caseBox.checked; onChange(); });
+
+    host.appendChild(h('div.row.wrap.gap-3',
+      h('div.field.field-sm', h('label.label', { for: modeId }, t('teacher.vc_mode')), modeSelect),
+      h('div.field.field-sm', h('label.label', { for: dirId }, t('teacher.vc_direction')), dirSelect),
+      h('label.switch.field-row', shuffleBox, h('span.track', { 'aria-hidden': 'true' }), h('span.small', t('teacher.vc_shuffle'))),
+      h('label.switch.field-row', caseBox, h('span.track', { 'aria-hidden': 'true' }), h('span.small', t('teacher.vc_case'))),
+    ));
+
+    // --- load from a saved vocab list -------------------------------------
+    const listId = uid('vc-list');
+    const listSelect = h('select.select.select-sm', { id: listId });
+    listSelect.appendChild(h('option', { value: '' }, t('teacher.vc_pick_list')));
+    const loadBtn = h('button.btn.btn-sm.btn-secondary', { type: 'button' }, t('teacher.vc_load_list'));
+    loadBtn.addEventListener('click', async () => {
+      const listIdValue = listSelect.value;
+      if (!listIdValue) return;
+      loadBtn.disabled = true;
+      try {
+        const data = await get(`/api/vocab-lists/${encodeURIComponent(listIdValue)}`);
+        const incoming = Array.isArray(data.entries) ? data.entries : [];
+        config.entries = incoming.slice(0, 60).map((entry) => ({
+          id: nextConfigId(config.entries, 'e'),
+          term: String(entry.term || ''),
+          translation: String(entry.translation || ''),
+          alternatives: Array.isArray(entry.alternatives) ? entry.alternatives.map(String) : [],
+          example: String(entry.example || ''),
+          imageAssetId: String(entry.imageAssetId || ''),
+          audioAssetId: String(entry.audioAssetId || ''),
+        }));
+        rerender();
+        onChange();
+      } catch {
+        /* toast handled by api layer */
+      } finally {
+        loadBtn.disabled = false;
+      }
+    });
+    get('/api/vocab-lists')
+      .then((data) => {
+        for (const list of data.lists || []) {
+          listSelect.appendChild(h('option', { value: list.id }, `${list.title} (${list.entryCount})`));
+        }
+      })
+      .catch(() => {});
+    host.appendChild(h('div.field.field-sm',
+      h('label.label', { for: listId }, t('teacher.vc_from_list')),
+      h('div.row.gap-2.align-center', listSelect, loadBtn),
+    ));
+
+    // --- entries grid -------------------------------------------------------
+    const grid = h('div.vocab-entry-grid');
+    config.entries.forEach((entry, index) => {
+      const row = h('div.list-row.vocab-entry-row', { dataset: { index: String(index) } });
+      const termInput = h('input.input.input-sm.vc-term', { type: 'text', value: entry.term, placeholder: t('teacher.vc_term'), 'aria-label': t('teacher.vc_term') });
+      termInput.addEventListener('input', () => { entry.term = termInput.value; onChange(); });
+      const transInput = h('input.input.input-sm.vc-trans', { type: 'text', value: entry.translation, placeholder: t('teacher.vc_translation'), 'aria-label': t('teacher.vc_translation') });
+      transInput.addEventListener('input', () => { entry.translation = transInput.value; onChange(); });
+      const altInput = h('input.input.input-sm.vc-alt', { type: 'text', value: (entry.alternatives || []).join(', '), placeholder: t('teacher.vc_alternatives'), 'aria-label': t('teacher.vc_alternatives') });
+      altInput.addEventListener('input', () => {
+        entry.alternatives = altInput.value.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 10);
+        onChange();
+      });
+      const exInput = h('input.input.input-sm.vc-example', { type: 'text', value: entry.example, placeholder: t('teacher.vc_example'), 'aria-label': t('teacher.vc_example') });
+      exInput.addEventListener('input', () => { entry.example = exInput.value; onChange(); });
+
+      const imgInput = h('input', { type: 'file', accept: IMAGE_ACCEPT, class: 'sr-only' });
+      imgInput.addEventListener('change', async () => {
+        const file = imgInput.files && imgInput.files[0];
+        if (!file) return;
+        const asset = await pickAssetOrToast(file);
+        if (asset) { entry.imageAssetId = asset.id; rerender(); onChange(); }
+      });
+      const audioInput = h('input', { type: 'file', accept: AUDIO_ACCEPT, class: 'sr-only' });
+      audioInput.addEventListener('change', async () => {
+        const file = audioInput.files && audioInput.files[0];
+        if (!file) return;
+        const asset = await pickAssetOrToast(file);
+        if (asset) { entry.audioAssetId = asset.id; rerender(); onChange(); }
+      });
+      const imgBtn = h('button.btn.btn-icon.btn-sm.btn-ghost', {
+        type: 'button',
+        title: entry.imageAssetId ? t('teacher.pins_replace') : t('teacher.pins_upload'),
+        'aria-label': t('teacher.vc_image'),
+        on: { click: () => imgInput.click() },
+      }, h('span', { html: icon('image', { size: 16 }) }));
+      if (entry.imageAssetId) imgBtn.classList.add('has-asset');
+      const audioBtn = h('button.btn.btn-icon.btn-sm.btn-ghost', {
+        type: 'button',
+        title: entry.audioAssetId ? t('teacher.pins_replace') : t('teacher.upload_audio'),
+        'aria-label': t('teacher.vc_audio'),
+        on: { click: () => audioInput.click() },
+      }, h('span', { html: icon('mic', { size: 16 }) }));
+      if (entry.audioAssetId) audioBtn.classList.add('has-asset');
+      const delBtn = h('button.btn.btn-icon.btn-sm.btn-ghost', {
+        type: 'button',
+        'aria-label': t('common.remove'),
+        on: { click: () => { config.entries.splice(index, 1); rerender(); onChange(); } },
+      }, h('span', { html: '✕' }));
+
+      row.append(
+        h('div.row.gap-2.align-center', termInput, transInput, altInput),
+        h('div.row.gap-2.align-center', exInput),
+        h('div.row.gap-1.align-center', imgBtn, audioBtn, imgInput, audioInput, delBtn),
+      );
+      grid.appendChild(row);
+    });
+    host.appendChild(grid);
+    if (config.entries.length === 0) host.appendChild(h('p.help', t('teacher.vc_empty')));
+
+    host.appendChild(h('div.row.gap-2.mt-2',
+      h('button.btn.btn-sm.btn-secondary', {
+        type: 'button',
+        on: {
+          click: () => {
+            config.entries.push({ id: nextConfigId(config.entries, 'e'), term: '', translation: '', alternatives: [], example: '', imageAssetId: '', audioAssetId: '' });
+            rerender();
+            onChange();
+          },
+        },
+      }, t('teacher.vc_add_entry')),
+    ));
+  }
+
+  const host = h('div.vocab-editor');
+  rerender();
+  container.appendChild(host);
+}
+
+// ---------------------------------------------------------------------------
 // Public entry point
 // ---------------------------------------------------------------------------
 
@@ -2308,6 +2477,10 @@ export function renderConfigForm(container, { item, schema, onChange }) {
   }
   if (item.type === 'mark_sentence') {
     renderMarkSentenceEditor(container, { item, onChange: change });
+    return;
+  }
+  if (item.type === 'vocabulary') {
+    renderVocabularyEditor(container, { item, onChange: change });
     return;
   }
 

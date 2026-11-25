@@ -14,6 +14,7 @@ import { register as registerAuth } from './api/auth.js';
 import { register as registerAdmin } from './api/admin.js';
 import { register as registerActivities } from './api/activities.js';
 import { register as registerAssets } from './api/assets.js';
+import { register as registerVocab } from './api/vocab.js';
 import { register as registerAssignments } from './api/assignments.js';
 import { register as registerClasses } from './api/classes.js';
 import { register as registerGrading } from './api/grading.js';
@@ -50,6 +51,7 @@ registerParticipant(router);
 registerGrading(router);
 registerAdmin(router);
 registerAssets(router);
+registerVocab(router);
 
 // ---------------------------------------------------------------------------
 // System endpoints

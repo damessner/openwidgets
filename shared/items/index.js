@@ -18,6 +18,7 @@ import * as table from './table.js';
 import * as groups from './groups.js';
 import * as markSentence from './mark_sentence.js';
 import * as audioAnswer from './audio_answer.js';
+import * as vocabulary from './vocabulary.js';
 
 export const itemTypes = [
   text,
@@ -35,6 +36,7 @@ export const itemTypes = [
   groups,
   markSentence,
   audioAnswer,
+  vocabulary,
 ];
 
 const byType = new Map(itemTypes.map((module) => [module.type, module]));
@@ -225,6 +227,9 @@ export function regenerateItemIds(item) {
       out.config = { ...normalized.config, zones, items };
       break;
     }
+    case 'vocabulary':
+      out.config = { ...normalized.config, entries: freshIds(normalized.config.entries, 'e') };
+      break;
     default:
       break;
   }

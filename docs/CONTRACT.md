@@ -95,6 +95,8 @@ IDs are UUID v4 strings (`crypto.randomUUID()`). Timestamps are ISO-8601 UTC str
 - `responses(id, participant_id, item_id, response TEXT JSON, auto_score REAL, max_score REAL, correct INT, needs_manual INT, feedback TEXT, manual_score REAL, updated_at, UNIQUE(participant_id,item_id))`
 - `events(id INTEGER PK AUTOINCREMENT, assignment_id, participant_id, kind, payload TEXT JSON, created_at)`
 - `assets(id, owner_id, filename, mime, size, sha256, created_at)`
+- `vocab_lists(id, owner_id, title, description, source_lang, target_lang, created_at, updated_at)` (schema v4)
+- `vocab_entries(id, list_id, position, term, translation, alternatives TEXT JSON, example, image_asset_id, audio_asset_id, notes)`
 - `settings(key PK, value)`
 
 Query helpers exported by `server/db.js`: `db`, `one(sql, ...params)`, `all(sql, ...params)`, `run(sql, ...params)`, `uid()`, `now()`, `tx(fn)`. Always use prepared statements via these helpers (no string interpolation of values).
@@ -161,6 +163,7 @@ Assignment delivery: `POST /api/activities/:id/publish` copies the activity `set
 | `groups` | yes | In Zonen gruppieren | `{ "zones": [{"id","label"}], "items": [{"id","side": side, "zoneId": "<correct zone id>"}], "shuffle": bool }` — `side` same as `match` (text/image/audio); sanitize strips `zoneId` |
 | `mark_sentence` | yes | Satz markieren / Wörter streichen | `{ "mode": "mark"\|"correct", "words": [{"text","target":"none"\|"mark"\|"wrong","fix":""}] }` — ≤120 words; ≥1 word with target ≠ none |
 | `audio_answer` | yes (manual) | Audio-Antwort (Aufnahme) | `{ "maxDurationSec": 120 }` (5..3600); response references an uploaded audio asset; `needsManual = true` always |
+| `vocabulary` | yes (flashcards: no) | Vokabeln | `{ "mode": "flashcards"\|"translate"\|"listen"\|"example", "direction": "term_to_translation"\|"translation_to_term"\|"both", "shuffle": true, "caseSensitive": false, "entries": [{"id","term","translation","alternatives":[...],"example","imageAssetId","audioAssetId"}] }` — ≤60 entries; translate needs `translation`, listen needs `audioAssetId`, example needs `example` |
 
 **Canonical responses** (what the client sends, stored as-is after `normalizeResponse`):
 
@@ -181,6 +184,7 @@ Assignment delivery: `POST /api/activities/:id/publish` copies the activity `set
 | `groups` | `{ "placement": { "<itemId>": "<zoneId>" } }` (every item placed) |
 | `mark_sentence` | `{ "selected": [wordIndex, ...], "fixes": { "<wordIndex>": "correction" } }` |
 | `audio_answer` | `{ "assetId": "...", "durationMs": 12345, "mime": "audio/webm" }` — mime must be in the audio allowlist |
+| `vocabulary` | typed modes: `{ "answers": { "<entryId>": "..." } }`; flashcards: `{ "ratings": { "<entryId>": "known"\|"unknown" } }` |
 
 **Scoring semantics per type:**
 
@@ -199,6 +203,7 @@ Assignment delivery: `POST /api/activities/:id/publish` copies the activity `set
 - `groups`: per item equal weight; correct iff `placement[itemId] === item.zoneId`. `autoScore = round(points * correct/total, 4)`; `correct` = all placed correctly. Sanitize strips `zoneId` from items.
 - `mark_sentence`: mode `mark` — per target word (`target==="mark"`) equal weight; selected set must equal the target set (wrong selections cancel hits). Mode `correct` — additionally every `target==="wrong"` word needs `fixes[idx]` matching `fix` after normalization. `autoScore = round(points * correct/total, 4)`. Sanitize strips `target` and `fix`.
 - `audio_answer`: `autoScore = 0`, `needsManual = true` always; the response asset is an audio upload via `POST /api/participant/assets` (audio-only); the grading view plays it back (`/assets/<id>/<id>`).
+- `vocabulary`: typed modes — per entry equal weight; accepted = answer side per direction (`translation`+`alternatives` for term→translation, `term` for translation→term/listen/example; `both` alternates per entry index); normalized text match; `autoScore = round(points * correct/total, 4)`. Flashcards — `maxScore = 0` (not part of the scoreable total), ratings stored, `correct` = all known. Sanitize strips the answer side per mode/direction (never sends `translation`/`alternatives` when they are the answer, nor `term` when it is; in example mode the term is masked to `_____` inside the example; prompt-side media stays, answer-side media is stripped).
 
 **`shared/items/<type>.js` exports** (all pure, importable from browser and Node):
 
@@ -339,6 +344,18 @@ Live-player shape (single source of truth, used by `/live`, SSE and results):
 `{id, name, status, score, maxScore, lastSeenAt, online, items:{ [itemId]: "unanswered"|"correct"|"partial"|"incorrect"|"manual" }, flags:[itemId], submittedAt}`.
 `state` derivation: no response ⇒ `unanswered`; `needs_manual` ⇒ `manual`; `auto_score >= max_score-ε` ⇒ `correct`; `<= ε` ⇒ `incorrect`; else `partial`.
 
+### 5.9 Vocabulary lists (teacher-only, owner-scoped; admin sees all)
+| Method | Path | Body | Response |
+| --- | --- | --- | --- |
+| GET | `/api/vocab-lists` | — | `{lists:[{id,title,description,sourceLang,targetLang,entryCount,createdAt,updatedAt}]}` |
+| POST | `/api/vocab-lists` | `{title, description?, sourceLang?, targetLang?, entries?}` | 201 `{list, entries}`; 400 `validation_failed` |
+| GET | `/api/vocab-lists/:id` | — | `{list, entries:[{id,position,term,translation,alternatives,example,imageAssetId,audioAssetId,notes}]}`; 404 / 403 `not_your_list` |
+| PUT | `/api/vocab-lists/:id` | same as POST; when `entries` present they replace all rows in one transaction | 200 `{list, entries}` |
+| DELETE | `/api/vocab-lists/:id` | — | 204 |
+| POST | `/api/vocab-lists/:id/import` | `{csv}` (≤512 KB; one row per line `term;translation;example;note`, `;` or tab, header row auto-skipped, ≤500 rows) | 200 `{added, entries}`; 400 `empty_csv`/`no_rows`/`too_many_entries` |
+
+Entry validation: `term` required (≤200 chars), `translation` ≤200, `alternatives` ≤10 strings ≤200, `example` ≤1000, `notes` ≤500, `imageAssetId`/`audioAssetId` must exist in `assets` (400 otherwise). CSV parsing lives in `shared/vocab-csv.js` (`parseVocabCsv`) so server and tests share it. Lists are an **authoring library**: a `vocabulary` item stores a snapshot of entries, so editing/deleting a list never breaks saved activities.
+
 ### 5.8 System (Lead)
 - `GET /api/health` → `{status:"ok", version, uptime, db:"ok"}` 200; 503 if DB probe fails.
 - `GET /api/capabilities` → `{version, itemTypes:[{type,label,scoreable}], features:{sse:true,print:true,importExport:true,timeLimit:true,classes:true}, maxUploadMb}`.
@@ -350,7 +367,7 @@ Page loaders:
 - `/` (`public/index.html`): landing, teacher login link, student code entry → `/a/<CODE>`.
 - `/login` (`public/login.html` + `login.js`): teacher login form.
 - `/teacher/...` (`public/teacher/index.html` + `teacher/app.js`): teacher SPA (hash-free path routing via `location.pathname`).
-  Views: `#/dashboard` (own activities + assignments), `#/edit?id=`, `#/assignment?id=`, `#/grade?assignment=&participant=`, `#/admin`, `#/print?activity=` | `#/print?assignment=&participant=`. Use `history.pushState` + path prefix `/teacher/...`; server serves index.html for all `/teacher/*`.
+  Views: `#/dashboard` (own activities + assignments), `#/edit?id=`, `#/assignment?id=`, `#/grade?assignment=&participant=`, `#/classes`, `#/class?id=`, `#/vocab`, `#/vocab-edit?id=`, `#/admin`, `#/print?activity=` | `#/print?assignment=&participant=`. Use `history.pushState` + path prefix `/teacher/...`; server serves index.html for all `/teacher/*`.
 - `/a/:code` (`public/student.html` + `student.js`): join (name form), player, submit, result/review. Reads code from `location.pathname`.
 
 Shared browser libs (Lead owns, do not edit):
@@ -391,7 +408,7 @@ Uploads in authoring (pins image): `POST /api/assets?filename=...` raw body via 
 - Student token: per-assignment random 24-byte token; only SHA-256 stored; comparisons via `timingSafeEqual`.
 - Rate-limit login (in-memory) and asset uploads (per user, 60/min).
 - No directory traversal in static/asset serving (resolve + prefix check).
-- The student payload omits: all answer keys, `long_answer.hints`, `long_answer.rubric`, `pins.zones[].r`, `image_boxes.boxes[].accepted`, text gap answers (masked to `<<>>`), per-answer `feedback`, `hotspot.zones[].correct`, `table` gap `answers` + option `correct`, `groups.items[].zoneId`, `mark_sentence.words[].target/fix`, and teacher-only data. `sanitizeActivity()` is the only place that strips; do not hand-roll elsewhere. Media `url`s are enriched from the assets table server-side, generically for every `assetId` found in an item.
+- The student payload omits: all answer keys, `long_answer.hints`, `long_answer.rubric`, `pins.zones[].r`, `image_boxes.boxes[].accepted`, text gap answers (masked to `<<>>`), per-answer `feedback`, `hotspot.zones[].correct`, `table` gap `answers` + option `correct`, `groups.items[].zoneId`, `mark_sentence.words[].target/fix`, `vocabulary` answer side per mode/direction (see §4.1), and teacher-only data. `sanitizeActivity()` is the only place that strips; do not hand-roll elsewhere. Media `url`s are enriched from the assets table server-side, generically for every `assetId` found in an item.
 - `/api/capabilities` is **minimal for anonymous callers** (feature flags, maxUploadMb, demoMode only). Version, baseUrl and the item-type list require a teacher session. `/api/health` stays public for the updater/monitoring.
 - **Student accounts (schema v3):** table `students` (owner teacher, name, unique `username`, scrypt `password_hash`; plaintext generated passwords are returned exactly once at creation/reset and never stored) + `student_sessions` (separate `ow_student` cookie). `class_participants.student_id` links roster entries to accounts; `participants.student_id` links assignment attempts. A logged-in student joining a class or assignment is linked automatically (name taken from the account; class unlock rules enforced). Teacher roster endpoints: `GET/POST /api/classes/:id/students`, `POST .../students/:studentId/reset`, `DELETE .../students/:studentId`, `GET .../stats`; student: `POST /api/auth/student-login`, `POST /api/auth/student-logout`, `GET /api/student/me`. Initial passwords are one-time only (returned at creation/reset) — the UI offers copy-as-CSV and a printable sheet at that moment.
 - **Practice mode:** `settings.practice: true` on an activity/assignment. Practice attempts are flagged (`participants.flags` contains `"practice"`) and excluded from results, CSV export, grading and the live dashboard; `POST /api/participant/reopen` allows retrying (practice only).

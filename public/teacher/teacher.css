@@ -1034,3 +1034,19 @@
 .ms-chip[data-target="wrong"] { background: var(--danger-soft); border-color: var(--danger); }
 .ms-chip[data-target="wrong"] .ms-chip-word { text-decoration: line-through; }
 .ms-fix-input { max-width: 130px; margin-left: 4px; }
+
+/* vocabulary lists + item editor (v0.7) */
+.ta-right { text-align: right; }
+.section-title { font-size: 1.05rem; font-weight: 700; margin: 18px 0 8px; }
+.vocab-table td { vertical-align: middle; }
+.vocab-entry-grid { display: flex; flex-direction: column; gap: 10px; }
+.vocab-entry-row { padding: 10px 12px; }
+.vocab-entry-row .vc-term { min-width: 140px; }
+.vocab-entry-row .vc-trans { min-width: 140px; }
+.vocab-entry-row .vc-alt { min-width: 160px; }
+.vocab-entry-row .vc-example { flex: 1; min-width: 200px; }
+.btn.has-asset { color: var(--primary); border-color: var(--primary); }
+.vc-thumb { width: 44px; height: 34px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.vc-audio { height: 30px; max-width: 200px; }
+.vocab-editor .field-sm { margin-bottom: 8px; }
+

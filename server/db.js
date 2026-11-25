@@ -178,11 +178,39 @@ CREATE INDEX IF NOT EXISTS idx_class_participants_class ON class_participants(cl
 CREATE INDEX IF NOT EXISTS idx_students_owner ON students(owner_id, name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_student_sessions_student ON student_sessions(student_id);
 CREATE INDEX IF NOT EXISTS idx_student_sessions_expiry ON student_sessions(expires_at);
+
+-- v4: vocabulary lists (teacher-managed word libraries) ----------------------
+CREATE TABLE IF NOT EXISTS vocab_lists (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  source_lang TEXT NOT NULL DEFAULT 'de',
+  target_lang TEXT NOT NULL DEFAULT 'en',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS vocab_entries (
+  id TEXT PRIMARY KEY,
+  list_id TEXT NOT NULL REFERENCES vocab_lists(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  term TEXT NOT NULL,
+  translation TEXT NOT NULL DEFAULT '',
+  alternatives TEXT NOT NULL DEFAULT '[]',
+  example TEXT NOT NULL DEFAULT '',
+  image_asset_id TEXT,
+  audio_asset_id TEXT,
+  notes TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_vocab_lists_owner ON vocab_lists(owner_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_vocab_entries_list ON vocab_entries(list_id, position);
 `;
 
 export const db = new DatabaseSync(config.dbPath);
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 /**
  * Migration ladder. When the schema changes in v0.2+, append
@@ -238,6 +266,36 @@ const MIGRATIONS = [
         db.exec('ALTER TABLE participants ADD COLUMN student_id TEXT REFERENCES students(id) ON DELETE SET NULL');
       }
       db.exec('CREATE INDEX IF NOT EXISTS idx_participants_student ON participants(student_id)');
+    },
+  },
+  {
+    version: 4,
+    up() {
+      // Vocabulary lists (teacher word libraries) + entries.
+      db.exec(`CREATE TABLE IF NOT EXISTS vocab_lists (
+        id TEXT PRIMARY KEY,
+        owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        source_lang TEXT NOT NULL DEFAULT 'de',
+        target_lang TEXT NOT NULL DEFAULT 'en',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`);
+      db.exec(`CREATE TABLE IF NOT EXISTS vocab_entries (
+        id TEXT PRIMARY KEY,
+        list_id TEXT NOT NULL REFERENCES vocab_lists(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL,
+        term TEXT NOT NULL,
+        translation TEXT NOT NULL DEFAULT '',
+        alternatives TEXT NOT NULL DEFAULT '[]',
+        example TEXT NOT NULL DEFAULT '',
+        image_asset_id TEXT,
+        audio_asset_id TEXT,
+        notes TEXT NOT NULL DEFAULT ''
+      )`);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_vocab_lists_owner ON vocab_lists(owner_id, updated_at DESC)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_vocab_entries_list ON vocab_entries(list_id, position)');
     },
   },
 ];

@@ -1124,3 +1124,23 @@ span.item-pin {
 /* ------------------------------------------------------------- audio answer */
 .item-audio-player-wrap { margin-top: 8px; }
 .item-audio-player { width: 100%; max-width: 420px; }
+
+/* vocabulary trainer (v0.7) */
+.item-vocab-list { display: flex; flex-direction: column; gap: 12px; }
+.item-vocab-row { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--surface-2); }
+.item-vocab-row.is-correct { border-color: var(--success); background: var(--success-soft); }
+.item-vocab-row.is-incorrect { border-color: var(--danger); background: var(--danger-soft); }
+.item-vocab-prompt { margin-bottom: 6px; }
+.item-vocab-prompt-text { font-size: 1.1em; font-weight: 600; }
+.item-vocab-img { max-width: 160px; max-height: 120px; border-radius: var(--radius-sm); display: block; margin-bottom: 6px; }
+.item-vocab-audio { display: block; max-width: 260px; height: 32px; margin-top: 4px; }
+.item-vocab-mark { font-weight: 700; min-width: 1.2em; text-align: center; }
+.item-vocab-flashcards { max-width: 480px; }
+.item-vocab-card { border: 2px solid var(--primary); border-radius: var(--radius-sm); background: var(--surface); padding: 24px; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.item-vocab-card-side { font-size: 1.5em; font-weight: 700; }
+.item-vocab-card-side.is-answer { color: var(--primary); }
+.item-vocab-progress { margin: 8px 0 0; }
+.item-vocab-review-list { display: flex; flex-direction: column; gap: 6px; }
+.item-vocab-review-row { display: flex; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; }
+.item-vocab-review-term { font-weight: 600; }
+

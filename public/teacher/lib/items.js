@@ -28,6 +28,7 @@ export const CANONICAL_TYPE_ORDER = [
   'groups',
   'mark_sentence',
   'audio_answer',
+  'vocabulary',
 ];
 
 const FALLBACK_META = {
@@ -46,6 +47,7 @@ const FALLBACK_META = {
   groups: { label: { de: 'In Zonen gruppieren (Drag & Drop)', en: 'Group into zones (drag & drop)' }, scoreable: true, category: 'interactive', points: 2 },
   mark_sentence: { label: { de: 'Satz markieren / Wörter streichen', en: 'Mark / correct words in a sentence' }, scoreable: true, category: 'assessment', points: 2 },
   audio_answer: { label: { de: 'Audio-Antwort (Aufnahme)', en: 'Audio answer (record)' }, scoreable: true, category: 'manual', points: 3 },
+  vocabulary: { label: { de: 'Vokabeln', en: 'Vocabulary trainer' }, scoreable: true, category: 'assessment', points: 2 },
 };
 
 const CATEGORY_LABELS = {

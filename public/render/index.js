@@ -33,8 +33,9 @@ import * as table from './table.js';
 import * as groups from './groups.js';
 import * as markSentence from './mark_sentence.js';
 import * as audioAnswer from './audio_answer.js';
+import * as vocabulary from './vocabulary.js';
 
-const modules = [text, multipleChoice, shortAnswer, numeric, fillBlanks, match, ordering, pins, imageBoxes, longAnswer, hotspot, table, groups, markSentence, audioAnswer];
+const modules = [text, multipleChoice, shortAnswer, numeric, fillBlanks, match, ordering, pins, imageBoxes, longAnswer, hotspot, table, groups, markSentence, audioAnswer, vocabulary];
 
 /** Map<type, rendererModule> — e.g. for palette listings. */
 export const renderers = new Map(modules.map((module) => [module.type, module]));

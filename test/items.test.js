@@ -19,7 +19,7 @@ import {
 
 const SECRET = 'SENTINEL_SECRET_ANSWER';
 
-test('registry: fifteen types with palette metadata', () => {
+test('registry: sixteen types with palette metadata', () => {
   assert.deepEqual(
     itemTypes.map((module) => module.type),
     [
@@ -38,10 +38,11 @@ test('registry: fifteen types with palette metadata', () => {
       'groups',
       'mark_sentence',
       'audio_answer',
+      'vocabulary',
     ],
   );
   const meta = itemTypeMeta();
-  assert.equal(meta.length, 15);
+  assert.equal(meta.length, 16);
   assert.equal(meta.find((entry) => entry.type === 'text').scoreable, false);
   assert.equal(meta.find((entry) => entry.type === 'multiple_choice').scoreable, true);
   for (const entry of meta) {
