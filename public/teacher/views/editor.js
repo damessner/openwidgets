@@ -1,7 +1,7 @@
 // #/edit?id= — activity authoring: item list, generated config forms, live
 // preview, settings and debounced autosave with revision-conflict handling.
 import { get, put, uploadAsset, ApiError, errorMessage } from '/lib/api.js';
-import { h, clear, toast, confirmDialog, debounce } from '/lib/dom.js';
+import { h, clear, toast, confirmDialog, debounce, modal } from '/lib/dom.js';
 import { t, getLocale } from '/lib/i18n.js';
 import { icon } from '/lib/icons.js';
 import {
@@ -16,6 +16,7 @@ import {
   normalizeItemForEditor,
   editSchemaFor,
   typeLabel,
+  typeEmoji,
   categoryLabel,
   isScoreableType,
   hasSharedRegistry,
@@ -376,6 +377,15 @@ export async function mount(root, ctx) {
       h('span', { html: icon('arrow-left', { size: 16 }) }),
       h('span.hide-sm', t('teacher.back_to_dashboard')),
     );
+    const previewButton = h(
+      'button.btn.btn-secondary.btn-sm.worksheet-preview-button',
+      { type: 'button', title: t('teacher.preview_worksheet_hint') },
+      h('span', { html: icon('eye', { size: 16 }) }),
+      h('span', t('common.preview')),
+    );
+    previewButton.addEventListener('click', () => {
+      openWorksheetPreview();
+    });
     const printButton = h(
       'button.btn.btn-secondary.btn-sm',
       { type: 'button', title: t('teacher.print_worksheet') },
@@ -430,7 +440,7 @@ export async function mount(root, ctx) {
           statusBadge,
           saveStatusEl,
         ),
-        h('div.row.gap-2', saveButton, printButton, publishButton),
+        h('div.row.gap-2', previewButton, saveButton, printButton, publishButton),
       ),
     );
     updateSaveStatus();
@@ -588,7 +598,7 @@ export async function mount(root, ctx) {
               const button = h(
                 'button.btn.btn-sm.btn-secondary.palette-button',
                 { type: 'button', title: t('teacher.add_item_hint', { type: typeLabel(entry.type) }) },
-                h('span', { html: icon('plus', { size: 14 }) }),
+                h('span.palette-emoji', { 'aria-hidden': 'true', text: typeEmoji(entry.type) }),
                 h('span', typeLabel(entry.type)),
               );
               button.addEventListener('click', () => addItem(entry.type));
@@ -680,7 +690,23 @@ export async function mount(root, ctx) {
     state.doc.items.forEach((item, index) => {
       itemListHost.appendChild(buildItemCard(item, index));
     });
+    // "Add item" button at the bottom of the list → jumps to the palette
+    const addBottom = h(
+      'button.btn.btn-secondary.btn-block.editor-add-bottom.no-print',
+      { type: 'button', on: { click: () => focusPalette() } },
+      h('span', { html: icon('plus', { size: 16 }) }),
+      h('span', t('teacher.add_item_bottom')),
+    );
+    itemListHost.appendChild(h('div.editor-add-bottom-wrap.mt-2', addBottom));
     updateSelectionClasses();
+  }
+
+  function focusPalette() {
+    const card = mainHost && mainHost.querySelector('.palette-card');
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.classList.add('palette-flash');
+    setTimeout(() => card.classList.remove('palette-flash'), 1600);
   }
 
   // -------------------------------------------------------------------------
@@ -1208,6 +1234,70 @@ export async function mount(root, ctx) {
 
   function selectedItem() {
     return state.doc.items.find((item) => item.id === state.selectedItemId) || null;
+  }
+
+  /**
+   * Full-worksheet preview: mounts every item with the real student renderers
+   * (interactive, local only) so the teacher can test the worksheet — including
+   * drag & drop — before publishing. "Auswerten" scores locally via scoreItem.
+   */
+  async function openWorksheetPreview() {
+    const doc = state.doc;
+    const body = h('div.worksheet-preview');
+    if (!doc.items.length) body.appendChild(h('p.help', t('teacher.preview_empty')));
+    const evalButton = h('button.btn.btn-primary.btn-sm', { type: 'button' }, t('teacher.preview_evaluate'));
+    const scoreOut = h('span.small.muted.ml-2');
+    const footer = h('div.row.gap-2.mt-3.align-center', evalButton, scoreOut);
+    const dialog = modal({
+      title: `${t('common.preview')}: ${doc.title || t('teacher.edit_title')}`,
+      body: h('div', body, footer),
+      actions: [],
+    });
+    dialog.dialog.classList.add('worksheet-preview-dialog');
+
+    const instances = [];
+    for (const item of doc.items) {
+      const card = h('div.card.compact.preview-item');
+      card.appendChild(
+        h('div.row.gap-2.mb-1',
+          h('span.badge.badge-primary', `${typeEmoji(item.type)} ${typeLabel(item.type)}`)),
+      );
+      const mountEl = h('div.preview-mount-item');
+      card.appendChild(mountEl);
+      body.appendChild(card);
+      const instance = await mountItemSafe(mountEl, {
+        item: deepClone(item),
+        mode: 'preview',
+        locale: doc.locale,
+        response: {},
+      });
+      instances.push({ item, instance });
+    }
+
+    evalButton.addEventListener('click', async () => {
+      const { scoreItem } = await import('/shared/items/index.js');
+      let score = 0;
+      let max = 0;
+      for (const { item, instance } of instances) {
+        let response = {};
+        try {
+          response = instance && typeof instance.getResponse === 'function' ? instance.getResponse() : {};
+        } catch {
+          response = {};
+        }
+        const result = scoreItem(item, response || {});
+        if (instance && typeof instance.setResult === 'function') instance.setResult(result);
+        score += Number(result.autoScore) || 0;
+        max += Number(result.maxScore) || 0;
+      }
+      scoreOut.textContent = t('teacher.preview_score', { score, max });
+    });
+
+    dialog.dialog.addEventListener('close', () => {
+      for (const { instance } of instances) {
+        if (instance && typeof instance.destroy === 'function') instance.destroy();
+      }
+    });
   }
 
   async function renderPreview() {

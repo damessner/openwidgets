@@ -6,7 +6,10 @@
 // authoring library — deleting a list never breaks a saved activity.
 import { all, now, one, run, tx, uid, parseJson } from '../db.js';
 import { parseVocabCsv, MAX_VOCAB_CSV_ROWS } from '../../shared/vocab-csv.js';
+import { buildVocabCourse } from '../../shared/vocab-course.js';
 import { requireUser } from '../lib/auth.js';
+import { activityJson, definitionFromRow, generateAssignmentCode } from './_helpers.js';
+import { requireOwnedClass } from './classes.js';
 import {
   assertSameOrigin,
   badRequest,
@@ -232,5 +235,76 @@ export function register(router) {
     });
     const entries = all('SELECT * FROM vocab_entries WHERE list_id = ? ORDER BY position', row.id).map(entryRow);
     json(res, 200, { added: parsed.length, entries });
+  });
+
+  // -------------------------------------------------------------------------
+  // Generate a multi-level vocabulary course from this list (v0.9).
+  // Creates one draft activity per level. With `classId` the levels are also
+  // published and appended to that class in sequence mode.
+  // -------------------------------------------------------------------------
+  router.post('/api/vocab-lists/:id/generate-course', async (req, res, params) => {
+    assertSameOrigin(req);
+    const { user, row } = getOwnedList(req, params.id);
+    const body = await readJsonSafe(req);
+    const entryRows = all('SELECT * FROM vocab_entries WHERE list_id = ? ORDER BY position', row.id).map(entryRow);
+    if (entryRows.length < 3) {
+      throw badRequest('too_few_entries', 'At least 3 entries are needed to build a course');
+    }
+    let course;
+    try {
+      course = buildVocabCourse({
+        title: row.title,
+        description: row.description,
+        sourceLang: row.source_lang,
+        targetLang: row.target_lang,
+        entries: entryRows,
+      });
+    } catch (error) {
+      throw badRequest('course_failed', error.message || 'Could not build the course');
+    }
+
+    const created = [];
+    for (const definition of course.levels) {
+      const id = uid();
+      const ts = now();
+      run(
+        'INSERT INTO activities (id, owner_id, title, description, template, locale, definition, status, revision, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        id, user.id, definition.title, definition.description, definition.template, definition.locale,
+        JSON.stringify(definition), 'draft', 1, ts, ts,
+      );
+      created.push(one('SELECT * FROM activities WHERE id = ?', id));
+    }
+
+    let classId = '';
+    let assignmentIds = [];
+    const requestedClassId = body && typeof body.classId === 'string' ? body.classId.trim() : '';
+    if (requestedClassId) {
+      const classRow = requireOwnedClass(req, requestedClassId);
+      classId = classRow.id;
+      const maxPos = one('SELECT COALESCE(MAX(position), 0) AS p FROM class_items WHERE class_id = ?', classRow.id);
+      let position = (maxPos && Number(maxPos.p)) || 0;
+      for (const activity of created) {
+        const definition = definitionFromRow(activity);
+        const assignmentId = uid();
+        run(
+          'INSERT INTO assignments (id, activity_id, owner_id, code, title, settings, status, due_at, created_at) VALUES (?,?,?,?,?,?,?,?,?)',
+          assignmentId, activity.id, user.id, generateAssignmentCode(), activity.title,
+          JSON.stringify(definition.settings), 'open', null, now(),
+        );
+        run("UPDATE activities SET status = 'published' WHERE id = ? AND status = 'draft'", activity.id);
+        position += 1;
+        run('INSERT INTO class_items (id, class_id, assignment_id, position) VALUES (?,?,?,?)', uid(), classRow.id, assignmentId, position);
+        assignmentIds.push(assignmentId);
+      }
+      // a course is meant to be worked through in order
+      run("UPDATE classes SET order_mode = 'sequence', updated_at = ? WHERE id = ?", now(), classRow.id);
+    }
+
+    json(res, 201, {
+      activities: created.map((activity) => activityJson(activity)),
+      levelTitles: course.levelTitles,
+      classId,
+      assignmentIds,
+    });
   });
 }

@@ -1061,3 +1061,13 @@
 .cw-preview-grid td { width: 26px; height: 26px; border: 1px solid var(--border); text-align: center; font-weight: 700; }
 .cw-preview-block { background: var(--surface-3, #222); }
 
+
+/* editor: palette flash + bottom add button + worksheet preview (v0.9) */
+.palette-button .palette-emoji { font-size: 0.95rem; }
+.palette-flash { animation: palette-flash 1.6s ease; }
+@keyframes palette-flash { 0%, 60% { box-shadow: 0 0 0 3px var(--primary-soft), 0 0 18px var(--primary); } 100% { box-shadow: none; } }
+.editor-add-bottom-wrap { display: block; }
+.editor-add-bottom { width: 100%; border-style: dashed; }
+.worksheet-preview-dialog { max-width: 860px; width: min(860px, 94vw); }
+.worksheet-preview .preview-item { margin-bottom: 0.75rem; }
+.align-center { align-items: center; }

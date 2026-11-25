@@ -175,7 +175,7 @@ function requireClassRow(id) {
   return row;
 }
 
-function requireOwnedClass(req, id) {
+export function requireOwnedClass(req, id) {
   const row = requireClassRow(id);
   assertCanAccess(req.user, row);
   return row;

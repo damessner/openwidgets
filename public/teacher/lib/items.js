@@ -33,6 +33,32 @@ export const CANONICAL_TYPE_ORDER = [
   'crossword',
 ];
 
+/** Emoji shown on the palette buttons (one per item type). */
+export const TYPE_EMOJIS = {
+  text: '📝',
+  multiple_choice: '☑️',
+  short_answer: '✏️',
+  numeric: '🔢',
+  fill_blanks: '🧩',
+  match: '🔗',
+  ordering: '🔀',
+  pins: '📍',
+  image_boxes: '🖼️',
+  long_answer: '📄',
+  hotspot: '🎯',
+  table: '🧮',
+  groups: '🗂️',
+  mark_sentence: '🖍️',
+  audio_answer: '🎙️',
+  vocabulary: '📚',
+  hangman: '😶',
+  crossword: '🔤',
+};
+
+export function typeEmoji(type) {
+  return TYPE_EMOJIS[type] || '▫️';
+}
+
 const FALLBACK_META = {
   text: { label: { de: 'Textblock', en: 'Text block' }, scoreable: false, category: 'structure', points: 0 },
   multiple_choice: { label: { de: 'Multiple Choice', en: 'Multiple choice' }, scoreable: true, category: 'assessment', points: 1 },

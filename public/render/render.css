@@ -1186,3 +1186,17 @@ span.item-pin {
 .item-vocab-match-img img { width: 96px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); display: block; }
 .item-vocab-match-select { min-width: 180px; }
 
+
+/* fill_blanks drag & drop word box (v0.9) */
+.item-word-box { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem; border: 1px dashed var(--border-strong, #c9d2e8); border-radius: var(--radius-sm); background: var(--bg); margin-bottom: 0.5rem; }
+.item-word-chip { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface, #fff); cursor: grab; user-select: none; font-size: 0.9rem; }
+.item-word-chip.is-used { opacity: 0.35; cursor: default; }
+.item-word-chip.is-selected { border-color: var(--primary); background: var(--primary-soft); font-weight: 600; }
+.item-word-chip.is-dragging { opacity: 0.6; }
+.item-blank-gap { display: inline-flex; align-items: center; justify-content: center; min-width: 4.5rem; min-height: 1.9rem; margin: 0 0.15rem; padding: 0 0.4rem; border: 1.5px dashed var(--primary); border-radius: var(--radius-sm); background: var(--primary-soft); vertical-align: middle; cursor: pointer; }
+.item-blank-gap.is-drag-over { background: var(--primary); color: #fff; }
+.item-blank-gap.is-filled { border-style: solid; background: var(--surface, #fff); }
+.item-blank-gap-placeholder { opacity: 0.55; font-size: 0.85rem; }
+.item-blank-gap.is-filled .item-blank-gap-placeholder { display: none; }
+.item-gap-word { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 600; }
+.item-gap-clear { border: none; background: none; color: var(--danger, #c0392b); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0.1rem; }

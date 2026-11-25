@@ -207,12 +207,59 @@ export async function mount(root, ctx) {
     });
   }
 
+  async function openCourseDialog() {
+    let classes = [];
+    try {
+      const data = await get('/api/classes');
+      classes = Array.isArray(data && data.classes) ? data.classes : [];
+    } catch { classes = []; }
+    const classSelect = h('select.select',
+      h('option', { value: '' }, t('teacher.course_no_class')),
+      classes.map((cls) => h('option', { value: cls.id }, cls.name || cls.code)),
+    );
+    const errorBox = h('p.error-text', { role: 'alert', hidden: true });
+    const cancelButton = h('button.btn.btn-secondary', { type: 'button' }, t('common.cancel'));
+    const generateButton = h('button.btn.btn-primary', { type: 'submit' }, t('teacher.course_generate'));
+    const form = h('form',
+      h('p.help', t('teacher.course_help')),
+      h('div.field', h('label.label', { for: 'course-class' }, t('teacher.course_class')), classSelect, h('p.help', t('teacher.course_class_help'))),
+      errorBox,
+      h('div.row.end.gap-2', cancelButton, generateButton),
+    );
+    classSelect.id = 'course-class';
+    const dialog = modal({ title: t('teacher.course_title'), body: form, actions: [] });
+    const close = () => dialog.close();
+    cancelButton.addEventListener('click', close);
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      generateButton.disabled = true;
+      generateButton.textContent = t('common.loading');
+      errorBox.hidden = true;
+      try {
+        const payload = { classId: classSelect.value || undefined };
+        const result = await post(`/api/vocab-lists/${encodeURIComponent(listId)}/generate-course`, payload);
+        const count = (result.activities || []).length;
+        toast(t('teacher.course_created', { count }), 'success');
+        close();
+        if (result.classId) navigate(`/teacher/class?id=${encodeURIComponent(result.classId)}`);
+        else navigate('/teacher/dashboard');
+      } catch (error) {
+        errorBox.textContent = String(error && error.message ? error.message : error);
+        errorBox.hidden = false;
+        generateButton.disabled = false;
+        generateButton.textContent = t('teacher.course_generate');
+      }
+    });
+  }
+
   function render() {
     clear(root);
     ctx.setTitle(`${t('teacher.vocab_edit_title')} — ${state.title || data.list.title}`);
     root.appendChild(h('div.row.between.wrap.mb-4',
       h('div', h('h1.page-title', t('teacher.vocab_edit_title')), h('p.muted.mb-0', h('a', { href: '/teacher/vocab' }, t('teacher.back_to_vocab')))),
       h('div.row.gap-2',
+        h('button.btn.btn-secondary.course-generate-button', { type: 'button', on: { click: () => openCourseDialog() } },
+          h('span', { html: icon('sparkle', { size: 16 }) }), ' ', t('teacher.course_button')),
         h('button.btn.btn-secondary', { type: 'button', on: { click: () => openImportDialog() } }, t('teacher.vocab_import')),
         h('button.btn.btn-danger', {
           type: 'button',

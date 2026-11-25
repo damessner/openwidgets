@@ -538,8 +538,8 @@ function renderListInto(container, descriptor, target, onChange, depth = 0) {
 
 function blankNumbersFromText(text) {
   const numbers = new Set();
-  for (const match of String(text || '').matchAll(/\{\{\s*(\d+)\s*\}\}/g)) {
-    const n = Number(match[1]);
+  for (const match of String(text || '').matchAll(/<<\s*(\d+)\s*>>|\{\{\s*(\d+)\s*\}\}/g)) {
+    const n = Number(match[1] || match[2]);
     if (Number.isFinite(n) && n > 0) numbers.add(n);
   }
   return Array.from(numbers).sort((a, b) => a - b);
@@ -548,6 +548,8 @@ function blankNumbersFromText(text) {
 function renderFillBlanksEditor(container, { item, onChange }) {
   const config = item.config;
   if (!config.blanks || typeof config.blanks !== 'object') config.blanks = {};
+  if (config.mode !== 'drag') config.mode = 'input';
+  if (!Array.isArray(config.wordBank)) config.wordBank = [];
   const textId = uid('blanks-text');
   const textarea = h('textarea.textarea', {
     id: textId,
@@ -562,6 +564,7 @@ function renderFillBlanksEditor(container, { item, onChange }) {
   });
   textarea.value = String(config.text || '');
   const blanksHost = h('div.blanks-editor');
+  const modeHost = h('div');
 
   function syncBlanks() {
     const numbers = blankNumbersFromText(config.text);
@@ -618,7 +621,9 @@ function renderFillBlanksEditor(container, { item, onChange }) {
                 type: 'button',
                 on: {
                   click: () => {
-                    config.text = String(config.text || '').replace(new RegExp(`\\{\\{\\s*${n}\\s*\\}\\}`), '');
+                    config.text = String(config.text || '')
+                      .replace(new RegExp(`<<\\s*${n}\\s*>>`), '')
+                      .replace(new RegExp(`\\{\\{\\s*${n}\\s*\\}\\}`), '');
                     textarea.value = config.text;
                     syncBlanks();
                     onChange();
@@ -638,7 +643,7 @@ function renderFillBlanksEditor(container, { item, onChange }) {
   function addBlank() {
     const numbers = blankNumbersFromText(config.text);
     const next = numbers.length ? Math.max(...numbers) + 1 : 1;
-    const placeholder = `{{${next}}}`;
+    const placeholder = `<<${next}>>`;
     const currentText = String(config.text || '');
     const start = typeof textarea.selectionStart === 'number' ? textarea.selectionStart : currentText.length;
     const end = typeof textarea.selectionEnd === 'number' ? textarea.selectionEnd : start;
@@ -655,7 +660,57 @@ function renderFillBlanksEditor(container, { item, onChange }) {
     onChange();
   }
 
+  function renderMode() {
+    clear(modeHost);
+    const segmented = h('div.segmented', { role: 'group', 'aria-label': t('teacher.blanks_mode') });
+    const typeBtn = h('button', { type: 'button' }, t('teacher.blanks_mode_input'));
+    const dragBtn = h('button', { type: 'button' }, t('teacher.blanks_mode_drag'));
+    typeBtn.classList.toggle('is-active', config.mode === 'input');
+    dragBtn.classList.toggle('is-active', config.mode === 'drag');
+    typeBtn.addEventListener('click', () => { config.mode = 'input'; renderMode(); onChange(); });
+    dragBtn.addEventListener('click', () => { config.mode = 'drag'; renderMode(); onChange(); });
+    segmented.append(typeBtn, dragBtn);
+    modeHost.appendChild(
+      h('div.field.field-sm', h('label.label', t('teacher.blanks_mode')), segmented, h('p.help', t(config.mode === 'drag' ? 'teacher.blanks_mode_drag_help' : 'teacher.blanks_mode_input_help'))),
+    );
+    if (config.mode === 'drag') {
+      const bankId = uid('blanks-bank');
+      const bankArea = h('textarea.textarea', {
+        id: bankId,
+        rows: 3,
+        on: {
+          input: (event) => {
+            config.wordBank = event.target.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+            onChange();
+          },
+        },
+      });
+      bankArea.value = config.wordBank.join('\n');
+      const fillBtn = h('button.btn.btn-sm.btn-ghost', {
+        type: 'button',
+        on: {
+          click: () => {
+            const answers = new Set();
+            for (const n of blankNumbersFromText(config.text)) {
+              for (const a of (config.blanks[n] && config.blanks[n].accepted) || []) {
+                if (String(a).trim()) answers.add(String(a).trim());
+              }
+            }
+            const existing = new Set(config.wordBank);
+            for (const a of answers) if (!existing.has(a)) config.wordBank.push(a);
+            bankArea.value = config.wordBank.join('\n');
+            onChange();
+          },
+        },
+      }, t('teacher.blanks_bank_autofill'));
+      modeHost.appendChild(
+        h('div.field.field-sm', h('label.label', { for: bankId }, t('teacher.blanks_bank')), bankArea, h('p.help', t('teacher.blanks_bank_help')), fillBtn),
+      );
+    }
+  }
+
   syncBlanks();
+  renderMode();
   container.appendChild(
     h(
       'div.field',
@@ -665,6 +720,7 @@ function renderFillBlanksEditor(container, { item, onChange }) {
     ),
   );
   container.appendChild(blanksHost);
+  container.appendChild(modeHost);
   container.appendChild(
     h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: addBlank } }, t('teacher.blanks_add')),
   );
@@ -1071,6 +1127,48 @@ function renderImageBoxesEditor(container, { item, onChange }) {
     if (num) num.textContent = String(config.boxes.indexOf(box) + 1);
   }
 
+  function buildBoxEl(box) {
+    const el = h('div.ib-edit-box', { dataset: { boxId: String(box.id) } });
+    el.appendChild(h('span.ib-edit-box-num', { 'aria-hidden': 'true', text: '?' }));
+    el.appendChild(h('span.ib-edit-box-grip', { 'aria-hidden': 'true' }));
+    el.addEventListener('pointerdown', (event) => beginBoxDrag(event, box, event.target.classList.contains('ib-edit-box-grip') ? 'resize' : 'move'));
+    el.addEventListener('click', (event) => {
+      event.stopPropagation();
+      selectedBoxId = String(box.id);
+      config.boxes.forEach(refreshBox);
+      renderBoxes();
+    });
+    refreshBox(box);
+    return el;
+  }
+
+  function appendBoxEl(box) {
+    const layer = imageHost.querySelector('.pins-layer');
+    if (layer) layer.appendChild(buildBoxEl(box));
+  }
+
+  function addBox() {
+    if (!config.image || !config.image.assetId) {
+      fileInput.click();
+      return;
+    }
+    const box = {
+      id: nextConfigId(config.boxes, 'b'),
+      x: 0.4,
+      y: 0.4,
+      w: 0.2,
+      h: 0.15,
+      label: '',
+      accepted: [],
+    };
+    config.boxes.push(box);
+    selectedBoxId = String(box.id);
+    appendBoxEl(box);
+    config.boxes.forEach(refreshBox);
+    renderBoxes();
+    onChange();
+  }
+
   function renderImage() {
     clear(imageHost);
     const assetId = config.image && config.image.assetId;
@@ -1087,22 +1185,12 @@ function renderImageBoxesEditor(container, { item, onChange }) {
     const image = h('img.pins-image', { src: assetUrl(assetId), alt: config.image.alt || '', draggable: false });
     const layer = h('div.pins-layer');
     for (const box of config.boxes) {
-      const el = h('div.ib-edit-box', { dataset: { boxId: String(box.id) } });
-      el.appendChild(h('span.ib-edit-box-num', { 'aria-hidden': 'true', text: '?' }));
-      el.appendChild(h('span.ib-edit-box-grip', { 'aria-hidden': 'true' }));
-      el.addEventListener('pointerdown', (event) => beginBoxDrag(event, box, event.target.classList.contains('ib-edit-box-grip') ? 'resize' : 'move'));
-      el.addEventListener('click', (event) => {
-        event.stopPropagation();
-        selectedBoxId = String(box.id);
-        config.boxes.forEach(refreshBox);
-        renderBoxes();
-      });
-      layer.appendChild(el);
-      refreshBox(box);
+      layer.appendChild(buildBoxEl(box));
     }
     imageHost.appendChild(h('div.pins-canvas', image, layer));
     imageHost.appendChild(
       h('div.row.wrap.gap-2.mt-2',
+        h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: addBox } }, '+ ', t('teacher.ib_add_box')),
         h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => fileInput.click() } }, t('teacher.pins_replace')),
         h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => { config.image = { assetId: '', alt: config.image.alt || '' }; config.boxes = []; renderImage(); renderBoxes(); onChange(); } } }, t('teacher.pins_remove_image')),
         fileInput,
@@ -1154,7 +1242,9 @@ function renderImageBoxesEditor(container, { item, onChange }) {
           };
           config.boxes.push(box);
           selectedBoxId = String(box.id);
-          renderImage();
+          // incremental update: append only the new box, no full re-render (no flicker)
+          appendBoxEl(box);
+          config.boxes.forEach(refreshBox);
           renderBoxes();
           onChange();
         }
@@ -1246,7 +1336,9 @@ function renderImageBoxesEditor(container, { item, onChange }) {
                 click: () => {
                   config.boxes.splice(index, 1);
                   if (selectedBoxId === String(box.id)) selectedBoxId = null;
-                  renderImage();
+                  const el = boxElFor(box.id);
+                  if (el) el.remove();
+                  config.boxes.forEach(refreshBox);
                   renderBoxes();
                   onChange();
                 },
