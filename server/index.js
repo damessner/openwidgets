@@ -113,6 +113,13 @@ router.get('/api/capabilities', async (req, res) => {
 // HTML pages (client-side routed)
 // ---------------------------------------------------------------------------
 
+// JS/CSS must always revalidate so deploys show up on the next reload;
+// images/fonts can stay cached briefly.
+function assetCacheControl(filePath) {
+  if (/\.(js|mjs|css)$/i.test(String(filePath || ''))) return 'no-cache';
+  return 'public, max-age=300';
+}
+
 function pageHandler(file) {
   return async (req, res, params, url) => {
     const pathname = url?.pathname || req.url || '/';
@@ -120,7 +127,7 @@ function pageHandler(file) {
     // /teacher/teacher.css — anything with a file extension is served as static.
     if (pathname.startsWith('/teacher/') && /\.[a-z0-9]{1,8}$/i.test(pathname)) {
       const assetPath = safeJoin(config.publicDir, pathname);
-      if (assetPath && (await serveFile(req, res, assetPath, { cacheControl: 'public, max-age=300' }))) return;
+      if (assetPath && (await serveFile(req, res, assetPath, { cacheControl: assetCacheControl(pathname) }))) return;
       throw new HttpError(404, 'not_found', 'Not found');
     }
     const ok = await serveFile(req, res, path.join(config.publicDir, file), { cacheControl: 'no-cache' });
@@ -221,7 +228,7 @@ const server = http.createServer(async (req, res) => {
       if (filePath) {
         const isHtml = filePath.toLowerCase().endsWith('.html');
         const served = await serveFile(req, res, filePath, {
-          cacheControl: isHtml ? 'no-cache' : 'public, max-age=300',
+          cacheControl: assetCacheControl(filePath),
         });
         if (served) return;
       }
