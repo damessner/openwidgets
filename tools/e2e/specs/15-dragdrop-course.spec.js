@@ -88,11 +88,11 @@ test.describe('v0.9: drag&drop gaps, worksheet preview, vocab course', () => {
     await previewPage.close();
   });
 
-  test('student: match task shows right side as clickable option cards (not a text-only select)', async ({ page, browser }) => {
+  test('student: match task is a two-column connect board (tap one, tap the match — line drawn)', async ({ page, browser }) => {
     test.setTimeout(120_000);
     await loginAsAdmin(page);
     const { assignment } = await seedPublishedActivity(page.request, {
-      title: uniqueLabel('E2E Match-Karten'),
+      title: uniqueLabel('E2E Match-Board'),
       items: [
         {
           id: 'it_m', type: 'match', points: 2, stem: 'Ordne zu.',
@@ -114,13 +114,24 @@ test.describe('v0.9: drag&drop gaps, worksheet preview, vocab course', () => {
 
     const card = student.locator('.student-item[data-item-id="it_m"]');
     await expect(card).toBeVisible();
-    const rows = card.locator('.item-match-row');
-    await expect(rows).toHaveCount(2);
-    // each row has clickable option cards for the right side
-    await expect(rows.first().locator('.item-match-option')).toHaveCount(2);
-    await rows.first().locator('.item-match-option', { hasText: 'house' }).click();
-    await expect(rows.first().locator('.item-match-option', { hasText: 'house' })).toHaveAttribute('aria-pressed', 'true');
-    await rows.nth(1).locator('.item-match-option', { hasText: 'tree' }).click();
+    // two columns, each entry shown exactly once
+    await expect(card.locator('.item-match-col-left .item-match-card')).toHaveCount(2);
+    await expect(card.locator('.item-match-col-right .item-match-card')).toHaveCount(2);
+
+    const leftHouse = card.locator('.item-match-col-left .item-match-card', { hasText: 'Haus' });
+    const rightHouse = card.locator('.item-match-col-right .item-match-card', { hasText: 'house' });
+    // tap one, then the match -> selected state + connecting line
+    await leftHouse.click();
+    await expect(leftHouse).toHaveClass(/is-selected/);
+    await rightHouse.click();
+    await expect(leftHouse).toHaveClass(/is-matched/);
+    await expect(card.locator('.item-match-lines line.item-match-line')).toHaveCount(1);
+
+    const leftTree = card.locator('.item-match-col-left .item-match-card', { hasText: 'Baum' });
+    const rightTree = card.locator('.item-match-col-right .item-match-card', { hasText: 'tree' });
+    await leftTree.click();
+    await rightTree.click();
+    await expect(card.locator('.item-match-lines line.item-match-line')).toHaveCount(2);
 
     await student.locator('[data-submit]').first().click();
     const dialog = student.locator('dialog.modal');

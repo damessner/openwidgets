@@ -16,7 +16,7 @@ import {
   readJson,
 } from '../lib/http.js';
 import { touchPresence } from '../lib/events.js';
-import { activityStats } from '../../shared/activity.js';
+import { activityStats, itemIsScoreable } from '../../shared/activity.js';
 import { getType } from '../../shared/items/index.js';
 import {
   definitionFromRow,
@@ -348,7 +348,8 @@ export function register(router) {
     const rawItem = definition.items.find((item) => item.id === String(params.itemId));
     if (!rawItem) throw notFound('item_not_found');
     const module = getType(rawItem.type);
-    if (!module || !module.meta || !module.meta.scoreable) {
+    // text blocks become scoreable when they contain <<gap>> markers
+    if (!module || !itemIsScoreable(rawItem)) {
       throw badRequest('invalid_response', 'This item does not accept a response');
     }
     const item = module.normalizeItem(rawItem);

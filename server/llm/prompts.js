@@ -63,7 +63,7 @@ export function buildWorksheetPrompt({ topic, subject = '', grade = '', locale =
     '- For scoreable items the config must contain the correct answers exactly as shown in the type\'s example structure (choices with "correct": true, blanks with "answers", pairs, etc.).',
     '- Media-dependent types (pins, image_boxes, hotspot, audio_answer): only use them if you can describe the zones/boxes in text; set "media" to {"type":"none"} and describe the picture in the stem. The teacher attaches real media later.',
     '- fill_blanks with mode "drag": config.wordBank holds ONLY distractor words (the accepted answers of the <<n>> gaps are added to the word box automatically).',
-    '- "text" items may contain inline gaps like <<Haus|house>> — the accepted answers are written directly inside the <<>> markers; "fill_blanks" uses {{1}}-style keys with config.blanks["1"].accepted = [...].',
+    '- "text" items may contain inline gaps like <<Haus|house>> — the accepted answers are written directly inside the <<>> markers; "fill_blanks" uses <<1>>-style keys with config.blanks["1"].accepted = [...].',
     'Available item types with an example each:',
     JSON.stringify(catalog, null, 1),
   ].join('\n');

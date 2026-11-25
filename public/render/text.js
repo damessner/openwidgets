@@ -3,7 +3,7 @@
 // <<answer>> by the teacher. The student payload masks them as <<>>; here they
 // become real inputs (gap ids g1..gN in order of appearance). Without gaps the
 // block is pure content and has no response.
-import { registerMessages } from '../lib/i18n.js';
+import { registerMessages, t } from '../lib/i18n.js';
 import { h, renderRichText } from '../lib/dom.js';
 import {
   normalizeCtx,

@@ -1219,3 +1219,24 @@ span.item-pin {
 .writing-textarea { width: 100%; font-family: inherit; line-height: 1.5; }
 .writing-feedback .ai-feedback-head { margin-bottom: 0.4rem; }
 .writing-criterion .progress { height: 8px; }
+
+/* ------------------------------------------------- matching connect board */
+.item-match-board { position: relative; }
+.item-match-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: visible; }
+.item-match-line { stroke: var(--primary); stroke-width: 3; stroke-linecap: round; opacity: 0.9; }
+.item-match-line.is-correct { stroke: var(--success); }
+.item-match-line.is-incorrect { stroke: var(--danger); }
+.item-match-cols { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.item-match-col { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.item-match-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem; width: 100%; padding: 0.55rem 0.6rem; border: 2px solid var(--border); border-radius: var(--radius); background: var(--surface); cursor: pointer; font-size: 0.95rem; text-align: center; overflow-wrap: anywhere; transition: border-color 0.13s, box-shadow 0.13s, background 0.13s; }
+.item-match-card:hover:not(:disabled) { border-color: var(--primary); box-shadow: var(--shadow-sm); }
+.item-match-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.item-match-card.is-selected { border-color: var(--primary); background: var(--primary-soft); box-shadow: 0 0 0 3px var(--primary-soft); font-weight: 600; }
+.item-match-card.is-matched { border-color: var(--primary); }
+.item-match-card.is-matched.is-selected { background: var(--surface); }
+.item-match-card:disabled { cursor: default; opacity: 0.85; }
+.item-match-card img.item-match-img { max-width: 130px; max-height: 96px; object-fit: contain; display: block; border-radius: var(--radius-sm); }
+.item-match-card audio.item-match-audio { max-width: 170px; }
+.item-match-text { display: block; }
+.ow-item[data-readonly='true'] .item-match-card { background: var(--surface-2); }
+@media (max-width: 640px) { .item-match-cols { grid-template-columns: 1fr; } }

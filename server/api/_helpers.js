@@ -559,7 +559,8 @@ export function resultPayload(participantRow, assignmentRow, activityRow) {
     const item = byId.get(itemId);
     if (!item) return;
     const module = getType(item.type);
-    if (!module || !module.meta || !module.meta.scoreable) return;
+    // text blocks with <<gaps>> are scoreable too (meta.scoreable is false for plain text)
+    if (!module || !itemIsScoreable(item)) return;
     const row = byItem.get(itemId);
     const entry = {
       itemId,
