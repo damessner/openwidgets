@@ -384,7 +384,8 @@ export async function mount(root, ctx) {
       h('span', t('common.preview')),
     );
     previewButton.addEventListener('click', () => {
-      openWorksheetPreview();
+      // full-page preview in a new tab (assets, drag&drop, everything testable)
+      window.open(`/teacher/preview?activity=${encodeURIComponent(activityId)}`, '_blank', 'noopener');
     });
     const printButton = h(
       'button.btn.btn-secondary.btn-sm',
@@ -1236,69 +1237,8 @@ export async function mount(root, ctx) {
     return state.doc.items.find((item) => item.id === state.selectedItemId) || null;
   }
 
-  /**
-   * Full-worksheet preview: mounts every item with the real student renderers
-   * (interactive, local only) so the teacher can test the worksheet — including
-   * drag & drop — before publishing. "Auswerten" scores locally via scoreItem.
-   */
-  async function openWorksheetPreview() {
-    const doc = state.doc;
-    const body = h('div.worksheet-preview');
-    if (!doc.items.length) body.appendChild(h('p.help', t('teacher.preview_empty')));
-    const evalButton = h('button.btn.btn-primary.btn-sm', { type: 'button' }, t('teacher.preview_evaluate'));
-    const scoreOut = h('span.small.muted.ml-2');
-    const footer = h('div.row.gap-2.mt-3.align-center', evalButton, scoreOut);
-    const dialog = modal({
-      title: `${t('common.preview')}: ${doc.title || t('teacher.edit_title')}`,
-      body: h('div', body, footer),
-      actions: [],
-    });
-    dialog.dialog.classList.add('worksheet-preview-dialog');
-
-    const instances = [];
-    for (const item of doc.items) {
-      const card = h('div.card.compact.preview-item');
-      card.appendChild(
-        h('div.row.gap-2.mb-1',
-          h('span.badge.badge-primary', `${typeEmoji(item.type)} ${typeLabel(item.type)}`)),
-      );
-      const mountEl = h('div.preview-mount-item');
-      card.appendChild(mountEl);
-      body.appendChild(card);
-      const instance = await mountItemSafe(mountEl, {
-        item: deepClone(item),
-        mode: 'preview',
-        locale: doc.locale,
-        response: {},
-      });
-      instances.push({ item, instance });
-    }
-
-    evalButton.addEventListener('click', async () => {
-      const { scoreItem } = await import('/shared/items/index.js');
-      let score = 0;
-      let max = 0;
-      for (const { item, instance } of instances) {
-        let response = {};
-        try {
-          response = instance && typeof instance.getResponse === 'function' ? instance.getResponse() : {};
-        } catch {
-          response = {};
-        }
-        const result = scoreItem(item, response || {});
-        if (instance && typeof instance.setResult === 'function') instance.setResult(result);
-        score += Number(result.autoScore) || 0;
-        max += Number(result.maxScore) || 0;
-      }
-      scoreOut.textContent = t('teacher.preview_score', { score, max });
-    });
-
-    dialog.dialog.addEventListener('close', () => {
-      for (const { instance } of instances) {
-        if (instance && typeof instance.destroy === 'function') instance.destroy();
-      }
-    });
-  }
+  // Full-worksheet preview lives in its own tab: /teacher/preview?activity=<id>
+  // (see preview.html / preview-page.js) — opened via the toolbar button.
 
   async function renderPreview() {
     if (!previewHost || disposed) return;

@@ -146,23 +146,39 @@ export function mount(container, rawCtx) {
 
   const field = fieldset(t('item.match.legend'));
   const list = h('div.item-match-list');
-  /** @type {Array<{left: {id: any, side: object}, select: HTMLSelectElement}>} */
+  /** @type {Array<{left: {id: any, side: object}, optionsWrap: HTMLElement, buttons: Map<string, HTMLElement>}>} */
   const entries = [];
+  /** leftId -> rightId */
+  const selected = new Map();
 
   lefts.forEach((left, index) => {
-    const selectId = `${groupName}-${index}`;
     const leftText = sideLabel(left.side, index);
-    const select = h('select.select.item-match-select', {
-      id: selectId,
+    // right side: clickable option cards (images/audio visible, not just names)
+    const optionsWrap = h('div.item-match-options', {
+      role: 'radiogroup',
       'aria-label': t('item.match.select_label', { left: leftText || `#${index + 1}` }),
     });
-    select.appendChild(h('option', { value: '' }, t('item.match.placeholder')));
+    const buttons = new Map();
     rights.forEach((option, optionIndex) => {
-      const optionEl = h('option', { value: String(option.id) });
-      optionEl.textContent = sideLabel(option.side, optionIndex);
-      select.appendChild(optionEl);
+      const rightId = String(option.id);
+      const btn = h('button.item-match-option', {
+        type: 'button',
+        'aria-pressed': 'false',
+        'data-right-id': rightId,
+        disabled: readonly || undefined,
+      });
+      const media = sideBlock(option.side, optionIndex);
+      if (media) btn.appendChild(media);
+      const label = sideLabel(option.side, optionIndex);
+      if (label) btn.appendChild(h('span.item-match-option-label', { text: label }));
+      if (!media && !label) btn.appendChild(h('span.item-match-option-label', { text: `#${optionIndex + 1}` }));
+      btn.addEventListener('click', () => {
+        selected.set(String(left.id), rightId);
+        for (const [id, el] of buttons) el.setAttribute('aria-pressed', id === rightId ? 'true' : 'false');
+      });
+      buttons.set(rightId, btn);
+      optionsWrap.appendChild(btn);
     });
-    if (readonly) select.disabled = true;
 
     const leftContent = h('span.item-match-left');
     const leftMedia = sideBlock(left.side, index);
@@ -173,9 +189,9 @@ export function mount(container, rawCtx) {
       'div.item-match-row',
       leftContent,
       h('span.item-match-arrow', { 'aria-hidden': 'true', text: '→' }),
-      select,
+      optionsWrap,
     );
-    entries.push({ left, select });
+    entries.push({ left, optionsWrap, buttons });
     list.appendChild(row);
   });
 
@@ -192,11 +208,16 @@ export function mount(container, rawCtx) {
   function setResponse(response) {
     const matches =
       response && response.matches && typeof response.matches === 'object' ? response.matches : {};
-    for (const { left, select } of entries) {
+    selected.clear();
+    for (const { left, buttons } of entries) {
       const value =
         matches[left.id] === undefined || matches[left.id] === null ? '' : String(matches[left.id]);
-      const exists = Array.from(select.options).some((option) => option.value === value);
-      select.value = exists ? value : '';
+      if (value && buttons.has(value)) {
+        selected.set(String(left.id), value);
+        for (const [id, el] of buttons) el.setAttribute('aria-pressed', id === value ? 'true' : 'false');
+      } else {
+        for (const el of buttons.values()) el.setAttribute('aria-pressed', 'false');
+      }
     }
   }
 
@@ -206,9 +227,7 @@ export function mount(container, rawCtx) {
   return {
     getResponse() {
       const matches = {};
-      for (const { left, select } of entries) {
-        if (select.value) matches[left.id] = select.value;
-      }
+      for (const [leftId, rightId] of selected) matches[leftId] = rightId;
       return { matches };
     },
     setResponse,
@@ -216,7 +235,7 @@ export function mount(container, rawCtx) {
       applyResult(root, resultRegion, result);
     },
     focus() {
-      if (!focusFirst(root, 'select:enabled')) focusRoot(root);
+      if (!focusFirst(root, 'button.item-match-option:enabled')) focusRoot(root);
     },
     destroy() {
       container.replaceChildren();

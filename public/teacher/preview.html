@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenWidgets — Vorschau</title>
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/render/render.css">
+  <link rel="stylesheet" href="/teacher/teacher.css">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body class="page">
+  <header class="app-header no-print">
+    <div class="container">
+      <a class="brand" href="/teacher/dashboard"><span class="brand-mark" aria-hidden="true">OW</span> <span>OpenWidgets</span></a>
+      <div class="row gap-2 ml-auto" id="preview-actions"></div>
+    </div>
+  </header>
+  <main id="view" class="container preview-page-main" tabindex="-1">
+    <div class="loading-block" role="status"><span class="spinner" aria-hidden="true"></span> <span>Lädt …</span></div>
+  </main>
+  <script type="module" src="/teacher/preview-page.js"></script>
+</body>
+</html>

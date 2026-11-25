@@ -199,6 +199,7 @@ function pageHandler(file) {
 router.get('/', pageHandler('index.html'));
 router.get('/login', pageHandler('login.html'));
 router.get('/teacher', pageHandler('teacher/index.html'));
+router.get('/teacher/preview', pageHandler('teacher/preview.html'));
 router.get('/teacher/*', pageHandler('teacher/index.html'));
 router.get('/a/:code', pageHandler('student.html'));
 router.get('/c/:code', pageHandler('student.html'));

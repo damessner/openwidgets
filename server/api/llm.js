@@ -61,12 +61,24 @@ export function register(router) {
     requireAdmin(req);
     requireLlmEnabled();
     const started = Date.now();
-    const answer = await chatJson({
-      system: 'You are a JSON-only assistant. Reply with exactly {"ok":true} and nothing else.',
-      user: 'Ping. Reply with {"ok":true}.',
-      temperature: 0,
-    });
-    json(res, 200, { ok: answer && answer.ok === true, model: resolveLlmConfig().model, latencyMs: Date.now() - started });
+    const cfg = resolveLlmConfig();
+    try {
+      const answer = await chatJson({
+        system: 'You are a JSON-only assistant. Reply with exactly {"ok":true} and nothing else.',
+        user: 'Ping. Reply with {"ok":true}.',
+        temperature: 0,
+      });
+      json(res, 200, { ok: answer && answer.ok === true, model: cfg.model, provider: cfg.provider, latencyMs: Date.now() - started });
+    } catch (error) {
+      if (error instanceof HttpError) {
+        throw new HttpError(
+          error.status,
+          error.code,
+          `${error.message} — Anbieter: ${cfg.provider}, Modell: „${cfg.model}“. Bitte Modell/Key in den Admin-Einstellungen prüfen (Vorschläge siehe Modell-Liste).`,
+        );
+      }
+      throw error;
+    }
   });
 
   // -------------------------------------------------------------------------

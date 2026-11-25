@@ -438,6 +438,17 @@ export async function mount(root, ctx) {
       testButton.disabled = true;
       resultBox.textContent = t('teacher.llm_testing');
       try {
+        // save the current form first so "test" always tests what is shown
+        const saved = await put('/api/llm/config', {
+          provider: providerSelect.value,
+          apiKey: keyInput.value.trim(),
+          model: modelInput.value.trim(),
+          baseUrl: baseUrlInput.value.trim(),
+          enabled: enabledInput.checked,
+        });
+        state.llm = saved;
+        keyInput.value = '';
+        keyInput.placeholder = saved.apiKeyMasked || '';
         const res = await post('/api/llm/test', {});
         resultBox.textContent = t('teacher.llm_test_ok', { model: res.model || '', ms: res.latencyMs || 0 });
       } catch (error) {

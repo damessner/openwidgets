@@ -75,15 +75,60 @@ test.describe('v0.9: drag&drop gaps, worksheet preview, vocab course', () => {
     // add-item button at the bottom of the item list
     await expect(page.locator('.editor-add-bottom')).toBeVisible();
 
-    // worksheet preview button in the toolbar
-    await page.locator('.worksheet-preview-button').click();
-    const dialog = page.locator('dialog.worksheet-preview-dialog');
+    // worksheet preview button opens a full-page preview in a NEW TAB
+    const [previewPage] = await Promise.all([
+      page.context().waitForEvent('page'),
+      page.locator('.worksheet-preview-button').click(),
+    ]);
+    await previewPage.waitForLoadState('domcontentloaded');
+    await expect(previewPage.locator('.preview-item')).toHaveCount(1);
+    await previewPage.locator('.item-choice', { hasText: '4' }).click();
+    await previewPage.locator('button', { hasText: 'Antworten auswerten' }).click();
+    await expect(previewPage.locator('span.small.muted')).toContainText('1 / 1');
+    await previewPage.close();
+  });
+
+  test('student: match task shows right side as clickable option cards (not a text-only select)', async ({ page, browser }) => {
+    test.setTimeout(120_000);
+    await loginAsAdmin(page);
+    const { assignment } = await seedPublishedActivity(page.request, {
+      title: uniqueLabel('E2E Match-Karten'),
+      items: [
+        {
+          id: 'it_m', type: 'match', points: 2, stem: 'Ordne zu.',
+          config: {
+            shuffle: false,
+            pairs: [
+              { id: 'p1', left: { kind: 'text', text: 'Haus' }, right: { kind: 'text', text: 'house' } },
+              { id: 'p2', left: { kind: 'text', text: 'Baum' }, right: { kind: 'text', text: 'tree' } },
+            ],
+          },
+        },
+      ],
+    });
+    const context = await browser.newContext();
+    const student = await context.newPage();
+    await student.goto(`/a/${assignment.code}`);
+    await student.fill('#join-name', uniqueLabel('Match-Schüler'));
+    await student.locator('.student-join-form button[type="submit"]').click();
+
+    const card = student.locator('.student-item[data-item-id="it_m"]');
+    await expect(card).toBeVisible();
+    const rows = card.locator('.item-match-row');
+    await expect(rows).toHaveCount(2);
+    // each row has clickable option cards for the right side
+    await expect(rows.first().locator('.item-match-option')).toHaveCount(2);
+    await rows.first().locator('.item-match-option', { hasText: 'house' }).click();
+    await expect(rows.first().locator('.item-match-option', { hasText: 'house' })).toHaveAttribute('aria-pressed', 'true');
+    await rows.nth(1).locator('.item-match-option', { hasText: 'tree' }).click();
+
+    await student.locator('[data-submit]').first().click();
+    const dialog = student.locator('dialog.modal');
     await expect(dialog).toBeVisible();
-    await expect(dialog.locator('.preview-item')).toHaveCount(1);
-    // answer in the preview, then evaluate locally
-    await dialog.locator('.item-choice', { hasText: '4' }).click();
-    await dialog.locator('button', { hasText: 'Antworten auswerten' }).click();
-    await expect(dialog.locator('span.small.muted')).toContainText('1 / 1');
+    await dialog.locator('button.btn-primary', { hasText: 'Abgeben' }).click();
+    await expect(student.locator('.student-result')).toBeVisible({ timeout: 20_000 });
+    await expect(student.locator('.student-score-value')).toHaveText('2');
+    await context.close();
   });
 
   test('teacher: vocabulary list generates a multi-level course (drafts + into class sequence)', async ({ page }) => {

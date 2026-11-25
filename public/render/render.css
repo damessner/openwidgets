@@ -1200,3 +1200,13 @@ span.item-pin {
 .item-blank-gap.is-filled .item-blank-gap-placeholder { display: none; }
 .item-gap-word { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 600; }
 .item-gap-clear { border: none; background: none; color: var(--danger, #c0392b); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0.1rem; }
+
+/* match: right side as media option cards (v0.9.2) */
+.item-match-options { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.item-match-option { display: inline-flex; flex-direction: column; align-items: center; gap: 0.25rem; max-width: 150px; padding: 0.35rem 0.5rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface, #fff); cursor: pointer; font-size: 0.85rem; }
+.item-match-option:hover { border-color: var(--primary); }
+.item-match-option[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); font-weight: 600; }
+.item-match-option:disabled { opacity: 0.7; cursor: default; }
+.item-match-option img.item-match-img { max-width: 130px; max-height: 90px; object-fit: contain; display: block; }
+.item-match-option audio { max-width: 140px; }
+.item-match-option-label { line-height: 1.2; text-align: center; }

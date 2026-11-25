@@ -255,5 +255,11 @@ export function errorMessage(error) {
     if (message && message !== key) return message;
   }
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return t('errors.network_error');
+  // Server HttpError messages are user-facing by design (validation, LLM
+  // provider details, …) — show them instead of a generic "something went
+  // wrong", otherwise e.g. "model not found" is invisible.
+  if (error && typeof error.message === 'string' && error.message && !(error instanceof TypeError)) {
+    return error.message;
+  }
   return t('errors.unknown');
 }
