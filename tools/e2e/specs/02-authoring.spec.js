@@ -33,7 +33,7 @@ test.describe('Authoring und Veröffentlichen', () => {
     const activityId = new URL(page.url()).searchParams.get('id');
     expect(activityId).toBeTruthy();
     await expect(page.locator('.editor-heading')).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('.palette-button')).toHaveCount(18);
+    await expect(page.locator('.palette-button')).toHaveCount(19);
 
     // --- add a Multiple Choice item from the palette ----------------------
     await page.locator('.palette-button', { hasText: 'Multiple Choice' }).click();

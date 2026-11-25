@@ -727,6 +727,128 @@ function renderFillBlanksEditor(container, { item, onChange }) {
 }
 
 // ---------------------------------------------------------------------------
+// writing custom editor (criteria with weights, grade level, source text)
+// ---------------------------------------------------------------------------
+
+function renderWritingEditor(container, { item, onChange }) {
+  const config = item.config;
+  if (!Array.isArray(config.criteria) || !config.criteria.length) {
+    config.criteria = [{ id: 'c1', label: 'Inhalt', weight: 40, description: '' }];
+  }
+  if (typeof config.gradeLevel !== 'string') config.gradeLevel = '';
+  if (typeof config.sourceText !== 'string') config.sourceText = '';
+  if (typeof config.minWords !== 'number') config.minWords = 0;
+  if (typeof config.maxWords !== 'number') config.maxWords = 3000;
+  if (typeof config.allowLoops !== 'boolean') config.allowLoops = true;
+
+  const gradeId = uid('wr-grade');
+  const gradeInput = h('input.input', {
+    id: gradeId,
+    type: 'text',
+    value: config.gradeLevel,
+    placeholder: 'z. B. 7. Klasse',
+    on: { input: (event) => { config.gradeLevel = event.target.value; onChange(); } },
+  });
+
+  const sourceId = uid('wr-source');
+  const sourceArea = h('textarea.textarea', {
+    id: sourceId,
+    rows: 5,
+    placeholder: 'Hintergrundtext / Quelle, auf die sich die Aufgabe bezieht …',
+    on: { input: (event) => { config.sourceText = event.target.value; onChange(); } },
+  });
+  sourceArea.value = config.sourceText;
+
+  const minId = uid('wr-min');
+  const minInput = h('input.input.input-sm', {
+    id: minId, type: 'number', min: 0, step: 10, value: String(config.minWords),
+    on: { input: (event) => { config.minWords = Math.max(0, Number(event.target.value) || 0); onChange(); } },
+  });
+  const maxId = uid('wr-max');
+  const maxInput = h('input.input.input-sm', {
+    id: maxId, type: 'number', min: 1, step: 50, value: String(config.maxWords),
+    on: { input: (event) => { config.maxWords = Math.max(1, Number(event.target.value) || 1); onChange(); } },
+  });
+
+  const loopsId = uid('wr-loops');
+  const loopsInput = h('input', {
+    id: loopsId,
+    type: 'checkbox',
+    checked: config.allowLoops !== false,
+    on: { change: (event) => { config.allowLoops = event.target.checked; onChange(); } },
+  });
+
+  const criteriaHost = h('div.writing-criteria-editor');
+
+  function renderCriteria() {
+    clear(criteriaHost);
+    config.criteria.forEach((criterion, index) => {
+      const rowId = uid('wr-c');
+      const labelInput = h('input.input', {
+        type: 'text', value: criterion.label, placeholder: t('teacher.wr_criterion_label_ph'),
+        on: { input: (event) => { criterion.label = event.target.value; onChange(); } },
+      });
+      const weightInput = h('input.input.input-sm.wr-weight', {
+        type: 'number', min: 0, max: 100, step: 5, value: String(criterion.weight),
+        title: t('teacher.wr_weight'),
+        on: { input: (event) => { criterion.weight = Math.max(0, Math.min(100, Number(event.target.value) || 0)); onChange(); } },
+      });
+      const descInput = h('input.input', {
+        type: 'text', value: criterion.description || '', placeholder: t('teacher.wr_criterion_desc_ph'),
+        on: { input: (event) => { criterion.description = event.target.value; onChange(); } },
+      });
+      const removeBtn = h('button.btn.btn-icon.btn-sm.btn-ghost', {
+        type: 'button', title: t('common.remove'), 'aria-label': t('common.remove'),
+        on: {
+          click: () => {
+            config.criteria.splice(index, 1);
+            renderCriteria();
+            onChange();
+          },
+        },
+      }, h('span', { html: '✕' }));
+      criteriaHost.appendChild(
+        h('div.list-row.wr-criterion-row',
+          h('div.row.gap-1.wrap',
+            h('span.list-index', String(index + 1)),
+            labelInput,
+            weightInput,
+            h('span.tiny.muted', '%'),
+          ),
+          h('div.row.gap-1', descInput, removeBtn),
+        ),
+      );
+    });
+    const total = config.criteria.reduce((sum, c) => sum + (Number(c.weight) || 0), 0);
+    criteriaHost.appendChild(h('p.help.mt-1', total !== 100 ? t('teacher.wr_weight_sum', { sum: total }) : t('teacher.wr_weight_ok')));
+  }
+
+  const addBtn = h('button.btn.btn-sm.btn-secondary', {
+    type: 'button',
+    on: {
+      click: () => {
+        const n = config.criteria.length + 1;
+        config.criteria.push({ id: `c${Date.now().toString(36)}${n}`, label: '', weight: 0, description: '' });
+        renderCriteria();
+        onChange();
+      },
+    },
+  }, h('span', { html: icon('plus', { size: 14 }) }), ' ', t('teacher.wr_add_criterion'));
+
+  renderCriteria();
+  container.append(
+    h('div.field.field-sm', h('label.label', { for: gradeId }, t('teacher.wr_grade')), gradeInput, h('p.help', t('teacher.wr_grade_help'))),
+    h('div.field.field-sm', h('label.label', { for: sourceId }, t('teacher.wr_source')), sourceArea, h('p.help', t('teacher.wr_source_help'))),
+    h('div.row.gap-2.wrap',
+      h('div.field.field-sm.mb-0', h('label.label', { for: minId }, t('teacher.wr_min_words')), minInput),
+      h('div.field.field-sm.mb-0', h('label.label', { for: maxId }, t('teacher.wr_max_words')), maxInput),
+    ),
+    h('div.field.field-sm', h('label.switch.setting-row', loopsInput, h('span.track', { 'aria-hidden': 'true' }), h('span.setting-text', h('span.small', t('teacher.wr_allow_loops'))))),
+    h('div.field.field-sm', h('label.label', t('teacher.wr_criteria')), criteriaHost, addBtn, h('p.help', t('teacher.wr_criteria_help'))),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // pins custom editor (click on the image to place zones)
 // ---------------------------------------------------------------------------
 
@@ -2639,6 +2761,10 @@ export function renderConfigForm(container, { item, schema, onChange }) {
 
   if (item.type === 'fill_blanks') {
     renderFillBlanksEditor(container, { item, onChange: change });
+    return;
+  }
+  if (item.type === 'writing') {
+    renderWritingEditor(container, { item, onChange: change });
     return;
   }
   if (item.type === 'pins') {

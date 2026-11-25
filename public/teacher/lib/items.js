@@ -31,6 +31,7 @@ export const CANONICAL_TYPE_ORDER = [
   'vocabulary',
   'hangman',
   'crossword',
+  'writing',
 ];
 
 /** Emoji shown on the palette buttons (one per item type). */
@@ -53,6 +54,7 @@ export const TYPE_EMOJIS = {
   vocabulary: '📚',
   hangman: '😶',
   crossword: '🔤',
+  writing: '✍️',
 };
 
 export function typeEmoji(type) {
@@ -78,6 +80,7 @@ const FALLBACK_META = {
   vocabulary: { label: { de: 'Vokabeln', en: 'Vocabulary trainer' }, scoreable: true, category: 'assessment', points: 2 },
   hangman: { label: { de: 'Galgenmännchen', en: 'Hangman' }, scoreable: true, category: 'assessment', points: 2 },
   crossword: { label: { de: 'Kreuzworträtsel', en: 'Crossword' }, scoreable: true, category: 'interactive', points: 3 },
+  writing: { label: { de: 'Schreibaufgabe (KI-Feedback)', en: 'Writing task (AI feedback)' }, scoreable: true, category: 'manual', points: 5 },
 };
 
 const CATEGORY_LABELS = {

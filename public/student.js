@@ -417,6 +417,7 @@ function normalizeResult(result) {
     // student-safe per-type detail (hangman reveal, crossword cells, …) — the
     // server only sends this when the item type marks it safe via safeDetail
     detail: result.detail && typeof result.detail === 'object' && !Array.isArray(result.detail) ? result.detail : undefined,
+    writingFeedback: result.writingFeedback && typeof result.writingFeedback === 'object' ? result.writingFeedback : undefined,
   };
 }
 
@@ -1477,6 +1478,13 @@ function createItemCard(item, index, options = {}) {
     uploadAudio: state.token
       ? (blob, mime) => uploadParticipantAsset(blob, state.token, `aufnahme.${String(mime || 'audio/webm').split('/')[1]?.split(';')[0] || 'webm'}`)
       : undefined,
+    // writing renderer asks for an interim AI feedback loop through this callback
+    requestFeedback: state.token
+      ? (text) =>
+          post('/api/llm/writing-feedback', { itemId: item.id, text }, { headers: participantHeaders(state.token) })
+            .then((data) => data.feedback)
+      : undefined,
+    writingFeedback: mode === 'review' ? (storedResult && storedResult.writingFeedback) || null : null,
   });
 
   const view = {

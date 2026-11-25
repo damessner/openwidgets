@@ -18,6 +18,8 @@ import * as classesView from './views/classes.js';
 import * as classEditView from './views/class-edit.js';
 import * as vocabView from './views/vocab.js';
 import * as vocabEditView from './views/vocab-edit.js';
+import * as writingView from './views/writing.js';
+import * as writingMonitorView from './views/writing-monitor.js';
 
 const ROUTES = [
   { name: 'dashboard', pattern: /^\/teacher\/dashboard\/?$/, view: dashboardView },
@@ -28,6 +30,8 @@ const ROUTES = [
   { name: 'class-edit', pattern: /^\/teacher\/class\/?$/, view: classEditView },
   { name: 'vocab', pattern: /^\/teacher\/vocab\/?$/, view: vocabView },
   { name: 'vocab-edit', pattern: /^\/teacher\/vocab-edit\/?$/, view: vocabEditView },
+  { name: 'writing', pattern: /^\/teacher\/writing\/?$/, view: writingView },
+  { name: 'writing-monitor', pattern: /^\/teacher\/writing-monitor\/?$/, view: writingMonitorView },
   { name: 'admin', pattern: /^\/teacher\/admin\/?$/, view: adminView, adminOnly: true },
   { name: 'print', pattern: /^\/teacher\/print\/?$/, view: printView, chrome: false },
 ];
@@ -58,6 +62,7 @@ const NAV_ITEMS = [
   { route: 'dashboard', href: '/teacher/dashboard', key: 'teacher.nav_dashboard', icon: 'grid' },
   { route: 'classes', href: '/teacher/classes', key: 'teacher.nav_classes', icon: 'list' },
   { route: 'vocab', href: '/teacher/vocab', key: 'teacher.nav_vocab', icon: 'book' },
+  { route: 'writing', href: '/teacher/writing', key: 'teacher.nav_writing', icon: 'edit' },
   { route: 'admin', href: '/teacher/admin', key: 'teacher.nav_admin', icon: 'settings', adminOnly: true },
 ];
 

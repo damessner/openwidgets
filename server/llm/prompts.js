@@ -176,6 +176,68 @@ export function buildFeedbackPrompt({ locale = 'de', activityTitle = '', results
   return { system, user };
 }
 
+// ---------------------------------------------------------------------------
+// Writing task feedback (criteria-based, formative, pseudonymized)
+// ---------------------------------------------------------------------------
+
+/**
+ * @param criteria [{id, label, weight, description}]
+ * @param text the student's current draft (truncated server-side)
+ */
+export function buildWritingFeedbackPrompt({ locale = 'de', gradeLevel = '', criteria = [], sourceText = '', text = '', loop = 1, previous = null } = {}) {
+  const lang = localeName(locale);
+  const system = [
+    `You are a supportive school teacher giving formative feedback on a pupil's written text in ${lang}.`,
+    'Answer with a single JSON object and NOTHING else:',
+    '{"summary": string, "criteria": [{"id": string, "label": string, "met": number, "comment": string, "tip": string}]}',
+    'Rules:',
+    `- "summary": 2–4 sentences in ${lang}, addressed to the pupil ("du"), naming strengths and the most important next step. Encouraging, no grades.`,
+    `- "criteria": exactly one entry per criterion id given below, same order. "met" is a number 0..1 (how well the criterion is met in THIS draft).`,
+    `- "comment": 1–2 sentences per criterion in ${lang}, specific to the text. "tip": one concrete, actionable revision tip per criterion.`,
+    '- Base everything strictly on the pupil\'s text and the criteria. Do not invent content the pupil did not write.',
+    gradeLevel ? `- Target grade level: ${gradeLevel} — calibrate vocabulary and expectations accordingly.` : '',
+    `This is feedback loop ${loop}${previous ? ' (a previous feedback round exists — acknowledge progress if the draft improved)' : ''}.`,
+    'Criteria (id, label, weight %, description):',
+    JSON.stringify(criteria.map((c) => ({ id: c.id, label: c.label, weight: c.weight, description: c.description || '' })), null, 1),
+  ].filter(Boolean).join('\n');
+
+  const user = [
+    sourceText ? `Source material:\n${sourceText.slice(0, 6000)}` : '',
+    `Pupil's text (${String(text || '').trim().split(/\s+/).filter(Boolean).length} words):`,
+    String(text || '').slice(0, 12000),
+  ].filter(Boolean).join('\n\n');
+
+  return { system, user };
+}
+
+/** Sanitize a model-generated writing feedback object for storage/display. */
+export function sanitizeWritingFeedback(raw, criteria = []) {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const summary = String(src.summary || '').trim().slice(0, 1500);
+  const byId = new Map((Array.isArray(criteria) ? criteria : []).map((c) => [String(c.id), c]));
+  const outCriteria = [];
+  const rawCriteria = Array.isArray(src.criteria) ? src.criteria : [];
+  for (const c of rawCriteria) {
+    const entry = c && typeof c === 'object' ? c : {};
+    const id = String(entry.id || '');
+    const base = byId.get(id) || {};
+    const met = Number(entry.met);
+    outCriteria.push({
+      id,
+      label: String(entry.label || base.label || id).slice(0, 120),
+      met: Number.isFinite(met) ? Math.max(0, Math.min(1, met)) : 0,
+      comment: String(entry.comment || '').trim().slice(0, 600),
+      tip: String(entry.tip || '').trim().slice(0, 400),
+    });
+  }
+  // keep only criteria the teacher defined
+  const filtered = outCriteria.filter((c) => byId.has(c.id));
+  if (!summary && filtered.length === 0) {
+    throw new HttpError(502, 'llm_invalid_output', 'The model returned an empty writing feedback');
+  }
+  return { summary, criteria: filtered };
+}
+
 /** Sanitize a model-generated feedback object for storage/display. */
 export function sanitizeFeedback(raw) {
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};

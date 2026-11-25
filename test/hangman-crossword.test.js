@@ -38,7 +38,7 @@ function crosswordItem(words) {
 }
 
 test('hangman: registered (18 types), default valid', () => {
-  assert.equal(itemTypes.length, 18);
+  assert.equal(itemTypes.length, 19);
   assert.ok(getType('hangman'));
   assert.ok(getType('crossword'));
   assert.deepEqual(validateItem(createItem('hangman')), []);

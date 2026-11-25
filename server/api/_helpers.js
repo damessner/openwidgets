@@ -578,6 +578,19 @@ export function resultPayload(participantRow, assignmentRow, activityRow) {
         /* ignore */
       }
     }
+    if (item.type === 'writing') {
+      const latest = one(
+        'SELECT feedback FROM writing_feedback WHERE participant_id = ? AND item_id = ? ORDER BY loop DESC LIMIT 1',
+        participantRow.id, itemId,
+      );
+      if (latest) {
+        try {
+          entry.writingFeedback = JSON.parse(latest.feedback);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
     if (showAnswers) {
       const answerText = textAnswerFor(item);
       if (answerText.length > 0) entry.answerText = answerText;

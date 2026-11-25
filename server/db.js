@@ -206,11 +206,22 @@ CREATE TABLE IF NOT EXISTS vocab_entries (
 
 CREATE INDEX IF NOT EXISTS idx_vocab_lists_owner ON vocab_lists(owner_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_vocab_entries_list ON vocab_entries(list_id, position);
+
+CREATE TABLE IF NOT EXISTS writing_feedback (
+  id TEXT PRIMARY KEY,
+  participant_id TEXT NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
+  item_id TEXT NOT NULL,
+  loop INTEGER NOT NULL DEFAULT 1,
+  text TEXT NOT NULL DEFAULT '',
+  feedback TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_writing_fb_participant ON writing_feedback(participant_id, item_id, loop);
 `;
 
 export const db = new DatabaseSync(config.dbPath);
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 /**
  * Migration ladder. When the schema changes in v0.2+, append
@@ -307,6 +318,22 @@ const MIGRATIONS = [
       if (!cols.includes('ai_feedback')) {
         db.exec('ALTER TABLE participants ADD COLUMN ai_feedback TEXT');
       }
+    },
+  },
+  {
+    version: 6,
+    up() {
+      // AI writing-feedback loops (interim + final) per participant and item.
+      db.exec(`CREATE TABLE IF NOT EXISTS writing_feedback (
+        id TEXT PRIMARY KEY,
+        participant_id TEXT NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
+        item_id TEXT NOT NULL,
+        loop INTEGER NOT NULL DEFAULT 1,
+        text TEXT NOT NULL DEFAULT '',
+        feedback TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )`);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_writing_fb_participant ON writing_feedback(participant_id, item_id, loop)');
     },
   },
 ];

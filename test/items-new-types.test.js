@@ -27,7 +27,7 @@ test('registry: all new types registered with labels + meta', () => {
     assert.ok(entry && entry.label.de && entry.label.en, `meta for ${type}`);
     assert.equal(entry.scoreable, true);
   }
-  assert.equal(itemTypes.length, 18);
+  assert.equal(itemTypes.length, 19);
 });
 
 test('hotspot: sanitize strips correct flag, keeps feedback/link; scoring counts hits vs wrong taps', () => {

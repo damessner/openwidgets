@@ -67,10 +67,21 @@ function feedbackPayload() {
   };
 }
 
+function writingPayload() {
+  return {
+    summary: 'Guter Anfang — baue die Argumentation noch aus.',
+    criteria: [
+      { id: 'c1', label: 'Inhalt', met: 0.6, comment: 'Zwei Argumente sind gut.', tip: 'Ergänze ein Beispiel.' },
+      { id: 'c2', label: 'Struktur', met: 0.9, comment: 'Klare Absätze.', tip: 'Schlussatz ausbauen.' },
+    ],
+  };
+}
+
 function decide(systemText, userText) {
   const sys = String(systemText || '');
   const usr = String(userText || '');
   if (/Ping/.test(usr)) return { ok: true };
+  if (/formative feedback/i.test(sys)) return writingPayload();
   if (/tutor/i.test(sys)) return feedbackPayload();
   return worksheetPayload(sys, usr);
 }

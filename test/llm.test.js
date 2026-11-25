@@ -274,7 +274,15 @@ function mockLlmHandler(req, res) {
     const user = [...payload.messages].reverse().find((m) => m.role === 'user')?.content || '';
     let answer;
     if (/Ping/.test(user)) answer = { ok: true };
-    else if (/tutor/i.test(system)) {
+    else if (/formative feedback/i.test(system)) {
+      answer = {
+        summary: 'Guter Anfang — baue die Argumentation noch aus.',
+        criteria: [
+          { id: 'c1', label: 'Inhalt', met: 0.6, comment: 'Zwei Argumente sind gut.', tip: 'Ergänze ein Beispiel.' },
+          { id: 'c2', label: 'Struktur', met: 0.9, comment: 'Klare Absätze.', tip: 'Schlussatz ausbauen.' },
+        ],
+      };
+    } else if (/tutor/i.test(system)) {
       answer = {
         summary: 'Du hast die Grundlagen drauf â€” Ã¼be die Fachbegriffe.',
         tips: ['Lies genau.', 'Wiederhole Vokabeln laut.'],
@@ -501,4 +509,89 @@ test('api: student feedback after submit is pseudonymized and cached', async () 
   assert.equal(again.json.cached, true);
   const viaGet = await anon.get('/api/llm/feedback', { token });
   assert.ok(viaGet.json.feedback.summary.includes('Fachbegriffe'));
+});
+
+test('api: writing task feedback loop is pseudonymized, stored per loop, monitorable', async () => {
+  const admin = new Client(baseUrl);
+  await admin.post('/api/auth/login', { email: ADMIN.email, password: ADMIN.password });
+
+  const created = await admin.post('/api/activities', { title: 'Schreibaufgabe Test', template: 'worksheet', locale: 'de' });
+  assert.equal(created.status, 201, created.text);
+  const activityId = created.json.activity.id;
+  const definition = {
+    v: 1, template: 'worksheet', title: 'Schreibaufgabe Test', description: '', locale: 'de',
+    settings: { showResults: true, allowReview: true },
+    items: [
+      {
+        id: 'w1', type: 'writing', points: 5, stem: 'Schreibe einen Text über deinen Hund.',
+        config: {
+          gradeLevel: '5. Klasse',
+          sourceText: 'Hunde sind Säugetiere.',
+          criteria: [
+            { id: 'c1', label: 'Inhalt', weight: 60, description: 'Bezug zum Thema' },
+            { id: 'c2', label: 'Sprache', weight: 40, description: 'Rechtschreibung' },
+          ],
+          minWords: 20, maxWords: 300, allowLoops: true,
+        },
+      },
+    ],
+  };
+  const updated = await admin.put(`/api/activities/${activityId}`, {
+    title: 'Schreibaufgabe Test', description: '', template: 'worksheet', locale: 'de',
+    definition, revision: created.json.activity.revision,
+  });
+  assert.equal(updated.status, 200, updated.text);
+  const published = await admin.post(`/api/activities/${activityId}/publish`, { title: 'Schreibaufgabe Test' });
+  assert.ok([200, 201].includes(published.status), published.text);
+  const code = published.json.assignment.code;
+  const assignmentId = published.json.assignment.id;
+
+  const anon = new Client(baseUrl);
+  const joined = await anon.post('/api/join', { code, name: 'Lisa Schreiber' });
+  assert.equal(joined.status, 200, joined.text);
+  const token = joined.json.participantToken;
+
+  // too short text -> 400
+  const tooShort = await anon.post('/api/llm/writing-feedback', { itemId: 'w1', text: 'kurz' }, { token });
+  assert.equal(tooShort.status, 400);
+
+  const draft = 'Mein Hund Bello ist braun und spielt gern Ball. Er ist sehr lieb und treu.';
+  await anon.put('/api/participant/responses/w1', { response: { text: draft } }, { token });
+
+  const before = mockRequests.length;
+  const fb = await anon.post('/api/llm/writing-feedback', { itemId: 'w1', text: draft }, { token });
+  assert.equal(fb.status, 200, fb.text);
+  assert.equal(fb.json.feedback.loop, 1);
+  assert.equal(fb.json.feedback.criteria.length, 2);
+  assert.equal(fb.json.feedback.criteria[0].id, 'c1');
+  assert.ok(fb.json.feedback.criteria[0].tip.length > 0);
+  // pseudonymized: name not sent to the LLM
+  assert.ok(!JSON.stringify(mockRequests[before]).includes('Lisa'), 'participant name must not be sent');
+  assert.ok(JSON.stringify(mockRequests[before]).includes('Bello'), 'the draft text is sent');
+
+  // second loop increments
+  const fb2 = await anon.post('/api/llm/writing-feedback', { itemId: 'w1', text: draft + ' Außerdem bellt er nie.' }, { token });
+  assert.equal(fb2.json.feedback.loop, 2);
+
+  // loops are listed
+  const loops = await anon.get('/api/llm/writing-feedback/w1', { token });
+  assert.equal(loops.json.loops.length, 2);
+
+  // after submit, feedback is blocked but result carries it
+  await anon.post('/api/participant/submit', { confirm: true }, { token });
+  const blocked = await anon.post('/api/llm/writing-feedback', { itemId: 'w1', text: draft }, { token });
+  assert.equal(blocked.status, 409);
+  const result = await anon.get('/api/participant/result', { token });
+  const writingEntry = result.json.result.items.find((entry) => entry.itemId === 'w1');
+  assert.ok(writingEntry && writingEntry.writingFeedback, 'result carries the latest writing feedback');
+  assert.equal(writingEntry.writingFeedback.loop, 2);
+
+  // teacher monitor sees the participant with loops (names visible to teacher)
+  const monitor = await admin.get(`/api/writing/monitor/${assignmentId}`);
+  assert.equal(monitor.status, 200, monitor.text);
+  const row = monitor.json.participants.find((p) => p.name.includes('Lisa'));
+  assert.ok(row, 'monitor lists the participant');
+  assert.equal(row.items[0].loopCount, 2);
+  assert.equal(row.items[0].latestFeedback.criteria.length, 2);
+  assert.ok(row.items[0].draft.includes('Bello'));
 });

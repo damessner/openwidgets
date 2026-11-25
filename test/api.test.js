@@ -353,7 +353,7 @@ test('health and capabilities', async () => {
   const authed = new Client(baseUrl);
   await authed.post('/api/auth/login', { email: ADMIN.email, password: ADMIN.password });
   const capabilities = expectStatus(await authed.get('/api/capabilities'), 200, 'capabilities authed');
-  assert.equal(capabilities.itemTypes.length, 18);
+  assert.equal(capabilities.itemTypes.length, 19);
   assert.equal(typeof capabilities.version, 'string');
 });
 

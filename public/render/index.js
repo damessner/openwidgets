@@ -36,8 +36,9 @@ import * as audioAnswer from './audio_answer.js';
 import * as vocabulary from './vocabulary.js';
 import * as hangman from './hangman.js';
 import * as crossword from './crossword.js';
+import * as writing from './writing.js';
 
-const modules = [text, multipleChoice, shortAnswer, numeric, fillBlanks, match, ordering, pins, imageBoxes, longAnswer, hotspot, table, groups, markSentence, audioAnswer, vocabulary, hangman, crossword];
+const modules = [text, multipleChoice, shortAnswer, numeric, fillBlanks, match, ordering, pins, imageBoxes, longAnswer, hotspot, table, groups, markSentence, audioAnswer, vocabulary, hangman, crossword, writing];
 
 /** Map<type, rendererModule> — e.g. for palette listings. */
 export const renderers = new Map(modules.map((module) => [module.type, module]));

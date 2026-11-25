@@ -37,7 +37,7 @@ function makeItem(configOverrides = {}) {
 test('vocabulary: registered with meta', () => {
   const module = TYPES_ENTRY();
   assert.ok(module, 'vocabulary registered');
-  assert.equal(itemTypes.length, 18);
+  assert.equal(itemTypes.length, 19);
   const meta = itemTypeMeta().find((m) => m.type === 'vocabulary');
   assert.equal(meta.scoreable, true);
   assert.ok(meta.label.de && meta.label.en);

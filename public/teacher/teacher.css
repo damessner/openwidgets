@@ -1071,3 +1071,12 @@
 .worksheet-preview-dialog { max-width: 860px; width: min(860px, 94vw); }
 .worksheet-preview .preview-item { margin-bottom: 0.75rem; }
 .align-center { align-items: center; }
+
+/* writing tasks: criteria editor + template grid + monitor (v0.9.3) */
+.writing-template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+.writing-template-card .card-title { font-size: 1rem; }
+.wr-criterion-row { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.6rem; margin-bottom: 0.4rem; }
+.wr-weight { width: 5.5rem; }
+.writing-monitor-criterion { margin-top: 0.35rem; }
+.writing-draft { white-space: pre-wrap; background: var(--bg); border-radius: var(--radius-sm); padding: 0.4rem 0.6rem; }
+.progress-sm { height: 6px; }

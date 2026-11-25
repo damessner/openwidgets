@@ -17,6 +17,7 @@ import { register as registerActivities } from './api/activities.js';
 import { register as registerAssets } from './api/assets.js';
 import { register as registerVocab } from './api/vocab.js';
 import { register as registerLlm } from './api/llm.js';
+import { register as registerWriting } from './api/writing.js';
 import { isLlmEnabled } from './llm/core.js';
 import { register as registerAssignments } from './api/assignments.js';
 import { register as registerClasses } from './api/classes.js';
@@ -56,6 +57,7 @@ registerAdmin(router);
 registerAssets(router);
 registerVocab(router);
 registerLlm(router);
+registerWriting(router);
 
 // ---------------------------------------------------------------------------
 // System endpoints

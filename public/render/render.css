@@ -1210,3 +1210,12 @@ span.item-pin {
 .item-match-option img.item-match-img { max-width: 130px; max-height: 90px; object-fit: contain; display: block; }
 .item-match-option audio { max-width: 140px; }
 .item-match-option-label { line-height: 1.2; text-align: center; }
+
+/* writing item: criteria overview, source, feedback panel (v0.9.3) */
+.writing-criteria-overview { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; background: var(--bg); margin-bottom: 0.5rem; }
+.writing-criteria-list { margin: 0; padding-left: 1.1rem; font-size: 0.875rem; }
+.writing-source summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+.writing-source-text { margin-top: 0.4rem; max-height: 220px; overflow: auto; border-left: 3px solid var(--border); padding-left: 0.6rem; }
+.writing-textarea { width: 100%; font-family: inherit; line-height: 1.5; }
+.writing-feedback .ai-feedback-head { margin-bottom: 0.4rem; }
+.writing-criterion .progress { height: 8px; }

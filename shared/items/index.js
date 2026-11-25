@@ -21,6 +21,7 @@ import * as audioAnswer from './audio_answer.js';
 import * as vocabulary from './vocabulary.js';
 import * as hangman from './hangman.js';
 import * as crossword from './crossword.js';
+import * as writing from './writing.js';
 
 export const itemTypes = [
   text,
@@ -41,6 +42,7 @@ export const itemTypes = [
   vocabulary,
   hangman,
   crossword,
+  writing,
 ];
 
 const byType = new Map(itemTypes.map((module) => [module.type, module]));
