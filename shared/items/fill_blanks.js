@@ -128,21 +128,40 @@ export function validateItem(item) {
   const mode = config.mode === 'drag' ? 'drag' : 'input';
   if (config.mode !== undefined && mode !== config.mode) errors.push('config.mode: must be "input" or "drag"');
   if (mode === 'drag') {
+    // wordBank holds only distractor/extra words — the accepted answers of all
+    // gaps are added to the word box automatically (see effectiveWordBank).
     const wordBank = asArray(config.wordBank).filter((value) => typeof value === 'string');
-    if (wordBank.length === 0) errors.push('config.wordBank: in drag mode at least one word is required');
     if (wordBank.length > 60) errors.push('config.wordBank: at most 60 words are supported');
-    // every accepted answer must be available in the word bank, otherwise the gap is unsolvable
-    const bank = new Set(wordBank.map((value) => value.trim()));
-    for (const key of keys) {
-      const accepted = asArray(blanks[key] && blanks[key].accepted);
-      for (const answer of accepted) {
-        if (typeof answer === 'string' && answer.trim() !== '' && !bank.has(answer.trim())) {
-          errors.push(`config.wordBank: missing the answer "${answer.trim()}" for gap <<${key}>>`);
-        }
-      }
-    }
+    wordBank.forEach((value, index) => {
+      if (value.length > 200) errors.push(`config.wordBank[${index}]: at most 200 characters`);
+    });
   }
   return errors;
+}
+
+/**
+ * The word box shown in drag mode: all accepted answers of every gap plus the
+ * manually configured distractor words (config.wordBank), deduplicated.
+ */
+export function effectiveWordBank(item) {
+  const normalized = normalizeItem(item);
+  if (normalized.config.mode !== 'drag') return [];
+  const seen = new Set();
+  const out = [];
+  const push = (value) => {
+    const word = String(value || '').trim();
+    if (word && !seen.has(word)) {
+      seen.add(word);
+      out.push(word);
+    }
+  };
+  for (const key of gapKeys(normalized.config.text)) {
+    for (const answer of asArray(normalized.config.blanks[key] && normalized.config.blanks[key].accepted)) {
+      push(answer);
+    }
+  }
+  for (const word of normalized.config.wordBank) push(word);
+  return out;
 }
 
 export function normalizeResponse(item, raw) {
@@ -199,15 +218,16 @@ export function score(item, response) {
 
 export function sanitizeItem(item) {
   const normalized = normalizeItem(item);
-  // The word bank is public by design (it is the word box shown to students);
-  // the accepted answers per gap stay server-side.
+  // The word box is public by design (students drag from it); in drag mode it
+  // contains the accepted answers mixed with distractors. The per-gap answer
+  // mapping itself stays server-side.
   return {
     ...sanitizeBaseItem(normalized),
     config: {
       text: normalized.config.text,
       caseSensitive: normalized.config.caseSensitive,
       mode: normalized.config.mode,
-      wordBank: [...normalized.config.wordBank],
+      wordBank: normalized.config.mode === 'drag' ? effectiveWordBank(normalized) : [],
     },
   };
 }
@@ -266,10 +286,10 @@ export function editSchema() {
     {
       key: 'wordBank',
       kind: 'list',
-      label: { en: 'Word box (drag mode)', de: 'Wortbox (Drag-Modus)' },
+      label: { en: 'Extra words / distractors (drag mode)', de: 'Zusätzliche Wörter / Distraktoren (Drag-Modus)' },
       help: {
-        en: 'One word per row. Must contain every accepted answer (plus optional distractor words).',
-        de: 'Ein Wort pro Zeile. Muss jede akzeptierte Antwort enthalten (plus optional Ablenkungswörter).',
+        en: 'One word per row. The accepted answers of all gaps are added to the word box automatically — here you only add distractors.',
+        de: 'Ein Wort pro Zeile. Die akzeptierten Antworten aller Lücken landen automatisch in der Wortbox — hier nur Ablenkungswörter eintragen.',
       },
       itemSchema: [{ key: '$value', kind: 'text', label: { en: 'Word', de: 'Wort' } }],
     },

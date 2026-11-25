@@ -273,9 +273,22 @@ export function mount(container, rawCtx) {
     }
     root.appendChild(field);
 
-    // Drag mode: word box above the text
+    // Drag mode: word box above the text. The bank = configured words plus all
+    // accepted answers (so teacher previews with raw items work too).
     if (dragMode) {
-      const bank = Array.isArray(config.wordBank) ? config.wordBank.filter((w) => typeof w === 'string' && w.trim() !== '') : [];
+      const seen = new Set();
+      const bank = [];
+      const push = (w) => {
+        const word = String(w || '').trim();
+        if (word && !seen.has(word)) {
+          seen.add(word);
+          bank.push(word);
+        }
+      };
+      for (const id of blankIds) {
+        for (const answer of (blanksConfig[id] && blanksConfig[id].accepted) || []) push(answer);
+      }
+      if (Array.isArray(config.wordBank)) config.wordBank.forEach(push);
       if (bank.length) {
         const shuffled = [...bank];
         for (let i = shuffled.length - 1; i > 0; i -= 1) {

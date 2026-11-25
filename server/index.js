@@ -1,6 +1,7 @@
 // OpenWidgets — single-process HTTP server. Serves the API, the teacher/student
 // UIs and shared ES modules. No bundler, no framework, no npm dependencies.
 import http from 'node:http';
+import fs from 'node:fs';
 import path from 'node:path';
 import { config, log, logError } from './config.js';
 import { initDb, one } from './db.js';
@@ -120,6 +121,51 @@ function assetCacheControl(filePath) {
   return 'public, max-age=300';
 }
 
+// ---------------------------------------------------------------------------
+// Cache-busting asset version. Behind a CDN (Cloudflare) that caches JS/CSS
+// for hours regardless of origin headers, the only reliable way to make a
+// deploy visible immediately is a fresh URL per deploy. The auto-update
+// service records the deployed commit sha in <DATA_DIR>/.deployed-sha; fall
+// back to a content mtime stamp for local/dev runs.
+// ---------------------------------------------------------------------------
+const ASSET_V = (() => {
+  try {
+    const file = process.env.OW_DEPLOYED_SHA_FILE || path.join(config.dataDir, '.deployed-sha');
+    const sha = fs.readFileSync(file, 'utf8').trim();
+    if (/^[0-9a-f]{7,40}$/i.test(sha)) return sha.slice(0, 10);
+  } catch { /* no state file */ }
+  try {
+    return `t${Math.floor(fs.statSync(path.join(config.publicDir, 'app.css')).mtimeMs / 1000)}`;
+  } catch {
+    return config.version.replace(/\W/g, '');
+  }
+})();
+
+/** Append ?v=ASSET_V to local asset references in served HTML/JS text. */
+function versionAssetRefs(content) {
+  return String(content)
+    .replace(/(href|src)="(\/[^"?]+\.(?:css|js))"/g, (m, attr, url) => `${attr}="${url}?v=${ASSET_V}"`)
+    .replace(/((?:from|import)\s*\(?\s*)(['"])(\/(?!api\/)[^'"]+\.js|\.\.?\/[^'"]+\.js)\2/g, (m, pre, q, url) => `${pre}${q}${url}?v=${ASSET_V}${q}`);
+}
+
+const TEXT_TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8' };
+
+/** Serve a text asset (html/js) with versioned references and no-cache. */
+function serveTextAsset(req, res, filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  const type = TEXT_TYPES[ext];
+  if (!type) return false;
+  let body;
+  try {
+    body = Buffer.from(versionAssetRefs(fs.readFileSync(filePath, 'utf8')), 'utf8');
+  } catch {
+    return false;
+  }
+  res.writeHead(200, { 'Content-Type': type, 'Content-Length': body.length, 'Cache-Control': 'no-cache' });
+  res.end(req.method === 'HEAD' ? undefined : body);
+  return true;
+}
+
 function pageHandler(file) {
   return async (req, res, params, url) => {
     const pathname = url?.pathname || req.url || '/';
@@ -127,11 +173,15 @@ function pageHandler(file) {
     // /teacher/teacher.css — anything with a file extension is served as static.
     if (pathname.startsWith('/teacher/') && /\.[a-z0-9]{1,8}$/i.test(pathname)) {
       const assetPath = safeJoin(config.publicDir, pathname);
+      if (assetPath && /\.(js|mjs)$/i.test(pathname) && serveTextAsset(req, res, assetPath)) return;
       if (assetPath && (await serveFile(req, res, assetPath, { cacheControl: assetCacheControl(pathname) }))) return;
       throw new HttpError(404, 'not_found', 'Not found');
     }
-    const ok = await serveFile(req, res, path.join(config.publicDir, file), { cacheControl: 'no-cache' });
-    if (!ok) renderErrorPage(res, 404, 'not_found', 'Page not found');
+    const pageFile = path.join(config.publicDir, file);
+    if (!serveTextAsset(req, res, pageFile)) {
+      const ok = await serveFile(req, res, pageFile, { cacheControl: 'no-cache' });
+      if (!ok) renderErrorPage(res, 404, 'not_found', 'Page not found');
+    }
   };
 }
 
@@ -226,7 +276,7 @@ const server = http.createServer(async (req, res) => {
         filePath = safeJoin(config.publicDir, pathname);
       }
       if (filePath) {
-        const isHtml = filePath.toLowerCase().endsWith('.html');
+        if (/\.(html|js|mjs)$/i.test(filePath) && serveTextAsset(req, res, filePath)) return;
         const served = await serveFile(req, res, filePath, {
           cacheControl: assetCacheControl(filePath),
         });

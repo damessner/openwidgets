@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
   gapKeys,
   canonicalizeText,
+  effectiveWordBank,
   normalizeItem,
   validateItem,
   score,
@@ -44,26 +45,32 @@ test('fill_blanks: validateItem uses <<n>> and checks drag word bank', () => {
   const noGaps = normalizeItem({ id: 'y', type: 'fill_blanks', config: { text: 'kein gap', blanks: {} } });
   assert.ok(validateItem(noGaps).some((e) => e.includes('<<1>>')));
 
-  // drag mode without answers in the bank -> error
-  const dragBad = normalizeItem({
-    id: 'z', type: 'fill_blanks', points: 2,
-    config: { text: 'Der <<1>>.', blanks: { 1: { accepted: ['Häuser'] } }, mode: 'drag', wordBank: ['Auto'] },
-  });
-  assert.ok(validateItem(dragBad).some((e) => e.includes('Häuser') && e.includes('wordBank')));
-
-  // drag mode with all answers in the bank (+ distractor) -> valid
+  // drag mode: wordBank = distractors only, answers are auto-added -> valid even without them
   const dragOk = normalizeItem({
     id: 'z2', type: 'fill_blanks', points: 2,
-    config: { text: 'Der <<1>>.', blanks: { 1: { accepted: ['Häuser'] } }, mode: 'drag', wordBank: ['Häuser', 'Auto'] },
+    config: { text: 'Der <<1>>.', blanks: { 1: { accepted: ['Häuser'] } }, mode: 'drag', wordBank: ['Auto'] },
   });
   assert.deepEqual(validateItem(dragOk), []);
 
-  // empty word bank in drag mode -> error
+  // empty distractor list is fine too (bank = answers only)
   const dragEmpty = normalizeItem({
     id: 'z3', type: 'fill_blanks', points: 2,
     config: { text: 'Der <<1>>.', blanks: { 1: { accepted: ['Häuser'] } }, mode: 'drag', wordBank: [] },
   });
-  assert.ok(validateItem(dragEmpty).some((e) => e.includes('wordBank')));
+  assert.deepEqual(validateItem(dragEmpty), []);
+});
+
+test('fill_blanks: effectiveWordBank = gap answers + distractors, deduplicated', () => {
+  const item = normalizeItem({
+    id: 'w', type: 'fill_blanks', points: 2,
+    config: {
+      text: '<<1>> und <<2>>',
+      blanks: { 1: { accepted: ['Hund', 'dog'] }, 2: { accepted: ['Katze'] } },
+      mode: 'drag',
+      wordBank: ['Hund', 'Vogel'],
+    },
+  });
+  assert.deepEqual(effectiveWordBank(item), ['Hund', 'dog', 'Katze', 'Vogel']);
 });
 
 test('fill_blanks: drag mode scores like input mode; sanitize exposes wordBank but not answers', () => {
@@ -82,8 +89,9 @@ test('fill_blanks: drag mode scores like input mode; sanitize exposes wordBank b
 
   const safe = sanitizeItem(item);
   assert.equal(safe.config.mode, 'drag');
-  assert.deepEqual(safe.config.wordBank.sort(), ['Hund', 'Katze', 'Vogel']);
-  assert.ok(!('blanks' in safe.config), 'accepted answers must not be sanitized to the client');
+  // sanitized bank contains answers mixed with distractors, but no per-gap mapping
+  assert.deepEqual([...safe.config.wordBank].sort(), ['Hund', 'Katze', 'Vogel']);
+  assert.ok(!('blanks' in safe.config), 'per-gap answer mapping must not be sanitized to the client');
   assert.ok(JSON.stringify(safe).includes('<<1>>'), 'gap markers stay visible');
 });
 
