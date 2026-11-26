@@ -5,6 +5,7 @@
 // block is pure content and has no response.
 import { registerMessages, t } from '../lib/i18n.js';
 import { h, renderRichText } from '../lib/dom.js';
+import { splitVorlesetext } from '/shared/items/text.js';
 import {
   normalizeCtx,
   isReadOnly,
@@ -27,10 +28,12 @@ registerMessages({
   de: {
     'item.text.empty': 'Dieser Textblock ist leer.',
     'item.text.gap_label': 'Lücke {n}',
+    'item.text.read_along': '📖 Text zum Mitlesen (aufklappen)',
   },
   en: {
     'item.text.empty': 'This text block is empty.',
     'item.text.gap_label': 'Gap {n}',
+    'item.text.read_along': '📖 Read-along text (expand)',
   },
 });
 
@@ -47,13 +50,20 @@ export function mount(container, rawCtx) {
   if (stem) root.appendChild(stem);
 
   const bodyText = String(config.text || '');
-  const hasGaps = GAP_MARKER_RE.test(bodyText);
+  // Students never see the teacher's VORLESETEXT marker line: with an audio
+  // attached, the text becomes a collapsible read-along hint below the player.
+  const { text: displayText } = splitVorlesetext(bodyText);
+  const hasAudio = !!(item.media && item.media.type === 'audio' && item.media.assetId);
+  const hasGaps = GAP_MARKER_RE.test(displayText);
   const gapInputs = new Map(); // gapId -> input
 
-  if (bodyText.trim()) {
+  const media = mediaBlock(item.media);
+  if (media) root.appendChild(media);
+
+  if (displayText.trim()) {
     const body = h('div.item-text-content');
     if (hasGaps) {
-      renderRichText(body, bodyText, {
+      renderRichText(body, displayText, {
         editableGaps: true,
         readonlyGaps: readonly,
         gapValues: {},
@@ -65,16 +75,21 @@ export function mount(container, rawCtx) {
         gapInputs.set(input.dataset.gap, input);
       });
     } else {
-      renderRichText(body, bodyText);
+      renderRichText(body, displayText);
     }
-    root.appendChild(body);
+    if (hasAudio && !hasGaps) {
+      // audio attached → text is an optional read-along hint (collapsed)
+      const details = h('details.item-text-hint.mt-1');
+      details.appendChild(h('summary', { text: t('item.text.read_along') }));
+      details.appendChild(body);
+      root.appendChild(details);
+    } else {
+      root.appendChild(body);
+    }
   }
 
   const help = helpBlock(item);
   if (help) root.appendChild(help);
-
-  const media = mediaBlock(item.media);
-  if (media) root.appendChild(media);
 
   if (!root.childNodes.length) root.appendChild(notice(t('item.text.empty'), 'info'));
 

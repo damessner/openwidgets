@@ -18,6 +18,21 @@ export const meta = {
 export const GAP_RE = /<<([^<>]*)>>/g;
 export const MAX_GAPS = 50;
 
+/**
+ * Teacher read-aloud marker ("VORLESETEXT …") at the start of a text block.
+ * Students never see the marker line: without audio the text shows normally,
+ * with audio attached it becomes a collapsible "read along" hint.
+ */
+export const VORLESETEXT_RE = /^\s*VORLESETEXT[^\n]*(\n|$)/i;
+
+/** Split off a leading VORLESETEXT marker line. Returns { marker, text }. */
+export function splitVorlesetext(text) {
+  const source = String(text ?? '');
+  const match = source.match(VORLESETEXT_RE);
+  if (!match) return { marker: '', text: source };
+  return { marker: match[0], text: source.slice(match[0].length) };
+}
+
 /** Parse <<answer|alt>> gaps in order. Returns [{ index, accepted, raw }]. */
 export function parseGaps(text) {
   const gaps = [];

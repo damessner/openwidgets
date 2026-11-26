@@ -3,6 +3,7 @@
 // server. `fetchImpl` is injectable for tests.
 import { HttpError } from '../lib/http.js';
 import { resolveLlmConfig, isTtsAvailable } from './core.js';
+import { splitVorlesetext } from '../../shared/items/text.js';
 
 export const MAX_TTS_CHARS = 8000;
 
@@ -68,7 +69,7 @@ export async function synthesizeSpeech({ text, voice, fetchImpl = globalThis.fet
   if (!isTtsAvailable()) {
     throw new HttpError(409, 'tts_unavailable', 'TTS needs the Mistral provider with an API key (admin → LLM settings)');
   }
-  const input = String(text || '').replace(/^VORLESETEXT[^\n]*\n?/im, '').trim();
+  const input = splitVorlesetext(String(text || '')).text.trim();
   if (!input) throw new HttpError(400, 'tts_empty', 'No text to speak');
   if (input.length > MAX_TTS_CHARS) throw new HttpError(400, 'tts_too_long', `Text too long (max ${MAX_TTS_CHARS} characters)`);
 

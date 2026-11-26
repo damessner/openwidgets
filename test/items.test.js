@@ -530,7 +530,7 @@ test('regenerateItemIds changes item and nested ids but keeps answers', () => {
 // rich-media authoring: text gaps, image boxes, match media sides
 // ---------------------------------------------------------------------------
 
-import { parseGaps, maskGaps } from '../shared/items/text.js';
+import { parseGaps, maskGaps, splitVorlesetext } from '../shared/items/text.js';
 import { normalizeSide, rightEntryId, sideLabel } from '../shared/items/match.js';
 import { itemIsScoreable } from '../shared/activity.js';
 
@@ -550,6 +550,20 @@ test('text: maskGaps hides answers but keeps the placeholder', () => {
   assert.ok(masked.includes('<<>>'));
   // text outside gaps is untouched
   assert.equal(maskGaps(`plain ${SECRET}`), `plain ${SECRET}`);
+});
+
+test('text: splitVorlesetext removes the teacher marker line for students', () => {
+  const withMarker = 'VORLESETEXT (die Lehrkraft liest vor):\n\nHello! My name is Leo.';
+  const split = splitVorlesetext(withMarker);
+  assert.ok(split.marker.startsWith('VORLESETEXT'));
+  assert.equal(split.text, '\nHello! My name is Leo.');
+  // no marker -> untouched
+  const plain = splitVorlesetext('Just a normal text.');
+  assert.equal(plain.marker, '');
+  assert.equal(plain.text, 'Just a normal text.');
+  // marker not at the start is kept (it is content then)
+  const mid = splitVorlesetext('Line one\nVORLESETEXT later');
+  assert.equal(mid.marker, '');
 });
 
 test('text: points require at least one gap; empty gap is a validation error', () => {

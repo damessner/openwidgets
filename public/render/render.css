@@ -1270,3 +1270,4 @@ span.item-pin {
 .writing-hints-card { border-left: 4px solid var(--primary, #3b6fe0); }
 .writing-hint-text { font-size: 0.95rem; white-space: pre-wrap; }
 .writing-wordbox-ok { color: var(--success, #1a7f4b); font-weight: 600; }
+.item-text-hint summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--muted, #666); }
