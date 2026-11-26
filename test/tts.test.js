@@ -80,6 +80,34 @@ test('tts: VORLESETEXT marker line is stripped before speaking', async () => {
   assert.equal(body.voice, 'voice_592', 'explicit voice wins');
 });
 
+test('tts: JSON envelope with base64 audio_data is decoded to mp3 bytes', async () => {
+  const b64 = MP3_BYTES.toString('base64');
+  const fetchImpl = async (url) => {
+    if (String(url).endsWith('/v1/audio/voices')) {
+      return { ok: true, json: async () => ({ items: [{ name: 'James', slug: 'voice_en_1', languages: ['en_us'] }] }) };
+    }
+    return {
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ audio_data: b64 }),
+    };
+  };
+  const result = await synthesizeSpeech({ text: 'Hello there!', fetchImpl });
+  assert.equal(result.bytes.length, MP3_BYTES.length);
+  assert.deepEqual(result.bytes.subarray(0, 4), MP3_BYTES.subarray(0, 4));
+  assert.equal(result.mime, 'audio/mpeg');
+});
+
+test('tts: JSON envelope without audio data -> clear error', async () => {
+  const fetchImpl = async (url) => {
+    if (String(url).endsWith('/v1/audio/voices')) {
+      return { ok: true, json: async () => ({ items: [{ slug: 'voice_en_1', languages: ['en'] }] }) };
+    }
+    return { ok: true, headers: { get: () => 'application/json' }, json: async () => ({}) };
+  };
+  await assert.rejects(() => synthesizeSpeech({ text: 'Hello there!', fetchImpl }), /without audio data/);
+});
+
 test('tts: validation + provider errors', async () => {
   const { fetchImpl } = fakeFetchOk();
   await assert.rejects(() => synthesizeSpeech({ text: '', fetchImpl }), /No text/);

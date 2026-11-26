@@ -93,7 +93,21 @@ export async function synthesizeSpeech({ text, voice, fetchImpl = globalThis.fet
     try { detail = (await response.text()).slice(0, 300); } catch { /* ignore */ }
     throw new HttpError(502, 'tts_failed', `Mistral TTS answered ${response.status}${detail ? `: ${detail}` : ''}`);
   }
-  const bytes = Buffer.from(await response.arrayBuffer());
+  // The endpoint answers either raw audio bytes OR a JSON envelope with
+  // base64 audio ({"audio_data": "..."}) — handle both.
+  const contentType = String((response.headers && typeof response.headers.get === 'function' ? response.headers.get('content-type') : '') || '');
+  let bytes;
+  if (contentType.includes('application/json')) {
+    const payload = await response.json();
+    const b64 = String(payload.audio_data || payload.audio || payload.data || '');
+    if (!b64) throw new HttpError(502, 'tts_failed', 'Mistral TTS returned a JSON envelope without audio data');
+    bytes = Buffer.from(b64, 'base64');
+  } else {
+    bytes = Buffer.from(await response.arrayBuffer());
+  }
   if (bytes.length < 100) throw new HttpError(502, 'tts_failed', 'Mistral TTS returned an empty audio response');
+  // sanity: MP3 starts with an ID3 tag or a frame sync byte
+  const looksMp3 = (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0);
+  if (!looksMp3) throw new HttpError(502, 'tts_failed', 'Mistral TTS did not return MP3 audio (unexpected payload)');
   return { bytes, mime: 'audio/mpeg', voice: voiceId, model };
 }
