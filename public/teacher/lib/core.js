@@ -81,6 +81,42 @@ export function assetUrl(assetId) {
   return `/assets/${assetId}/${assetId}`;
 }
 
+// ---------------------------------------------------------------------------
+// Server-backed asset library (GET /api/assets). Uploaded files live on the
+// server — the media picker lists them here, not only in localStorage.
+// ---------------------------------------------------------------------------
+
+let assetLibraryPromise = null;
+
+/** Fetch the teacher's asset library once per page load (cached). */
+export function fetchAssetLibrary(force = false) {
+  if (!force && assetLibraryPromise) return assetLibraryPromise;
+  assetLibraryPromise = (async () => {
+    try {
+      const response = await fetch('/api/assets', { credentials: 'same-origin' });
+      if (!response.ok) return [];
+      const data = await response.json();
+      const assets = Array.isArray(data.assets) ? data.assets : [];
+      for (const asset of assets) rememberAssetUrl(asset);
+      return assets;
+    } catch {
+      return [];
+    }
+  })();
+  return assetLibraryPromise;
+}
+
+/** Library assets of a media kind ('image' | 'audio' | null = all), newest first. */
+export function libraryAssets(kind) {
+  return fetchAssetLibrary().then((assets) =>
+    assets.filter((asset) => {
+      if (!kind) return true;
+      const mime = String(asset.mime || '');
+      return kind === 'audio' ? mime.startsWith('audio/') : mime.startsWith('image/');
+    }),
+  );
+}
+
 /** Resolve the media object of an item to an absolute URL (or '' for none). */
 export function mediaUrl(media) {
   if (!media || media.type === 'none') return '';

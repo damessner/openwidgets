@@ -9,6 +9,9 @@ import {
   relativeSavedLabel,
   assetUrl,
   rememberAssetUrl,
+  libraryAssets,
+  fetchAssetLibrary,
+  formatBytes,
 } from '../lib/core.js';
 import {
   loadPalette,
@@ -871,6 +874,31 @@ export async function mount(root, ctx) {
 
   function buildMediaEditor(item, media) {
     const host = h('div.media-editor');
+
+    /** Dropdown of already-uploaded assets (server-side library) for picking. */
+    function librarySelect(kind, currentAssetId, onPick) {
+      const select = h('select.select.select-sm.media-library-select', {
+        'aria-label': t('teacher.asset_library'),
+        title: t('teacher.asset_library'),
+      });
+      select.appendChild(h('option', { value: '' }, t('teacher.asset_library_pick')));
+      libraryAssets(kind).then((assets) => {
+        for (const asset of assets) {
+          const iconChar = String(asset.mime || '').startsWith('audio/') ? '🔊' : '🖼';
+          select.appendChild(
+            h('option', { value: asset.id, selected: asset.id === currentAssetId },
+              `${iconChar} ${asset.filename || asset.id} (${formatBytes(Number(asset.size) || 0)})`),
+          );
+        }
+      });
+      select.addEventListener('change', () => {
+        const id = select.value;
+        if (id) onPick(id);
+        select.value = '';
+      });
+      return select;
+    }
+
     function paint() {
       clear(host);
       const current = item.media || { type: 'none' };
@@ -902,8 +930,9 @@ export async function mount(root, ctx) {
                 })(),
               ),
               h(
-                'div.row.gap-2',
+                'div.row.gap-2.wrap',
                 h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => imageInput.click() } }, t('teacher.replace_image')),
+                librarySelect('image', current.assetId, (id) => setMedia({ type: 'image', assetId: id, alt: current.alt || item.stem || '' })),
                 h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => setMedia({ type: 'none' }) } }, t('common.remove')),
               ),
             ),
@@ -916,8 +945,9 @@ export async function mount(root, ctx) {
             'div.media-preview.media-preview-audio',
             audio,
             h(
-              'div.row.gap-2',
+              'div.row.gap-2.wrap',
               h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => audioInput.click() } }, t('teacher.replace_audio')),
+              librarySelect('audio', current.assetId, (id) => setMedia({ type: 'audio', assetId: id })),
               h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => setMedia({ type: 'none' }) } }, t('common.remove')),
             ),
           ),
@@ -949,6 +979,14 @@ export async function mount(root, ctx) {
             'div.row.wrap.gap-2.media-actions',
             h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => imageInput.click() } }, t('teacher.upload_image')),
             h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => audioInput.click() } }, t('teacher.upload_audio')),
+            librarySelect(null, '', (id) => {
+              fetchAssetLibrary().then((assets) => {
+                const asset = assets.find((a) => a.id === id);
+                const isAudio = String((asset && asset.mime) || '').startsWith('audio/');
+                if (isAudio) setMedia({ type: 'audio', assetId: id });
+                else setMedia({ type: 'image', assetId: id, alt: item.stem || '' });
+              });
+            }),
             h(
               'button.btn.btn-sm.btn-ghost',
               {

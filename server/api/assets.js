@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { config } from '../config.js';
-import { now, one, run, uid } from '../db.js';
+import { all, now, one, run, uid } from '../db.js';
 import { requireUser } from '../lib/auth.js';
 import { getStudent } from '../lib/students.js';
 import { mp3Filename, needsTranscode, transcodeToMp3 } from '../lib/audio.js';
@@ -113,6 +113,25 @@ async function normalizeAudioUpload(bytes, mime, filename) {
 }
 
 export function register(router) {
+  // -------------------------------------------------------------------------
+  // Library: list uploaded assets (owner-scoped; admins see all). This is
+  // what the teacher media picker shows — uploads are NOT only kept in the
+  // browser's localStorage, they live on the server.
+  // -------------------------------------------------------------------------
+  router.get('/api/assets', async (req, res) => {
+    const user = requireUser(req);
+    const rows =
+      user.role === 'admin'
+        ? all('SELECT * FROM assets ORDER BY created_at DESC LIMIT 200')
+        : all('SELECT * FROM assets WHERE owner_id = ? ORDER BY created_at DESC LIMIT 200', user.id);
+    json(res, 200, {
+      assets: rows.map((row) => ({
+        ...assetJson(row),
+        createdAt: row.created_at,
+      })),
+    });
+  });
+
   // -------------------------------------------------------------------------
   // Upload (raw body, teacher only, rate limited)
   // -------------------------------------------------------------------------

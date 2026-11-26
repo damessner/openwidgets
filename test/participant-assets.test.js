@@ -35,10 +35,11 @@ async function findFreePort() {
   });
 }
 
-async function req(pathname, { method = 'GET', token, student, body, contentType } = {}) {
+async function req(pathname, { method = 'GET', token, student, body, contentType, cookie } = {}) {
   const headers = {};
   if (token) headers['x-participant-token'] = token;
   if (student) headers.cookie = `ow_student=${student}`;
+  if (cookie) headers.cookie = cookie;
   if (contentType) headers['content-type'] = contentType;
   const response = await fetch(baseUrl + pathname, {
     method,
@@ -217,6 +218,32 @@ test('participant assets: audio upload works with token; image rejected; anon re
   assert.equal(teacherRoute.status, 401);
 
   state.token = token;
+});
+
+test('GET /api/assets: teacher library lists own uploads, anon rejected', async () => {
+  // anon rejected
+  const anon = await req('/api/assets', { method: 'GET' });
+  assert.equal(anon.status, 401);
+
+  // admin login, upload one teacher asset, then list
+  const login = await req('/api/auth/login', { method: 'POST', contentType: 'application/json', body: JSON.stringify({ email: ADMIN.email, password: ADMIN.password }) });
+  assert.equal(login.status, 200);
+  const cookie = login.setCookies.map((c) => c.split(';')[0]).join('; ');
+
+  const up = await req('/api/assets?filename=Lernvideo.mp3', { method: 'POST', cookie, contentType: 'audio/mpeg', body: Buffer.from([0xff, 0xfb, 0x90, 0x00, 1, 2, 3]) });
+  assert.equal(up.status, 201, up.text);
+  assert.equal(up.json.asset.mime, 'audio/mpeg', 'mp3 is stored untouched (no transcode)');
+
+  const list = await req('/api/assets', { method: 'GET', cookie });
+  assert.equal(list.status, 200, list.text);
+  assert.ok(Array.isArray(list.json.assets));
+  const found = list.json.assets.find((a) => a.id === up.json.asset.id);
+  assert.ok(found, 'uploaded asset appears in the library list');
+  assert.equal(found.mime, 'audio/mpeg');
+  assert.match(found.url, /^\/assets\//);
+  assert.ok(found.createdAt, 'list entries carry createdAt');
+  // participant-owned (owner NULL) assets are not in the teacher list unless admin — admin sees all
+  assert.ok(list.json.assets.length >= 1);
 });
 
 test('student join payload: hotspot config sanitized (no correct flag), audio_answer config present', async () => {

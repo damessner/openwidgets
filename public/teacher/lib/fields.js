@@ -13,7 +13,31 @@ import { t, getLocale } from '/lib/i18n.js';
 import { uploadAsset, get } from '/lib/api.js';
 import { icon } from '/lib/icons.js';
 import { autoLayout, buildGrid, lettersOf } from '/shared/items/crossword.js';
-import { assetUrl, rememberAssetUrl } from './core.js';
+import { assetUrl, rememberAssetUrl, libraryAssets, formatBytes } from './core.js';
+
+/** Dropdown of already-uploaded server assets ("Medienbibliothek") for picking. */
+function mediaLibrarySelect(kind, currentId, onPick) {
+  const select = h('select.select.select-sm.media-library-select', {
+    'aria-label': t('teacher.asset_library'),
+    title: t('teacher.asset_library'),
+  });
+  select.appendChild(h('option', { value: '' }, t('teacher.asset_library_pick')));
+  libraryAssets(kind).then((assets) => {
+    for (const asset of assets) {
+      const iconChar = String(asset.mime || '').startsWith('audio/') ? '🔊' : '🖼';
+      select.appendChild(
+        h('option', { value: asset.id, selected: asset.id === currentId },
+          `${iconChar} ${asset.filename || asset.id} (${formatBytes(Number(asset.size) || 0)})`),
+      );
+    }
+  });
+  select.addEventListener('change', () => {
+    const id = select.value;
+    if (id) onPick(id);
+    select.value = '';
+  });
+  return select;
+}
 import { nextConfigId, newRandomId } from './items.js';
 
 let uidCounter = 0;
@@ -1635,6 +1659,11 @@ function renderMatchEditor(container, { item, onChange }) {
         body.appendChild(h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => { onSideChange(side.kind === 'image' ? { kind: 'image', assetId: '', alt: '' } : { kind: 'audio', assetId: '' }); rerender(); onChange(); } } }, t('common.remove')));
       }
       body.appendChild(h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => fileInput.click() } }, side.assetId ? t('teacher.pins_replace') : (side.kind === 'image' ? t('teacher.pins_upload') : t('teacher.upload_audio'))));
+      body.appendChild(mediaLibrarySelect(side.kind === 'audio' ? 'audio' : 'image', side.assetId, (id) => {
+        onSideChange(side.kind === 'image' ? { kind: 'image', assetId: id, alt: side.alt || '' } : { kind: 'audio', assetId: id });
+        rerender();
+        onChange();
+      }));
       body.appendChild(fileInput);
     }
     wrap.appendChild(kindSelect);
@@ -1793,9 +1822,11 @@ function renderHotspotEditor(container, { item, onChange }) {
     if (config.prompt.audioAssetId) {
       row.appendChild(h('audio', { controls: true, preload: 'metadata', src: assetUrl(config.prompt.audioAssetId), class: 'match-audio-preview' }));
       row.appendChild(h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => audioInput.click() } }, t('teacher.pins_replace')));
+      row.appendChild(mediaLibrarySelect('audio', config.prompt.audioAssetId, (id) => { config.prompt.audioAssetId = id; renderPrompt(); onChange(); }));
       row.appendChild(h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => { config.prompt.audioAssetId = ''; renderPrompt(); onChange(); } } }, t('common.remove')));
     } else {
       row.appendChild(h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => audioInput.click() } }, t('teacher.hs_upload_prompt_audio')));
+      row.appendChild(mediaLibrarySelect('audio', '', (id) => { config.prompt.audioAssetId = id; renderPrompt(); onChange(); }));
     }
     row.appendChild(audioInput);
     promptHost.appendChild(h('div.field.field-sm', h('label.label', t('teacher.hs_prompt_audio')), row));
@@ -2324,6 +2355,11 @@ function renderGroupsEditor(container, { item, onChange }) {
         body.appendChild(h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => { entry.side = { kind: side.kind, assetId: '', ...(side.kind === 'image' ? { alt: '' } : {}) }; rerender(); onChange(); } } }, t('common.remove')));
       }
       body.appendChild(h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => fileInput.click() } }, side.assetId ? t('teacher.pins_replace') : (side.kind === 'image' ? t('teacher.pins_upload') : t('teacher.upload_audio'))));
+      body.appendChild(mediaLibrarySelect(side.kind === 'audio' ? 'audio' : 'image', side.assetId, (id) => {
+        onSideChange(side.kind === 'image' ? { kind: 'image', assetId: id, alt: side.alt || '' } : { kind: 'audio', assetId: id });
+        rerender();
+        onChange();
+      }));
       body.appendChild(fileInput);
     }
     wrap.appendChild(kindSelect);
@@ -2752,7 +2788,9 @@ function renderVocabularyEditor(container, { item, onChange }) {
       row.append(
         h('div.row.gap-2.align-center', termInput, transInput, altInput),
         h('div.row.gap-2.align-center', exInput),
-        h('div.row.gap-1.align-center', imgBtn, audioBtn, imgInput, audioInput, delBtn),
+        h('div.row.gap-1.align-center', imgBtn, audioBtn,
+          mediaLibrarySelect('audio', entry.audioAssetId, (id) => { entry.audioAssetId = id; rerender(); onChange(); }),
+          imgInput, audioInput, delBtn),
       );
       grid.appendChild(row);
     });
