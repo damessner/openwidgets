@@ -1080,3 +1080,10 @@
 .writing-monitor-criterion { margin-top: 0.35rem; }
 .writing-draft { white-space: pre-wrap; background: var(--bg); border-radius: var(--radius-sm); padding: 0.4rem 0.6rem; }
 .progress-sm { height: 6px; }
+
+/* ---- courses within classes (class-edit) ---- */
+.course-section { border: 1px solid var(--border); border-radius: var(--radius); padding: 0.6rem 0.75rem; background: var(--surface-2); }
+.course-section-unassigned { background: transparent; border-style: dashed; }
+.course-header { margin-bottom: 0.35rem; }
+.course-title-input { max-width: 420px; font-weight: 600; }
+.class-item-row .item-course-select { max-width: 200px; }

@@ -12,6 +12,9 @@ export const CLASS_LIMITS = {
   nameMax: 120,
   descriptionMax: 2000,
   maxItems: 50,
+  maxCourses: 50,
+  courseTitleMax: 120,
+  courseDescriptionMax: 500,
 };
 
 export function normalizeUnlockMinPercent(value) {

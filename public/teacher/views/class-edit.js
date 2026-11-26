@@ -29,8 +29,9 @@ export async function mount(root, ctx) {
   let cls = null;
   let assignments = [];
   let roster = [];
-  // Local working copy of ordered assignment ids (persisted via PUT items).
-  let itemIds = [];
+  // Local working copy of ordered items with their course (persisted via PUT items).
+  let itemEntries = []; // [{ assignmentId, courseId }]
+  let courses = []; // [{ id, title, description, position, itemCount }]
 
   ctx.onLocaleChange(() => { if (!disposed) renderAll(); });
 
@@ -44,7 +45,8 @@ export async function mount(root, ctx) {
     cls = classData.class;
     assignments = Array.isArray(assignmentsData.assignments) ? assignmentsData.assignments : [];
     roster = Array.isArray(rosterData.students) ? rosterData.students : [];
-    itemIds = (cls.items || []).map((item) => item.assignmentId);
+    itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null }));
+    courses = Array.isArray(cls.courses) ? cls.courses : [];
     statsCache = null; // item list may have changed — refetch stats on next render
     ctx.setTitle(cls.name || t('teacher.edit_class'));
     renderAll();
@@ -58,7 +60,8 @@ export async function mount(root, ctx) {
     try {
       const data = await put(`/api/classes/${encodeURIComponent(classId)}`, { name, description, orderMode, unlockMinPercent: percent });
       cls = data.class;
-      itemIds = (cls.items || []).map((item) => item.assignmentId);
+      itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null }));
+      courses = Array.isArray(cls.courses) ? cls.courses : [];
       toast(t('teacher.class_saved'), 'success');
       renderAll();
     } catch (error) {
@@ -68,9 +71,12 @@ export async function mount(root, ctx) {
 
   async function saveItems() {
     try {
-      const data = await put(`/api/classes/${encodeURIComponent(classId)}/items`, { assignmentIds: itemIds });
+      const data = await put(`/api/classes/${encodeURIComponent(classId)}/items`, {
+        items: itemEntries.map((entry) => ({ assignmentId: entry.assignmentId, courseId: entry.courseId })),
+      });
       cls = data.class;
-      itemIds = (cls.items || []).map((item) => item.assignmentId);
+      itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null }));
+      courses = Array.isArray(cls.courses) ? cls.courses : [];
       statsCache = null; // item list changed — refetch stats on next render
       toast(t('teacher.items_saved'), 'success');
       renderAll();
@@ -81,10 +87,10 @@ export async function mount(root, ctx) {
 
   function move(index, delta) {
     const next = index + delta;
-    if (next < 0 || next >= itemIds.length) return;
-    const copy = [...itemIds];
+    if (next < 0 || next >= itemEntries.length) return;
+    const copy = [...itemEntries];
     [copy[index], copy[next]] = [copy[next], copy[index]];
-    itemIds = copy;
+    itemEntries = copy;
     saveItems();
   }
 
@@ -108,8 +114,73 @@ export async function mount(root, ctx) {
   }
 
   async function removeItem(assignmentId) {
-    itemIds = itemIds.filter((id) => id !== assignmentId);
+    itemEntries = itemEntries.filter((entry) => entry.assignmentId !== assignmentId);
     await saveItems();
+  }
+
+  // -------------------------------------------------------------------------
+  // Courses within the class
+  // -------------------------------------------------------------------------
+
+  async function reloadClass() {
+    const data = await get(`/api/classes/${encodeURIComponent(classId)}`, { signal: ctx.signal });
+    if (disposed) return;
+    cls = data.class;
+    itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null }));
+    courses = Array.isArray(cls.courses) ? cls.courses : [];
+    statsCache = null;
+  }
+
+  async function addCourse(title) {
+    try {
+      await post(`/api/classes/${encodeURIComponent(classId)}/courses`, { title });
+      await reloadClass();
+      toast(t('teacher.course_added'), 'success');
+      renderAll();
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    }
+  }
+
+  async function renameCourse(course, title) {
+    try {
+      await put(`/api/classes/${encodeURIComponent(classId)}/courses/${encodeURIComponent(course.id)}`, { title });
+      await reloadClass();
+      renderAll();
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    }
+  }
+
+  async function deleteCourse(course) {
+    try {
+      await del(`/api/classes/${encodeURIComponent(classId)}/courses/${encodeURIComponent(course.id)}`);
+      await reloadClass();
+      toast(t('teacher.course_deleted'), 'success');
+      renderAll();
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    }
+  }
+
+  async function moveCourse(course, delta) {
+    const index = courses.findIndex((c) => c.id === course.id);
+    const next = index + delta;
+    if (next < 0 || next >= courses.length) return;
+    try {
+      await put(`/api/classes/${encodeURIComponent(classId)}/courses/${encodeURIComponent(course.id)}`, { position: next + 1 });
+      await reloadClass();
+      renderAll();
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    }
+  }
+
+  function setItemCourse(assignmentId, courseId) {
+    itemEntries = itemEntries.map((entry) =>
+      entry.assignmentId === assignmentId ? { ...entry, courseId: courseId || null } : entry,
+    );
+    saveItems();
   }
 
   function renderAll() {
@@ -176,59 +247,151 @@ export async function mount(root, ctx) {
     );
     host.appendChild(settingsCard);
 
-    // --- items card ---------------------------------------------------------
-    const itemsCard = h('div.card');
-    itemsCard.appendChild(h('h2.card-title', t('teacher.class_items')));
-    itemsCard.appendChild(h('p.card-subtitle', t('teacher.class_items_hint')));
-
-    const byId = new Map(assignments.map((a) => [a.id, a]));
-    const list = h('ul.item-order-list.class-item-list');
-    itemIds.forEach((assignmentId, index) => {
-      const a = byId.get(assignmentId);
-      const row = h('li.item-order-row.class-item-row',
-        h('span.item-order-number', { text: String(index + 1) }),
-        h('div.grow.min-w-0',
-          h('div.strong.truncate', { text: a ? a.title : assignmentId }),
-          h('div.small.muted.row.gap-2',
-            a ? h('span.badge', { text: templateLabel(a.template) }) : null,
-            a ? statusBadge(a.status, t(a.status === 'open' ? 'teacher.status_open' : 'teacher.status_closed')) : null,
-            a ? h('span', { text: t('teacher.class_participants', { n: a.participantCount || 0 }) }) : null,
-          ),
-        ),
-        h('div.item-order-controls',
-          h('button.btn.btn-ghost.btn-icon.btn-sm.item-order-btn', { type: 'button', title: t('teacher.move_up'), 'aria-label': t('teacher.move_up'), disabled: index === 0, on: { click: () => move(index, -1) } }, h('span', { html: icon('chevron-up', { size: 16 }) })),
-          h('button.btn.btn-ghost.btn-icon.btn-sm.item-order-btn', { type: 'button', title: t('teacher.move_down'), 'aria-label': t('teacher.move_down'), disabled: index === itemIds.length - 1, on: { click: () => move(index, 1) } }, h('span', { html: icon('chevron-down', { size: 16 }) })),
-          h('button.btn.btn-soft-danger.btn-icon.btn-sm.item-order-btn', { type: 'button', title: t('teacher.remove_item'), 'aria-label': t('teacher.remove_item'), on: { click: () => removeItem(assignmentId) } }, h('span', { html: icon('trash', { size: 15 }) })),
-        ),
-      );
-      list.appendChild(row);
-    });
-    if (itemIds.length === 0) {
-      list.appendChild(h('li.empty-inline.small.muted', { text: t('teacher.classes_empty_hint') }));
-    }
-    itemsCard.appendChild(list);
-
-    const available = assignments.filter((a) => !itemIds.includes(a.id));
-    const select = h('select.select', { style: 'min-width:220px' },
-      ...available.map((a) => h('option', { value: a.id }, `${a.title} (${a.code})`)),
-    );
-    itemsCard.appendChild(
-      h('div.row.gap-2.mt-3.wrap',
-        available.length > 0
-          ? h('div.row.gap-2', select, h('button.btn.btn-secondary', { type: 'button', on: { click: () => { if (select.value) { itemIds = [...itemIds, select.value]; saveItems(); } } } }, h('span', { html: icon('plus', { size: 15 }) }), ' ', t('teacher.add_assignment')))
-          : h('div.row.gap-2.wrap',
-              h('span.small.muted', t('teacher.no_assignments_available')),
-              h('a.btn.btn-secondary.btn-sm', { href: '/teacher/' }, t('teacher.go_publish_assignment')),
-            ),
-      ),
-    );
-    host.appendChild(itemsCard);
+    // --- items card (grouped into courses) ----------------------------------
+    host.appendChild(renderItemsCard());
 
     // --- roster card (student accounts) --------------------------------------
     host.appendChild(renderRosterCard());
 
     // --- statistics card ------------------------------------------------------
     host.appendChild(renderStatsCard());
+  }
+
+  // --- items card with course sections ---------------------------------------
+  function renderItemRow(assignmentId, index, courseId) {
+    const byId = new Map(assignments.map((a) => [a.id, a]));
+    const a = byId.get(assignmentId);
+    const courseSelect = h('select.select.select-sm.item-course-select', {
+      'aria-label': t('teacher.item_course_label'),
+      title: t('teacher.item_course_label'),
+      on: { change: (event) => setItemCourse(assignmentId, event.target.value || null) },
+    });
+    courseSelect.appendChild(h('option', { value: '', selected: !courseId }, t('teacher.course_none')));
+    for (const course of courses) {
+      courseSelect.appendChild(h('option', { value: course.id, selected: course.id === courseId }, course.title));
+    }
+    return h('li.item-order-row.class-item-row',
+      h('span.item-order-number', { text: String(index + 1) }),
+      h('div.grow.min-w-0',
+        h('div.strong.truncate', { text: a ? a.title : assignmentId }),
+        h('div.small.muted.row.gap-2',
+          a ? h('span.badge', { text: templateLabel(a.template) }) : null,
+          a ? statusBadge(a.status, t(a.status === 'open' ? 'teacher.status_open' : 'teacher.status_closed')) : null,
+          a ? h('span', { text: t('teacher.class_participants', { n: a.participantCount || 0 }) }) : null,
+        ),
+      ),
+      courseSelect,
+      h('div.item-order-controls',
+        h('button.btn.btn-ghost.btn-icon.btn-sm.item-order-btn', { type: 'button', title: t('teacher.move_up'), 'aria-label': t('teacher.move_up'), disabled: index === 0, on: { click: () => move(index, -1) } }, h('span', { html: icon('chevron-up', { size: 16 }) })),
+        h('button.btn.btn-ghost.btn-icon.btn-sm.item-order-btn', { type: 'button', title: t('teacher.move_down'), 'aria-label': t('teacher.move_down'), disabled: index === itemEntries.length - 1, on: { click: () => move(index, 1) } }, h('span', { html: icon('chevron-down', { size: 16 }) })),
+        h('button.btn.btn-soft-danger.btn-icon.btn-sm.item-order-btn', { type: 'button', title: t('teacher.remove_item'), 'aria-label': t('teacher.remove_item'), on: { click: () => removeItem(assignmentId) } }, h('span', { html: icon('trash', { size: 15 }) })),
+      ),
+    );
+  }
+
+  function renderCourseSection(course) {
+    const section = h('div.course-section.mb-3', { dataset: { courseId: course.id } });
+    const titleInput = h('input.input.input-sm.course-title-input', {
+      type: 'text',
+      maxlength: 120,
+      value: course.title,
+      'aria-label': t('teacher.course_title'),
+      on: {
+        change: (event) => {
+          const title = event.target.value.trim();
+          if (title && title !== course.title) renameCourse(course, title);
+          else event.target.value = course.title;
+        },
+      },
+    });
+    const courseIndex = courses.findIndex((c) => c.id === course.id);
+    section.appendChild(
+      h('div.row.gap-2.align-center.course-header',
+        h('span', { html: icon('book', { size: 16 }) }),
+        titleInput,
+        h('span.badge.badge-info', t('teacher.course_item_count', { n: course.itemCount })),
+        h('div.row.gap-1.ml-auto',
+          h('button.btn.btn-ghost.btn-icon.btn-sm', { type: 'button', title: t('teacher.move_up'), 'aria-label': t('teacher.move_up'), disabled: courseIndex === 0, on: { click: () => moveCourse(course, -1) } }, h('span', { html: icon('chevron-up', { size: 14 }) })),
+          h('button.btn.btn-ghost.btn-icon.btn-sm', { type: 'button', title: t('teacher.move_down'), 'aria-label': t('teacher.move_down'), disabled: courseIndex === courses.length - 1, on: { click: () => moveCourse(course, 1) } }, h('span', { html: icon('chevron-down', { size: 14 }) })),
+          h('button.btn.btn-soft-danger.btn-icon.btn-sm', { type: 'button', title: t('teacher.course_delete'), 'aria-label': t('teacher.course_delete'), on: { click: () => deleteCourse(course) } }, h('span', { html: icon('trash', { size: 14 }) })),
+        ),
+      ),
+    );
+    const list = h('ul.item-order-list.class-item-list');
+    itemEntries.forEach((entry, index) => {
+      if (entry.courseId === course.id) list.appendChild(renderItemRow(entry.assignmentId, index, entry.courseId));
+    });
+    if (!list.children.length) list.appendChild(h('li.empty-inline.small.muted', { text: t('teacher.course_empty') }));
+    section.appendChild(list);
+    return section;
+  }
+
+  function renderItemsCard() {
+    const itemsCard = h('div.card');
+    itemsCard.appendChild(h('h2.card-title', t('teacher.class_items')));
+    itemsCard.appendChild(h('p.card-subtitle', t('teacher.class_items_hint')));
+
+    // add-course inline form
+    const courseInput = h('input.input.input-sm#new-course-title', {
+      type: 'text', maxlength: 120, placeholder: t('teacher.course_new_ph'),
+      'aria-label': t('teacher.course_new_ph'),
+    });
+    itemsCard.appendChild(h('div.row.gap-2.mb-3.wrap',
+      courseInput,
+      h('button.btn.btn-secondary.btn-sm', {
+        type: 'button',
+        on: {
+          click: () => {
+            const title = courseInput.value.trim();
+            if (title) addCourse(title);
+          },
+        },
+      }, h('span', { html: icon('plus', { size: 15 }) }), ' ', t('teacher.course_add')),
+    ));
+
+    for (const course of courses) itemsCard.appendChild(renderCourseSection(course));
+
+    // unassigned items
+    const unassigned = itemEntries.filter((entry) => !entry.courseId);
+    if (unassigned.length > 0) {
+      const section = h('div.course-section.mb-3.course-section-unassigned');
+      section.appendChild(h('div.row.gap-2.align-center.course-header',
+        h('span', { html: icon('clipboard', { size: 16 }) }),
+        h('span.strong', t('teacher.course_none')),
+      ));
+      const list = h('ul.item-order-list.class-item-list');
+      itemEntries.forEach((entry, index) => {
+        if (!entry.courseId) list.appendChild(renderItemRow(entry.assignmentId, index, null));
+      });
+      section.appendChild(list);
+      itemsCard.appendChild(section);
+    }
+
+    if (itemEntries.length === 0 && courses.length === 0) {
+      const emptyList = h('ul.item-order-list.class-item-list');
+      emptyList.appendChild(h('li.empty-inline.small.muted', { text: t('teacher.classes_empty_hint') }));
+      itemsCard.appendChild(emptyList);
+    }
+
+    const available = assignments.filter((a) => !itemEntries.some((entry) => entry.assignmentId === a.id));
+    const select = h('select.select#add-item-select', { style: 'min-width:220px' },
+      ...available.map((a) => h('option', { value: a.id }, `${a.title} (${a.code})`)),
+    );
+    const coursePick = h('select.select.select-sm#add-item-course',
+      h('option', { value: '' }, t('teacher.course_none')),
+      ...courses.map((course) => h('option', { value: course.id }, course.title)),
+    );
+    itemsCard.appendChild(
+      h('div.row.gap-2.mt-3.wrap',
+        available.length > 0
+          ? h('div.row.gap-2.wrap', select, coursePick, h('button.btn.btn-secondary', { type: 'button', on: { click: () => { if (select.value) { itemEntries = [...itemEntries, { assignmentId: select.value, courseId: coursePick.value || null }]; saveItems(); } } } }, h('span', { html: icon('plus', { size: 15 }) }), ' ', t('teacher.add_assignment')))
+          : h('div.row.gap-2.wrap',
+              h('span.small.muted', t('teacher.no_assignments_available')),
+              h('a.btn.btn-secondary.btn-sm', { href: '/teacher/' }, t('teacher.go_publish_assignment')),
+            ),
+      ),
+    );
+    return itemsCard;
   }
 
   async function addStudents(namesText) {
@@ -335,12 +498,16 @@ export async function mount(root, ctx) {
       statsBody.appendChild(h('p.small.muted', t('teacher.stats_no_students')));
       return;
     }
+    const courseTitles = new Map((Array.isArray(statsCache.courses) ? statsCache.courses : []).map((course) => [course.id, course.title]));
     statsBody.appendChild(h('div.table-scroll',
       h('table.class-stats-table',
         h('thead', h('tr',
           h('th', t('teacher.stats_student')),
           ...items.map((item) => h('th',
             h('div.strong.stats-item-title', { text: `${item.position}. ${item.title}` }),
+            item.courseId && courseTitles.get(item.courseId)
+              ? h('div.small.muted', { text: courseTitles.get(item.courseId) })
+              : null,
             h('div.small.muted.mono', { text: item.code || '' }),
           )),
           h('th', t('teacher.stats_total')),

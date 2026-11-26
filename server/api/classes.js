@@ -81,6 +81,7 @@ export function generateClassCode() {
 function classListItem(row) {
   const itemCount = one('SELECT COUNT(*) AS c FROM class_items WHERE class_id = ?', row.id);
   const participantCount = one('SELECT COUNT(*) AS c FROM class_participants WHERE class_id = ?', row.id);
+  const courseCount = one('SELECT COUNT(*) AS c FROM class_courses WHERE class_id = ?', row.id);
   const assignmentIds = all('SELECT assignment_id FROM class_items WHERE class_id = ? ORDER BY position ASC', row.id).map(
     (r) => r.assignment_id,
   );
@@ -93,6 +94,7 @@ function classListItem(row) {
     unlockMinPercent: Number(row.unlock_min_percent) || 0,
     status: row.status,
     itemCount: itemCount ? itemCount.c : 0,
+    courseCount: courseCount ? courseCount.c : 0,
     participantCount: participantCount ? participantCount.c : 0,
     assignmentIds,
     createdAt: row.created_at,
@@ -102,7 +104,7 @@ function classListItem(row) {
 
 function itemRowsFor(classId) {
   return all(
-    `SELECT ci.id AS item_id, ci.position, s.id AS assignment_id, s.code AS assignment_code, s.title AS assignment_title,
+    `SELECT ci.id AS item_id, ci.position, ci.course_id AS course_id, s.id AS assignment_id, s.code AS assignment_code, s.title AS assignment_title,
             s.status AS assignment_status, a.title AS activity_title, a.template AS template, a.locale AS locale,
             (SELECT COUNT(*) FROM participants p WHERE p.assignment_id = s.id) AS participant_count
      FROM class_items ci JOIN assignments s ON s.id = ci.assignment_id LEFT JOIN activities a ON a.id = s.activity_id
@@ -111,12 +113,31 @@ function itemRowsFor(classId) {
   );
 }
 
+/** Courses of a class in order, with the number of assigned items each. */
+function coursesFor(classId) {
+  const rows = all('SELECT * FROM class_courses WHERE class_id = ? ORDER BY position ASC', classId);
+  return rows.map((row) => {
+    const itemCount = one('SELECT COUNT(*) AS c FROM class_items WHERE course_id = ?', row.id);
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      position: Number(row.position),
+      itemCount: itemCount ? itemCount.c : 0,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  });
+}
+
 function classDetail(row) {
   return {
     ...classListItem(row),
+    courses: coursesFor(row.id),
     items: itemRowsFor(row.id).map((item) => ({
       id: item.item_id,
       position: item.position,
+      courseId: item.course_id || null,
       assignmentId: item.assignment_id,
       code: item.assignment_code,
       title: item.assignment_title,
@@ -146,11 +167,18 @@ function classStudentPayload(classRow, participantRows) {
     orderMode: classRow.order_mode,
     unlockMinPercent: Number(classRow.unlock_min_percent) || 0,
     status: classRow.status,
+    courses: coursesFor(classRow.id).map((course) => ({
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      position: course.position,
+    })),
     items: states.map((state) => {
       const m = metaByAssignment.get(state.assignmentId) || {};
       return {
         position: state.position,
         assignmentId: state.assignmentId,
+        courseId: m.course_id || null,
         title: m.assignment_title || m.activity_title || '',
         template: m.template || 'worksheet',
         state: state.state,
@@ -355,19 +383,121 @@ export function register(router) {
     const user = requireUser(req);
     const row = requireOwnedClass(req, params.id);
     const body = await readJsonSafe(req);
-    if (!Array.isArray(body.assignmentIds)) throw badRequest('invalid_items', 'assignmentIds must be an array');
-    if (body.assignmentIds.length > CLASS_LIMITS.maxItems) throw badRequest('too_many_items', `At most ${CLASS_LIMITS.maxItems} items per class`);
-    const ids = body.assignmentIds.map((value) => String(value));
+    // Accept either { assignmentIds: [...] } (legacy, no courses) or
+    // { items: [{ assignmentId, courseId? }, ...] }.
+    let entries;
+    if (Array.isArray(body.items)) {
+      entries = body.items.map((entry) => ({
+        assignmentId: String(entry && entry.assignmentId),
+        courseId: entry && entry.courseId ? String(entry.courseId) : null,
+      }));
+    } else if (Array.isArray(body.assignmentIds)) {
+      entries = body.assignmentIds.map((value) => ({ assignmentId: String(value), courseId: null }));
+    } else {
+      throw badRequest('invalid_items', 'items or assignmentIds must be an array');
+    }
+    if (entries.length > CLASS_LIMITS.maxItems) throw badRequest('too_many_items', `At most ${CLASS_LIMITS.maxItems} items per class`);
+    const ids = entries.map((entry) => entry.assignmentId);
     if (new Set(ids).size !== ids.length) throw badRequest('duplicate_items', 'Each assignment may appear only once');
-    for (const assignmentId of ids) {
-      const assignment = one('SELECT * FROM assignments WHERE id = ?', assignmentId);
+    for (const entry of entries) {
+      const assignment = one('SELECT * FROM assignments WHERE id = ?', entry.assignmentId);
       if (!assignment) throw notFound('assignment_not_found');
       assertCanAccess(user, assignment);
+      if (entry.courseId) {
+        const course = one('SELECT * FROM class_courses WHERE id = ? AND class_id = ?', entry.courseId, row.id);
+        if (!course) throw badRequest('invalid_course', 'courseId does not belong to this class');
+      }
     }
     tx(() => {
       run('DELETE FROM class_items WHERE class_id = ?', row.id);
-      ids.forEach((assignmentId, index) => {
-        run('INSERT INTO class_items (id, class_id, assignment_id, position) VALUES (?,?,?,?)', uid(), row.id, assignmentId, index + 1);
+      entries.forEach((entry, index) => {
+        run(
+          'INSERT INTO class_items (id, class_id, assignment_id, course_id, position) VALUES (?,?,?,?,?)',
+          uid(),
+          row.id,
+          entry.assignmentId,
+          entry.courseId,
+          index + 1,
+        );
+      });
+      run('UPDATE classes SET updated_at = ? WHERE id = ?', now(), row.id);
+    });
+    json(res, 200, { class: classDetail(one('SELECT * FROM classes WHERE id = ?', row.id)) });
+  });
+
+  // -------------------------------------------------------------------------
+  // Teacher: courses within a class (CRUD + ordering)
+  // -------------------------------------------------------------------------
+  const MAX_COURSES = CLASS_LIMITS.maxCourses;
+
+  function courseRowOr404(classId, courseId) {
+    const course = one('SELECT * FROM class_courses WHERE id = ? AND class_id = ?', String(courseId), classId);
+    if (!course) throw notFound('course_not_found');
+    return course;
+  }
+
+  router.post('/api/classes/:id/courses', async (req, res, params) => {
+    assertSameOrigin(req);
+    requireUser(req);
+    const row = requireOwnedClass(req, params.id);
+    const body = await readJsonSafe(req);
+    const title = typeof body.title === 'string' ? body.title.trim().slice(0, CLASS_LIMITS.courseTitleMax) : '';
+    if (!title) throw badRequest('invalid_course', 'title is required (max 120 characters)');
+    const description = typeof body.description === 'string' ? body.description.slice(0, CLASS_LIMITS.courseDescriptionMax) : '';
+    const count = one('SELECT COUNT(*) AS c FROM class_courses WHERE class_id = ?', row.id);
+    if (count && count.c >= MAX_COURSES) throw badRequest('too_many_courses', `At most ${MAX_COURSES} courses per class`);
+    const position = (one('SELECT MAX(position) AS m FROM class_courses WHERE class_id = ?', row.id)?.m || 0) + 1;
+    const id = uid();
+    const timestamp = now();
+    run(
+      'INSERT INTO class_courses (id, class_id, title, description, position, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
+      id, row.id, title, description, position, timestamp, timestamp,
+    );
+    run('UPDATE classes SET updated_at = ? WHERE id = ?', timestamp, row.id);
+    json(res, 201, { class: classDetail(one('SELECT * FROM classes WHERE id = ?', row.id)) });
+  });
+
+  router.put('/api/classes/:id/courses/:courseId', async (req, res, params) => {
+    assertSameOrigin(req);
+    requireUser(req);
+    const row = requireOwnedClass(req, params.id);
+    const course = courseRowOr404(row.id, params.courseId);
+    const body = await readJsonSafe(req);
+    const title = body.title === undefined ? course.title : String(body.title || '').trim().slice(0, CLASS_LIMITS.courseTitleMax);
+    if (!title) throw badRequest('invalid_course', 'title is required (max 120 characters)');
+    const description = body.description === undefined ? course.description : String(body.description || '').slice(0, CLASS_LIMITS.courseDescriptionMax);
+    let position = Number(course.position);
+    if (body.position !== undefined) {
+      const count = one('SELECT COUNT(*) AS c FROM class_courses WHERE class_id = ?', row.id)?.c || 0;
+      position = Math.max(1, Math.min(count, Math.floor(Number(body.position)) || 1));
+      tx(() => {
+        run('UPDATE class_courses SET position = 0 WHERE id = ?', course.id);
+        run(
+          'UPDATE class_courses SET position = position + 1 WHERE class_id = ? AND id != ? AND position >= ?',
+          row.id, course.id, position,
+        );
+        run('UPDATE class_courses SET position = ? WHERE id = ?', position, course.id);
+      });
+    }
+    run(
+      'UPDATE class_courses SET title = ?, description = ?, position = ?, updated_at = ? WHERE id = ?',
+      title, description, position, now(), course.id,
+    );
+    run('UPDATE classes SET updated_at = ? WHERE id = ?', now(), row.id);
+    json(res, 200, { class: classDetail(one('SELECT * FROM classes WHERE id = ?', row.id)) });
+  });
+
+  router.delete('/api/classes/:id/courses/:courseId', async (req, res, params) => {
+    assertSameOrigin(req);
+    requireUser(req);
+    const row = requireOwnedClass(req, params.id);
+    courseRowOr404(row.id, params.courseId);
+    tx(() => {
+      // Items become unassigned (course_id SET NULL via FK), then delete + compact positions.
+      run('DELETE FROM class_courses WHERE id = ?', String(params.courseId));
+      const remaining = all('SELECT id FROM class_courses WHERE class_id = ? ORDER BY position ASC', row.id);
+      remaining.forEach((course, index) => {
+        if (Number(course.position) !== index + 1) run('UPDATE class_courses SET position = ? WHERE id = ?', index + 1, course.id);
       });
       run('UPDATE classes SET updated_at = ? WHERE id = ?', now(), row.id);
     });
@@ -703,9 +833,11 @@ export function register(router) {
     });
     json(res, 200, {
       class: classListItem(row),
+      courses: coursesFor(row.id),
       items: items.map((item) => ({
         assignmentId: item.assignment_id,
         position: Number(item.position),
+        courseId: item.course_id || null,
         title: item.assignment_title || item.activity_title || '',
         code: item.assignment_code,
         status: item.assignment_status,

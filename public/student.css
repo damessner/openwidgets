@@ -1002,3 +1002,8 @@ body.student-page {
   font-weight: 600;
 }
 
+/* class lobby: course sections */
+.student-class-course { margin-top: 0.75rem; }
+.student-class-course-head { padding: 0.4rem 0.6rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.student-class-course-title { margin: 0; font-size: 1.02rem; }
+.student-class-course-desc { margin: 0.35rem 0 0; }

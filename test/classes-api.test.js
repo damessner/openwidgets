@@ -524,3 +524,99 @@ test('classes: update fields (name/mode/percent) round-trips', async () => {
   assert.equal(bad.status, 400);
   await admin.delete(`/api/classes/${created.class.id}`);
 });
+
+test('classes: courses within a class — CRUD, item assignment, student payload groups by course', async () => {
+  const admin = state.admin;
+  const created = expectStatus(
+    await admin.post('/api/classes', { name: 'Kurs-Test', orderMode: 'sequence', unlockMinPercent: 0 }),
+    201,
+    'create class',
+  );
+  const classId = created.class.id;
+
+  // create two courses
+  const c1 = expectStatus(await admin.post(`/api/classes/${classId}/courses`, { title: 'Unit 1 — Time for School' }), 201, 'course 1');
+  const c2 = expectStatus(await admin.post(`/api/classes/${classId}/courses`, { title: 'Unit 2 — At the Zoo' }), 201, 'course 2');
+  const courses = c2.class.courses;
+  assert.equal(courses.length, 2);
+  assert.equal(courses[0].title, 'Unit 1 — Time for School');
+  assert.equal(courses[1].title, 'Unit 2 — At the Zoo');
+  const course1 = courses[0].id;
+  const course2 = courses[1].id;
+
+  // assign items: A,B -> course1, C -> course2 (via items entries)
+  const itemsRes = expectStatus(
+    await admin.put(`/api/classes/${classId}/items`, {
+      items: [
+        { assignmentId: state.a.id, courseId: course1 },
+        { assignmentId: state.b.id, courseId: course1 },
+        { assignmentId: state.c.id, courseId: course2 },
+      ],
+    }),
+    200,
+    'set items with courses',
+  );
+  assert.equal(itemsRes.class.courses.find((c) => c.id === course1).itemCount, 2);
+  assert.equal(itemsRes.class.courses.find((c) => c.id === course2).itemCount, 1);
+  const itemCourse = new Map(itemsRes.class.items.map((item) => [item.assignmentId, item.courseId]));
+  assert.equal(itemCourse.get(state.a.id), course1);
+  assert.equal(itemCourse.get(state.c.id), course2);
+
+  // invalid courseId rejected
+  const bad = await admin.put(`/api/classes/${classId}/items`, { items: [{ assignmentId: state.a.id, courseId: 'nope' }] });
+  assert.equal(bad.status, 400);
+
+  // legacy assignmentIds still accepted (courseId null)
+  const legacy = expectStatus(
+    await admin.put(`/api/classes/${classId}/items`, { assignmentIds: [state.a.id, state.b.id] }),
+    200,
+    'legacy items',
+  );
+  assert.ok(legacy.class.items.every((item) => item.courseId === null));
+  // restore course assignment
+  await admin.put(`/api/classes/${classId}/items`, {
+    items: [
+      { assignmentId: state.a.id, courseId: course1 },
+      { assignmentId: state.b.id, courseId: course1 },
+      { assignmentId: state.c.id, courseId: course2 },
+    ],
+  });
+
+  // rename + reorder course
+  const renamed = expectStatus(
+    await admin.put(`/api/classes/${classId}/courses/${course2}`, { title: 'Unit 2 — Zoo', position: 1 }),
+    200,
+    'rename/reorder course',
+  );
+  assert.equal(renamed.class.courses[0].title, 'Unit 2 — Zoo');
+  assert.equal(renamed.class.courses[0].id, course2);
+
+  // publish and check the student payload carries courses + courseId
+  expectStatus(await admin.post(`/api/classes/${classId}/publish`, {}), 200, 'publish');
+  const detail = expectStatus(await admin.get(`/api/classes/${classId}`), 200, 'class detail');
+  const classCode = detail.class.code;
+  assert.ok(classCode, 'published class has a code');
+  const anon = new Client(baseUrl);
+  const joinInfo = expectStatus(await anon.get(`/api/classes/join/${classCode}`), 200, 'join info');
+  assert.ok(joinInfo.class);
+  const joined = expectStatus(await anon.post('/api/classes/join', { code: classCode, name: 'Kurs-Schüler' }), 200, 'class join');
+  const payload = joined.class;
+  assert.equal(payload.courses.length, 2);
+  assert.ok(payload.items.every((item) => typeof item.courseId === 'string'));
+  // sequence lock still works: first item open, rest locked
+  assert.equal(payload.items[0].state, 'open');
+  assert.equal(payload.items[1].state, 'locked');
+  assert.equal(payload.items[2].state, 'locked');
+
+  // delete course -> items become unassigned, course gone
+  const delCourse = expectStatus(await admin.delete(`/api/classes/${classId}/courses/${course1}`), 200, 'delete course');
+  assert.equal(delCourse.class.courses.length, 1);
+  const unassigned = delCourse.class.items.filter((item) => item.courseId === null);
+  assert.equal(unassigned.length, 2);
+
+  // course create validation
+  const noTitle = await admin.post(`/api/classes/${classId}/courses`, { title: '  ' });
+  assert.equal(noTitle.status, 400);
+
+  await admin.delete(`/api/classes/${classId}`);
+});

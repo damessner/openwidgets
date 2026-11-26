@@ -281,6 +281,14 @@ export function register(router) {
     if (requestedClassId) {
       const classRow = requireOwnedClass(req, requestedClassId);
       classId = classRow.id;
+      // The generated levels form one course inside the class.
+      const courseId = uid();
+      const coursePos = (one('SELECT COALESCE(MAX(position), 0) AS p FROM class_courses WHERE class_id = ?', classRow.id)?.p || 0) + 1;
+      const ts = now();
+      run(
+        'INSERT INTO class_courses (id, class_id, title, description, position, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
+        courseId, classRow.id, row.title, `Vokabel-Kurs: ${row.title}`, coursePos, ts, ts,
+      );
       const maxPos = one('SELECT COALESCE(MAX(position), 0) AS p FROM class_items WHERE class_id = ?', classRow.id);
       let position = (maxPos && Number(maxPos.p)) || 0;
       for (const activity of created) {
@@ -293,7 +301,7 @@ export function register(router) {
         );
         run("UPDATE activities SET status = 'published' WHERE id = ? AND status = 'draft'", activity.id);
         position += 1;
-        run('INSERT INTO class_items (id, class_id, assignment_id, position) VALUES (?,?,?,?)', uid(), classRow.id, assignmentId, position);
+        run('INSERT INTO class_items (id, class_id, assignment_id, course_id, position) VALUES (?,?,?,?,?)', uid(), classRow.id, assignmentId, courseId, position);
         assignmentIds.push(assignmentId);
       }
       // a course is meant to be worked through in order

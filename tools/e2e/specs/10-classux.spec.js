@@ -56,7 +56,7 @@ test.describe('Klassen-UX (v0.5)', () => {
 
     // add the published assignment via the items card
     const itemsCard = page.locator('.card', { has: page.locator('.class-item-list') });
-    await itemsCard.locator('select.select').selectOption(assignment.assignment.id);
+    await itemsCard.locator('select#add-item-select').selectOption(assignment.assignment.id);
     await itemsCard.locator('button', { hasText: 'Aufgabe hinzufügen' }).click();
     await expect(page.locator('.class-item-row')).toHaveCount(1, { timeout: 20_000 });
 

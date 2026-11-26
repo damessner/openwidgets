@@ -62,6 +62,8 @@ registerMessages({
     'student.class_join_hint': 'Geben Sie Ihren Namen ein, um der Klasse beizutreten.',
     'student.class_join_button': 'Klasse beitreten',
     'student.class_progress': '{done} von {total} erledigt',
+    'student.class_course_progress': '{done}/{total} erledigt',
+    'student.class_course_avg': 'Ø {percent} %',
     'student.class_mode_free': 'Freie Reihenfolge',
     'student.class_mode_sequence': 'Feste Reihenfolge',
     'student.class_item_locked': 'Gesperrt — zuerst Nr. {position} erledigen',
@@ -168,6 +170,8 @@ registerMessages({
     'student.class_join_hint': 'Enter your name to join the class.',
     'student.class_join_button': 'Join class',
     'student.class_progress': '{done} of {total} done',
+    'student.class_course_progress': '{done}/{total} done',
+    'student.class_course_avg': 'avg {percent}%',
     'student.class_mode_free': 'Free order',
     'student.class_mode_sequence': 'Fixed sequence',
     'student.class_item_locked': 'Locked — finish no. {position} first',
@@ -2620,8 +2624,16 @@ function buildClassLobby() {
   if (items.length === 0) {
     wrap.appendChild(h('div.card.compact.center.muted', { text: t('student.class_empty') }));
   } else {
-    const list = h('ul.student-class-items');
+    // Group items by course (payload.courses, items carry courseId).
+    const courses = Array.isArray(payload.courses) ? payload.courses : [];
+    const byCourse = new Map(courses.map((course) => [course.id, []]));
+    const unassigned = [];
     for (const item of items) {
+      if (item.courseId && byCourse.has(item.courseId)) byCourse.get(item.courseId).push(item);
+      else unassigned.push(item);
+    }
+
+    const renderItem = (item) => {
       const li = h('li.student-class-item');
       li.appendChild(h('span.student-class-item-number', { 'aria-hidden': 'true', text: String(item.position) }));
       const main = h('div.student-class-item-main');
@@ -2647,9 +2659,46 @@ function buildClassLobby() {
         );
       }
       li.appendChild(side);
-      list.appendChild(li);
+      return li;
+    };
+
+    const renderCourse = (course, courseItems) => {
+      const section = h('div.student-class-course.mt-3');
+      const courseDone = courseItems.filter((item) => item.state === 'done').length;
+      const scored = courseItems.filter((item) => item.state === 'done' && Number(item.maxScore) > 0);
+      const avg = scored.length
+        ? Math.round((scored.reduce((sum, item) => sum + (Number(item.score) || 0), 0) / scored.reduce((sum, item) => sum + (Number(item.maxScore) || 0), 0)) * 1000) / 10
+        : null;
+      section.appendChild(
+        h('div.row.between.wrap.gap-2.student-class-course-head',
+          h('h3.student-class-course-title', { text: String(course.title || '') }),
+          h('span.badge.badge-info', {
+            text:
+              t('student.class_course_progress', { done: formatNumber(courseDone), total: formatNumber(courseItems.length) }) +
+              (avg !== null ? ` · ${t('student.class_course_avg', { percent: String(avg).replace('.', ',') })}` : ''),
+          }),
+        ),
+      );
+      if (course.description) {
+        const desc = h('div.student-class-course-desc.small.muted');
+        renderRichText(desc, String(course.description));
+        section.appendChild(desc);
+      }
+      const list = h('ul.student-class-items');
+      for (const item of courseItems) list.appendChild(renderItem(item));
+      section.appendChild(list);
+      return section;
+    };
+
+    for (const course of courses) {
+      const courseItems = byCourse.get(course.id) || [];
+      if (courseItems.length > 0) wrap.appendChild(renderCourse(course, courseItems));
     }
-    wrap.appendChild(list);
+    if (unassigned.length > 0) {
+      const list = h('ul.student-class-items');
+      for (const item of unassigned) list.appendChild(renderItem(item));
+      wrap.appendChild(list);
+    }
   }
 
   const actions = h('div.student-class-actions');

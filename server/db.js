@@ -127,10 +127,22 @@ CREATE TABLE IF NOT EXISTS classes (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS class_courses (
+  id TEXT PRIMARY KEY,
+  class_id TEXT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  position INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE (class_id, position)
+);
+
 CREATE TABLE IF NOT EXISTS class_items (
   id TEXT PRIMARY KEY,
   class_id TEXT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
   assignment_id TEXT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+  course_id TEXT REFERENCES class_courses(id) ON DELETE SET NULL,
   position INTEGER NOT NULL,
   UNIQUE (class_id, assignment_id),
   UNIQUE (class_id, position)
@@ -173,7 +185,9 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
 CREATE INDEX IF NOT EXISTS idx_assets_owner ON assets(owner_id);
 CREATE INDEX IF NOT EXISTS idx_classes_owner ON classes(owner_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_class_courses_class ON class_courses(class_id, position);
 CREATE INDEX IF NOT EXISTS idx_class_items_class ON class_items(class_id, position);
+CREATE INDEX IF NOT EXISTS idx_class_items_course ON class_items(course_id);
 CREATE INDEX IF NOT EXISTS idx_class_participants_class ON class_participants(class_id);
 CREATE INDEX IF NOT EXISTS idx_students_owner ON students(owner_id, name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_student_sessions_student ON student_sessions(student_id);
@@ -221,7 +235,7 @@ CREATE INDEX IF NOT EXISTS idx_writing_fb_participant ON writing_feedback(partic
 
 export const db = new DatabaseSync(config.dbPath);
 
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 /**
  * Migration ladder. When the schema changes in v0.2+, append
@@ -334,6 +348,28 @@ const MIGRATIONS = [
         created_at TEXT NOT NULL
       )`);
       db.exec('CREATE INDEX IF NOT EXISTS idx_writing_fb_participant ON writing_feedback(participant_id, item_id, loop)');
+    },
+  },
+  {
+    version: 7,
+    up() {
+      // Courses within classes: grouping level between class and assignments.
+      db.exec(`CREATE TABLE IF NOT EXISTS class_courses (
+        id TEXT PRIMARY KEY,
+        class_id TEXT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        position INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (class_id, position)
+      )`);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_class_courses_class ON class_courses(class_id, position)');
+      const cols = db.prepare('PRAGMA table_info(class_items)').all().map((col) => col.name);
+      if (!cols.includes('course_id')) {
+        db.exec('ALTER TABLE class_items ADD COLUMN course_id TEXT REFERENCES class_courses(id) ON DELETE SET NULL');
+      }
+      db.exec('CREATE INDEX IF NOT EXISTS idx_class_items_course ON class_items(course_id)');
     },
   },
 ];

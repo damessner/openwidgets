@@ -564,6 +564,7 @@ export async function mount(root, ctx) {
 
   // --- classes card: add/remove this assignment from classes -----------------
   let classesCache = null;
+  const classDetails = new Map(); // classId -> class detail (courses, items)
 
   async function renderClasses() {
     const host = h('div.card.compact.mb-4');
@@ -589,17 +590,46 @@ export async function mount(root, ctx) {
       return;
     }
     const assignmentId = state.assignment && state.assignment.id;
+    // Fetch details (courses + current item->course mapping) once per class.
+    await Promise.all(
+      classesCache.map(async (cls) => {
+        if (classDetails.has(cls.id)) return;
+        try {
+          const detail = await get(`/api/classes/${encodeURIComponent(cls.id)}`);
+          if (disposed) return;
+          classDetails.set(cls.id, detail.class || null);
+        } catch {
+          classDetails.set(cls.id, null);
+        }
+      }),
+    );
+    if (disposed) return;
     for (const cls of classesCache) {
+      const detail = classDetails.get(cls.id);
+      const existingItem = detail && Array.isArray(detail.items) ? detail.items.find((item) => item.assignmentId === assignmentId) : null;
       const checkbox = h('input', { type: 'checkbox', checked: Array.isArray(cls.assignmentIds) && cls.assignmentIds.includes(assignmentId) });
-      const label = h('label.checkbox-row', checkbox, h('span', { text: `${cls.name}${cls.code ? ` (${cls.code})` : ''}` }));
+      const courseSelect = h('select.select.select-sm.class-course-pick',
+        h('option', { value: '' }, t('teacher.course_none')),
+        ...((detail && Array.isArray(detail.courses) ? detail.courses : []).map((course) =>
+          h('option', { value: course.id, selected: existingItem && existingItem.courseId === course.id }, course.title),
+        )),
+      );
+      const label = h('label.checkbox-row', checkbox, h('span', { text: `${cls.name}${cls.code ? ` (${cls.code})` : ''}` }), courseSelect);
       checkbox.addEventListener('change', async () => {
         const want = checkbox.checked;
-        const current = Array.isArray(cls.assignmentIds) ? [...cls.assignmentIds] : [];
-        const next = want ? [...new Set([...current, assignmentId])] : current.filter((id) => id !== assignmentId);
         checkbox.disabled = true;
         try {
-          const data = await put(`/api/classes/${encodeURIComponent(cls.id)}/items`, { assignmentIds: next });
+          const currentDetail = classDetails.get(cls.id) || { items: [] };
+          const currentEntries = (Array.isArray(currentDetail.items) ? currentDetail.items : []).map((item) => ({
+            assignmentId: item.assignmentId,
+            courseId: item.courseId || null,
+          }));
+          const next = want
+            ? [...currentEntries.filter((entry) => entry.assignmentId !== assignmentId), { assignmentId, courseId: courseSelect.value || null }]
+            : currentEntries.filter((entry) => entry.assignmentId !== assignmentId);
+          const data = await put(`/api/classes/${encodeURIComponent(cls.id)}/items`, { items: next });
           cls.assignmentIds = ((data && data.class && data.class.items) || []).map((item) => item.assignmentId);
+          classDetails.set(cls.id, data.class || null);
           toast(want ? t('teacher.assignment_added_to_class', { name: cls.name }) : t('teacher.assignment_removed_from_class', { name: cls.name }), 'success');
         } catch (error) {
           checkbox.checked = !want;
