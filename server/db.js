@@ -187,7 +187,8 @@ CREATE INDEX IF NOT EXISTS idx_assets_owner ON assets(owner_id);
 CREATE INDEX IF NOT EXISTS idx_classes_owner ON classes(owner_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_class_courses_class ON class_courses(class_id, position);
 CREATE INDEX IF NOT EXISTS idx_class_items_class ON class_items(class_id, position);
-CREATE INDEX IF NOT EXISTS idx_class_items_course ON class_items(course_id);
+-- NOTE: idx_class_items_course is created in migration v7 only — on existing
+-- databases the course_id column does not exist yet when SCHEMA runs.
 CREATE INDEX IF NOT EXISTS idx_class_participants_class ON class_participants(class_id);
 CREATE INDEX IF NOT EXISTS idx_students_owner ON students(owner_id, name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_student_sessions_student ON student_sessions(student_id);
