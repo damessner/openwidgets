@@ -35,7 +35,10 @@ function fakeFetchOk() {
     if (String(url).endsWith('/v1/audio/voices')) {
       return {
         ok: true,
-        json: async () => [{ id: 'voice_en_1', name: 'English Voice', language: 'en' }, { id: 'voice_de_1', name: 'German', language: 'de' }],
+        json: async () => ({ items: [
+          { name: 'James', slug: 'voice_en_1', languages: ['en_us'], gender: 'male' },
+          { name: 'Greta', slug: 'voice_de_1', languages: ['de_de'], gender: 'female' },
+        ] }),
       };
     }
     if (String(url).endsWith('/v1/audio/speech')) {
@@ -60,7 +63,7 @@ test('tts: synthesizeSpeech posts to /v1/audio/speech with model+input+voice_id+
   const body = JSON.parse(speechCall.init.body);
   assert.equal(body.model, 'voxtral-mini-tts-3-0');
   assert.equal(body.input, 'Hello, I am Leo. I am ten years old.');
-  assert.equal(body.voice_id, 'voice_en_1');
+  assert.equal(body.voice, 'voice_en_1');
   assert.equal(body.response_format, 'mp3');
 });
 
@@ -74,7 +77,7 @@ test('tts: VORLESETEXT marker line is stripped before speaking', async () => {
   const speechCall = calls.find((c) => c.url.endsWith('/v1/audio/speech'));
   const body = JSON.parse(speechCall.init.body);
   assert.equal(body.input, 'Hello! My name is Leo.');
-  assert.equal(body.voice_id, 'voice_592', 'explicit voice wins');
+  assert.equal(body.voice, 'voice_592', 'explicit voice wins');
 });
 
 test('tts: validation + provider errors', async () => {

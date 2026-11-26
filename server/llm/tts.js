@@ -27,33 +27,36 @@ export async function listVoices(fetchImpl = globalThis.fetch) {
     throw new HttpError(502, 'tts_failed', `Mistral voices endpoint answered ${response.status}`);
   }
   const payload = await response.json();
-  const voices = Array.isArray(payload) ? payload : payload.voices || payload.data || [];
-  return voices.map((v) => ({
-    id: String(v.id || v.voice_id || ''),
-    name: String(v.name || v.id || ''),
+  const raw = Array.isArray(payload) ? payload : payload.items || payload.voices || payload.data || [];
+  return raw.map((v) => ({
+    id: String(v.slug || v.voice_id || v.id || ''),
+    name: String(v.name || v.slug || v.id || ''),
     gender: v.gender || '',
-    language: v.language || v.languages?.[0] || '',
+    language: Array.isArray(v.languages) && v.languages.length ? v.languages[0] : v.language || '',
   })).filter((v) => v.id);
 }
 
+/** Last-resort preset voice (docs example) when the voices list is unreachable. */
+const FALLBACK_VOICE = 'voice_592';
+
 let cachedDefaultVoice = null;
 
-/** Pick a voice: configured voice, else the first preset voice from the API. */
+/** Pick a voice: configured voice, else the first English preset voice from the API. */
 async function resolveVoiceId(cfg, voice, fetchImpl) {
   if (voice) return voice;
   if (cfg.voice) return cfg.voice;
   if (cachedDefaultVoice) return cachedDefaultVoice;
   try {
     const voices = await listVoices(fetchImpl);
-    const preset = voices.find((v) => /en/i.test(v.language) || !v.language) || voices[0];
+    const preset = voices.find((v) => /^en/i.test(v.language)) || voices[0];
     if (preset) {
       cachedDefaultVoice = preset.id;
       return preset.id;
     }
   } catch {
-    /* fall through to API default */
+    /* fall through to the fallback preset */
   }
-  return '';
+  return FALLBACK_VOICE;
 }
 
 /**
@@ -72,8 +75,7 @@ export async function synthesizeSpeech({ text, voice, fetchImpl = globalThis.fet
   const base = cfg.baseUrl.replace(/\/+$/, '');
   const model = cfg.ttsModel || 'voxtral-mini-tts-3-0';
   const voiceId = await resolveVoiceId(cfg, voice, fetchImpl);
-  const body = { model, input, response_format: 'mp3' };
-  if (voiceId) body.voice_id = voiceId;
+  const body = { model, input, response_format: 'mp3', voice: voiceId };
 
   let response;
   try {
