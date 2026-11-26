@@ -148,6 +148,30 @@ test('graded ranks above submitted for the same assignment', () => {
   assert.equal(states[1].state, 'open');
 });
 
+test('redo: among equal-rank attempts the best score wins', () => {
+  const items = [item(1, 'a1'), item(2, 'a2')];
+  const rows = [
+    participantRow('a1', { id: 'p-low', status: 'submitted', score: 1, max_score: 4 }), // 25%
+    participantRow('a1', { id: 'p-high', status: 'submitted', score: 4, max_score: 4 }), // 100%
+    participantRow('a1', { id: 'p-mid', status: 'submitted', score: 2, max_score: 4 }), // 50%
+  ];
+  const states = computeItemStates(classRow({ unlock_min_percent: 100 }), items, rows);
+  assert.equal(states[0].score, 4, 'best attempt counts');
+  assert.equal(states[0].passed, true);
+  assert.equal(states[1].state, 'open', 'redo with 100% unlocks the next item');
+});
+
+test('redo: a worse redo does not lower the recorded score', () => {
+  const items = [item(1, 'a1'), item(2, 'a2')];
+  const rows = [
+    participantRow('a1', { id: 'p-good', status: 'submitted', score: 3, max_score: 4 }),
+    participantRow('a1', { id: 'p-bad', status: 'submitted', score: 0, max_score: 4 }),
+  ];
+  const states = computeItemStates(classRow({ unlock_min_percent: 50 }), items, rows);
+  assert.equal(states[0].score, 3);
+  assert.equal(states[1].state, 'open');
+});
+
 // ---------------------------------------------------------------------------
 // firstBlockingPosition / isAssignmentUnlocked
 // ---------------------------------------------------------------------------

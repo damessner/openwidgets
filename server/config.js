@@ -34,6 +34,9 @@ export const config = {
   adminName: process.env.ADMIN_NAME || 'Administrator',
   sessionTtlDays: Math.max(1, intEnv('SESSION_TTL_DAYS', 14)),
   maxUploadBytes: Math.max(1, intEnv('MAX_UPLOAD_MB', 10)) * 1024 * 1024,
+  // ffmpeg binary used to normalise uploaded audio to MP3 (optional — when
+  // missing, non-MP3 audio is stored as-is).
+  ffmpegPath: process.env.FFMPEG_PATH || 'ffmpeg',
   nodeEnv: process.env.NODE_ENV || 'development',
   version: '0.9.0',
   startedAt: Date.now(),

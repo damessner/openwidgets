@@ -1,7 +1,7 @@
 // MORE1 revision courses (Unit 1–3): every generated activity must validate,
-// each unit is a 6-activity course (Vokabeln/Grammatik/Lesen/Hören/Schreiben/
-// Exit-Check) with the expected item types, and the listening activity carries
-// a teacher read-aloud script.
+// each unit is a 10-activity course (Vokabeln, Grammatik, Lesen 1–3, Hören 1–3,
+// Schreiben, Exit-Check), each listening carries a teacher read-aloud script,
+// and the writing task has a required word box + step hints.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateActivity } from '../shared/activity.js';
@@ -19,50 +19,67 @@ test('more1: three unit courses with book titles', () => {
 
 test('more1: every activity of every unit validates and has the expected structure', () => {
   for (const course of buildMore1Courses()) {
-    assert.equal(course.activities.length, 6, `${course.courseTitle}: 6 activities`);
+    assert.equal(course.activities.length, 10, `${course.courseTitle}: 10 activities`);
     const kinds = course.activities.map((a) => a.title.split(': ')[1]);
-    assert.deepEqual(kinds, ['Vokabeln', 'Grammatik', 'Lesen', 'Hören', 'Schreiben', 'Exit-Check']);
+    assert.deepEqual(kinds, [
+      'Vokabeln', 'Grammatik',
+      'Lesen 1', 'Lesen 2', 'Lesen 3',
+      'Hören 1', 'Hören 2', 'Hören 3',
+      'Schreiben', 'Exit-Check',
+    ]);
     for (const activity of course.activities) {
       const check = validateActivity(activity);
       assert.ok(check.ok, `${activity.title}: ${JSON.stringify(check.errors)}`);
       assert.ok(activity.items.length > 0, `${activity.title} has items`);
     }
+    // sized for ~15–20 minutes per unit course: plenty of items everywhere
+    const totalItems = course.activities.reduce((sum, a) => sum + a.items.length, 0);
+    assert.ok(totalItems >= 60, `${course.courseTitle} has ${totalItems} items (>= 60)`);
   }
 });
 
-test('more1: per-unit item types — vocab quiz, writing task with criteria, listening script', () => {
+test('more1: per-unit item types — vocab quiz, 3 readings, 3 listenings, writing, exit', () => {
   for (const unit of [1, 2, 3]) {
     const course = buildUnitCourse(unit);
-    const [vocab, grammar, reading, listening, writing, exit] = course.activities;
+    const [vocab, grammar, r1, r2, r3, h1, h2, h3, writing, exit] = course.activities;
 
     // Vokabeln: one vocabulary item in quiz mode with entries
     assert.equal(vocab.items[0].type, 'vocabulary');
     assert.equal(vocab.items[0].config.mode, 'quiz');
-    assert.ok(vocab.items[0].config.entries.length >= 20, 'unit vocab has 20+ entries');
+    assert.ok(vocab.items[0].config.entries.length >= 25, 'unit vocab has 25+ entries');
 
     // Grammatik: fill_blanks / short_answer / multiple_choice / ordering items
     const gTypes = new Set(grammar.items.map((i) => i.type));
     assert.ok(gTypes.has('fill_blanks'), `unit ${unit} grammar uses fill_blanks`);
+    assert.ok(grammar.items.length >= 12, `unit ${unit} grammar has 12+ items`);
 
-    // Lesen: two text blocks (book texts) + questions
-    const textItems = reading.items.filter((i) => i.type === 'text');
-    assert.equal(textItems.length, 2, `unit ${unit} reading has text A + B`);
-    assert.ok(reading.items.some((i) => i.type === 'multiple_choice'), 'reading has MC questions');
+    // Lesen 1–3: each has one text block (book text) + questions
+    for (const [idx, reading] of [r1, r2, r3].entries()) {
+      const textItems = reading.items.filter((i) => i.type === 'text');
+      assert.equal(textItems.length, 1, `unit ${unit} reading ${idx + 1} has one text block`);
+      assert.ok(reading.items.length >= 7, `unit ${unit} reading ${idx + 1} has 6+ questions`);
+      assert.ok(reading.items.some((i) => i.type === 'multiple_choice'), `unit ${unit} reading ${idx + 1} has MC questions`);
+    }
 
-    // Hören: first item is the read-aloud script (teacher-marked), then questions
-    const script = listening.items[0];
-    assert.equal(script.type, 'text');
-    assert.ok(/VORLESETEXT/i.test(script.config.text), 'listening script is marked for the teacher');
-    assert.ok(listening.items.length > 3, 'listening has questions after the script');
+    // Hören 1–3: first item is the read-aloud script (teacher-marked), then questions
+    for (const [idx, listening] of [h1, h2, h3].entries()) {
+      const script = listening.items[0];
+      assert.equal(script.type, 'text');
+      assert.ok(/VORLESETEXT/i.test(script.config.text), `unit ${unit} listening ${idx + 1} script is marked for the teacher`);
+      assert.ok(listening.items.length >= 7, `unit ${unit} listening ${idx + 1} has 6+ questions`);
+    }
 
-    // Schreiben: writing item with criteria + AI feedback enabled
+    // Schreiben: writing item with criteria + word box + hints
     assert.equal(writing.items[0].type, 'writing');
     assert.ok(writing.items[0].config.criteria.length >= 3, 'writing has criteria');
     assert.equal(writing.items[0].config.allowLoops, true, 'AI feedback loops enabled');
+    assert.ok((writing.items[0].config.requiredWords || []).length >= 5, 'writing has a required word box');
+    assert.equal((writing.items[0].config.hints || []).length, 3, 'writing has 3 step hints');
 
-    // Exit-Check: quiz template with short answers
+    // Exit-Check: quiz template, 12 typed items
     assert.equal(exit.template, 'quiz');
-    assert.ok(exit.items.every((i) => i.type === 'short_answer' || i.type === 'fill_blanks'), 'exit check is typed answers');
+    assert.equal(exit.items.length, 12, 'exit check has 12 items');
+    assert.ok(exit.items.every((i) => i.type === 'short_answer' || i.type === 'fill_blanks' || i.type === 'multiple_choice'), 'exit check is typed answers');
   }
 });
 

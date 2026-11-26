@@ -184,14 +184,14 @@ test('llmRateLimit: throws 429 after the limit', () => {
 test('buildWorksheetPrompt: presets, mixes and full type catalog', () => {
   const all = buildWorksheetPrompt({ topic: 'Fotosynthese', locale: 'de', length: 'long', mix: 'diverse' });
   for (const module of itemTypes) assert.ok(all.system.includes(`"type": "${module.type}"`), `catalog contains ${module.type}`);
-  assert.ok(all.system.includes('11') && all.system.includes('14'), 'long preset item range present');
+  assert.ok(all.system.includes(`${LENGTH_PRESETS.long.min}`) && all.system.includes(`${LENGTH_PRESETS.long.max}`), 'long preset item range present');
   assert.ok(all.user.includes('Fotosynthese'));
 
   const simple = buildWorksheetPrompt({ topic: 'X', locale: 'en', length: 'short', mix: 'simple' });
   for (const type of MIX_PRESETS.simple) assert.ok(simple.system.includes(`"type": "${type}"`));
   assert.ok(!simple.system.includes('"type": "crossword"'), 'simple mix excludes crossword');
   assert.ok(simple.system.includes('English'));
-  assert.ok(LENGTH_PRESETS.short.max === 6 && LENGTH_PRESETS.long.min === 11);
+  assert.ok(LENGTH_PRESETS.short.max === 9 && LENGTH_PRESETS.long.min === 15 && LENGTH_PRESETS.long.max === 20);
 });
 
 test('sanitizeGeneratedDefinition: keeps valid, drops invalid, fixes ids', () => {

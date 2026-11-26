@@ -9,8 +9,9 @@ registerMessages({
     'login.subtitle': 'Lehrkräfte melden sich mit E-Mail an, Schüler:innen mit ihrem persönlichen Login.',
     'login.mode_teacher': 'Lehrkraft',
     'login.mode_student': 'Schüler:in',
-    'login.username': 'Benutzername',
-    'login.student_hint': 'Benutzername und Passwort hat dir deine Lehrkraft gegeben.',
+    'login.username': 'Name oder Benutzername',
+    'login.username_placeholder': 'z. B. Sabrina Messner',
+    'login.student_hint': 'Melde dich mit deinem Namen (z. B. „Sabrina Messner“) oder Benutzernamen und deinem Passwort an — das hat dir deine Lehrkraft gegeben.',
     'login.selfhosted_note':
       'Diese Instanz wird selbst gehostet. Passwort vergessen? Bitte an die Administration wenden.',
     'login.redirecting': 'Anmeldung erfolgreich — weiter …',
@@ -23,8 +24,9 @@ registerMessages({
     'login.subtitle': 'Teachers sign in with email; students use their personal login.',
     'login.mode_teacher': 'Teacher',
     'login.mode_student': 'Student',
-    'login.username': 'Username',
-    'login.student_hint': 'Your teacher gave you your username and password.',
+    'login.username': 'Name or username',
+    'login.username_placeholder': 'e.g. Sabrina Messner',
+    'login.student_hint': 'Sign in with your full name (e.g. “Sabrina Messner”) or your username plus the password your teacher gave you.',
     'login.selfhosted_note':
       'This instance is self-hosted. Forgot your password? Please contact your administrator.',
     'login.redirecting': 'Signed in — continuing …',
@@ -90,12 +92,14 @@ function setMode(next) {
     emailInput.type = 'text';
     emailInput.autocomplete = 'username';
     emailInput.inputMode = 'text';
+    emailInput.placeholder = t('login.username_placeholder');
     emailInput.value = '';
   } else {
     emailLabel.textContent = t('common.email');
     emailInput.type = 'email';
     emailInput.autocomplete = 'username';
     emailInput.inputMode = 'email';
+    emailInput.placeholder = '';
   }
   qs('#login-error').hidden = true;
 }

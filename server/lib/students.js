@@ -65,6 +65,16 @@ export function findStudentByUsername(username) {
   return one('SELECT * FROM students WHERE username = ?', String(username || '').trim().toLowerCase());
 }
 
+/**
+ * All student accounts matching a full name ("Sabrina Messner") — names are
+ * not unique across classes, so callers disambiguate via the password.
+ */
+export function findStudentsByName(name) {
+  const clean = normalizeStudentName(name).toLowerCase();
+  if (!clean) return [];
+  return all('SELECT * FROM students WHERE lower(name) = ?', clean);
+}
+
 /** Find an existing account of this teacher for the same (normalized) name. */
 export function findStudentByName(ownerId, name) {
   const clean = normalizeStudentName(name).toLowerCase();

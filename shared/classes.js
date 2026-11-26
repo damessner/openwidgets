@@ -59,9 +59,21 @@ export function computeItemStates(classRow, items, participantRows) {
   const sorted = [...(items || [])].sort((a, b) => Number(a.position) - Number(b.position));
   const byAssignment = new Map();
   const rank = (row) => (row.status === 'graded' ? 3 : row.status === 'submitted' ? 2 : 1);
+  const percentOf = (row) => {
+    const maxScore = Number(row.max_score) || 0;
+    return maxScore > 0 ? (Number(row.score) || 0) / maxScore : 0;
+  };
   for (const row of participantRows || []) {
     const existing = byAssignment.get(row.assignment_id);
-    if (!existing || rank(row) > rank(existing)) byAssignment.set(row.assignment_id, row);
+    // Students may redo an item as often as they like: the attempt that counts
+    // is the highest-ranked one, and on equal rank the one with the best score.
+    if (
+      !existing ||
+      rank(row) > rank(existing) ||
+      (rank(row) === rank(existing) && percentOf(row) > percentOf(existing))
+    ) {
+      byAssignment.set(row.assignment_id, row);
+    }
   }
   const minPercent = normalizeUnlockMinPercent(classRow && classRow.unlock_min_percent);
   const sequence = classRow && classRow.order_mode === 'sequence';

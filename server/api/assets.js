@@ -8,6 +8,7 @@ import { config } from '../config.js';
 import { now, one, run, uid } from '../db.js';
 import { requireUser } from '../lib/auth.js';
 import { getStudent } from '../lib/students.js';
+import { mp3Filename, needsTranscode, transcodeToMp3 } from '../lib/audio.js';
 import { tokenHash } from './_helpers.js';
 import {
   assertSameOrigin,
@@ -88,14 +89,27 @@ function assetFile(id) {
   return safeJoin(config.assetsDir, `/${id}`);
 }
 
-export function assetJson(row) {
+export function assetJson(row, extra) {
   return {
     id: row.id,
     url: `/assets/${row.id}/${encodeURIComponent(row.filename)}`,
     filename: row.filename,
     mime: row.mime,
     size: row.size,
+    ...(extra || {}),
   };
+}
+
+/**
+ * Normalise uploaded audio to MP3 when possible (WAV/OGG/M4A/WebM → MP3, much
+ * smaller). Falls back to the original bytes when ffmpeg is unavailable or the
+ * conversion fails — browsers play those formats natively.
+ */
+async function normalizeAudioUpload(bytes, mime, filename) {
+  if (!needsTranscode(mime)) return { bytes, mime, filename, converted: false };
+  const mp3 = await transcodeToMp3(bytes, mime);
+  if (!mp3) return { bytes, mime, filename, converted: false };
+  return { bytes: mp3.bytes, mime: mp3.mime, filename: mp3Filename(filename), converted: true };
 }
 
 export function register(router) {
@@ -114,22 +128,24 @@ export function register(router) {
     const bytes = await readRaw(req, config.maxUploadBytes);
     if (!bytes || bytes.length === 0) throw badRequest('empty_file', 'The uploaded file is empty');
 
+    const audio = await normalizeAudioUpload(bytes, mime, filename);
+
     const id = uid();
     const target = assetFile(id);
     if (!target) throw badRequest('invalid_asset', 'Could not store the asset');
-    await fs.promises.writeFile(target, bytes);
-    const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
+    await fs.promises.writeFile(target, audio.bytes);
+    const sha256 = crypto.createHash('sha256').update(audio.bytes).digest('hex');
     run(
       'INSERT INTO assets (id, owner_id, filename, mime, size, sha256, created_at) VALUES (?,?,?,?,?,?,?)',
       id,
       user.id,
-      filename,
-      mime,
-      bytes.length,
+      audio.filename,
+      audio.mime,
+      audio.bytes.length,
       sha256,
       now(),
     );
-    json(res, 201, { asset: assetJson(one('SELECT * FROM assets WHERE id = ?', id)) });
+    json(res, 201, { asset: assetJson(one('SELECT * FROM assets WHERE id = ?', id), { convertedToMp3: audio.converted }) });
   });
 
   // -------------------------------------------------------------------------
@@ -175,22 +191,24 @@ export function register(router) {
     const bytes = await readRaw(req, Math.min(config.maxUploadBytes, PARTICIPANT_UPLOAD_MAX_BYTES));
     if (!bytes || bytes.length === 0) throw badRequest('empty_file', 'The uploaded file is empty');
 
+    const audio = await normalizeAudioUpload(bytes, mime, filename);
+
     const id = uid();
     const target = assetFile(id);
     if (!target) throw badRequest('invalid_asset', 'Could not store the asset');
-    await fs.promises.writeFile(target, bytes);
-    const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
+    await fs.promises.writeFile(target, audio.bytes);
+    const sha256 = crypto.createHash('sha256').update(audio.bytes).digest('hex');
     run(
       'INSERT INTO assets (id, owner_id, filename, mime, size, sha256, created_at) VALUES (?,?,?,?,?,?,?)',
       id,
       student ? student.id : null,
-      filename,
-      mime,
-      bytes.length,
+      audio.filename,
+      audio.mime,
+      audio.bytes.length,
       sha256,
       now(),
     );
-    json(res, 201, { asset: assetJson(one('SELECT * FROM assets WHERE id = ?', id)) });
+    json(res, 201, { asset: assetJson(one('SELECT * FROM assets WHERE id = ?', id), { convertedToMp3: audio.converted }) });
   });
 
   // -------------------------------------------------------------------------

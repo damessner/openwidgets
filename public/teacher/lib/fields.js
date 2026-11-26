@@ -740,6 +740,8 @@ function renderWritingEditor(container, { item, onChange }) {
   if (typeof config.minWords !== 'number') config.minWords = 0;
   if (typeof config.maxWords !== 'number') config.maxWords = 3000;
   if (typeof config.allowLoops !== 'boolean') config.allowLoops = true;
+  if (!Array.isArray(config.requiredWords)) config.requiredWords = [];
+  if (!Array.isArray(config.hints)) config.hints = [];
 
   const gradeId = uid('wr-grade');
   const gradeInput = h('input.input', {
@@ -777,6 +779,34 @@ function renderWritingEditor(container, { item, onChange }) {
     checked: config.allowLoops !== false,
     on: { change: (event) => { config.allowLoops = event.target.checked; onChange(); } },
   });
+
+  const wordsId = uid('wr-words');
+  const wordsArea = h('textarea.textarea', {
+    id: wordsId,
+    rows: 4,
+    placeholder: 'pencil case\nfavourite colour\nboard',
+    on: {
+      input: (event) => {
+        config.requiredWords = event.target.value.split('\n').map((line) => line.trim()).filter(Boolean);
+        onChange();
+      },
+    },
+  });
+  wordsArea.value = config.requiredWords.join('\n');
+
+  const hintsId = uid('wr-hints');
+  const hintsArea = h('textarea.textarea', {
+    id: hintsId,
+    rows: 4,
+    placeholder: '1. Lies die Aufgabe genau und markiere, worum es geht.\n2. Sammle Ideen …\n3. Schreibe zuerst einen Entwurf …',
+    on: {
+      input: (event) => {
+        config.hints = event.target.value.split('\n').map((line) => line.trim()).filter(Boolean);
+        onChange();
+      },
+    },
+  });
+  hintsArea.value = config.hints.join('\n');
 
   const criteriaHost = h('div.writing-criteria-editor');
 
@@ -844,6 +874,8 @@ function renderWritingEditor(container, { item, onChange }) {
       h('div.field.field-sm.mb-0', h('label.label', { for: maxId }, t('teacher.wr_max_words')), maxInput),
     ),
     h('div.field.field-sm', h('label.switch.setting-row', loopsInput, h('span.track', { 'aria-hidden': 'true' }), h('span.setting-text', h('span.small', t('teacher.wr_allow_loops'))))),
+    h('div.field.field-sm', h('label.label', { for: wordsId }, t('teacher.wr_required_words')), wordsArea, h('p.help', t('teacher.wr_required_words_help'))),
+    h('div.field.field-sm', h('label.label', { for: hintsId }, t('teacher.wr_hints')), hintsArea, h('p.help', t('teacher.wr_hints_help'))),
     h('div.field.field-sm', h('label.label', t('teacher.wr_criteria')), criteriaHost, addBtn, h('p.help', t('teacher.wr_criteria_help'))),
   );
 }

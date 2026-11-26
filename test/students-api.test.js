@@ -226,6 +226,32 @@ test('student login: wrong password rejected, correct accepted; /api/student/me'
   assert.equal((await anon.get('/api/student/me')).status, 401);
 });
 
+test('student login: full name ("Anna Müller") works like the username; wrong password rejected', async () => {
+  const anon = new Client(baseUrl);
+  // name with different case + extra whitespace
+  expectStatus(
+    await anon.post('/api/auth/student-login', { username: '  anna müller ', password: state.anna.password }),
+    200,
+    'login by full name',
+  );
+  // slug of the typed name also works
+  expectStatus(
+    await anon.post('/api/auth/student-login', { username: 'Anna Mueller', password: state.anna.password }),
+    200,
+    'login by slug of the name',
+  );
+  // full name but wrong password -> 401
+  assert.equal(
+    (await anon.post('/api/auth/student-login', { username: 'Anna Müller', password: 'wrongwrong' })).status,
+    401,
+  );
+  // unknown name -> 401
+  assert.equal(
+    (await anon.post('/api/auth/student-login', { username: 'Niemand Hier', password: state.anna.password })).status,
+    401,
+  );
+});
+
 test('account join: class join links the roster entry, assignment join links the attempt', async () => {
   const student = new Client(baseUrl);
   await student.post('/api/auth/student-login', { username: state.anna.username, password: state.anna.password });

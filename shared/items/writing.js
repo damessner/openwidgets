@@ -17,6 +17,10 @@ export const meta = {
 
 export const MAX_CRITERIA = 8;
 export const MAX_SOURCE_TEXT = 20000;
+export const MAX_REQUIRED_WORDS = 12;
+export const MAX_REQUIRED_WORD_LEN = 40;
+export const MAX_HINTS = 3;
+export const MAX_HINT_LEN = 500;
 
 export function defaultConfig() {
   return {
@@ -26,7 +30,36 @@ export function defaultConfig() {
     minWords: 0,
     maxWords: 3000,
     allowLoops: true,
+    requiredWords: [],
+    hints: [],
   };
+}
+
+function normalizeWordList(value, max, maxLen) {
+  const list = asArray(value)
+    .map((entry) => asString(entry).trim().replace(/\s+/g, ' '))
+    .filter((entry) => entry.length > 0)
+    .slice(0, max)
+    .map((entry) => entry.slice(0, maxLen));
+  return [...new Set(list)];
+}
+
+/**
+ * Word-boundary, case-insensitive matching of required words/phrases in a text.
+ * Returns { used: string[], missing: string[] } (used/missing as given in words).
+ */
+export function findUsedWords(text, words) {
+  const source = String(text || '');
+  const used = [];
+  const missing = [];
+  for (const word of asArray(words)) {
+    const w = String(word || '').trim();
+    if (!w) continue;
+    const pattern = new RegExp(`(^|[^\\p{L}\\p{N}])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^\\p{L}\\p{N}]|$)`, 'iu');
+    if (pattern.test(source)) used.push(w);
+    else missing.push(w);
+  }
+  return { used, missing };
 }
 
 export function defaultPoints() {
@@ -56,6 +89,8 @@ function normalizeConfig(rawConfig) {
     minWords: Math.max(0, Math.min(100000, asFiniteNumber(src.minWords, 0))),
     maxWords: Math.max(1, Math.min(100000, asFiniteNumber(src.maxWords, 3000))),
     allowLoops: asBool(src.allowLoops, true),
+    requiredWords: normalizeWordList(src.requiredWords, MAX_REQUIRED_WORDS, MAX_REQUIRED_WORD_LEN),
+    hints: normalizeWordList(src.hints, MAX_HINTS, MAX_HINT_LEN),
   };
 }
 
@@ -90,6 +125,24 @@ export function validateItem(item) {
   if (asString(config.sourceText).length > MAX_SOURCE_TEXT) {
     errors.push(`config.sourceText: at most ${MAX_SOURCE_TEXT} characters`);
   }
+  const requiredWords = asArray(config.requiredWords);
+  if (requiredWords.length > MAX_REQUIRED_WORDS) {
+    errors.push(`config.requiredWords: at most ${MAX_REQUIRED_WORDS} words are allowed`);
+  }
+  requiredWords.forEach((word, index) => {
+    if (asString(word).trim().length > MAX_REQUIRED_WORD_LEN) {
+      errors.push(`config.requiredWords[${index}]: at most ${MAX_REQUIRED_WORD_LEN} characters per word`);
+    }
+  });
+  const hints = asArray(config.hints);
+  if (hints.length > MAX_HINTS) {
+    errors.push(`config.hints: at most ${MAX_HINTS} hints are allowed`);
+  }
+  hints.forEach((hint, index) => {
+    if (asString(hint).length > MAX_HINT_LEN) {
+      errors.push(`config.hints[${index}]: at most ${MAX_HINT_LEN} characters per hint`);
+    }
+  });
   return errors;
 }
 
@@ -127,6 +180,8 @@ export function sanitizeItem(item) {
       minWords: normalized.config.minWords,
       maxWords: normalized.config.maxWords,
       allowLoops: normalized.config.allowLoops,
+      requiredWords: normalized.config.requiredWords,
+      hints: normalized.config.hints,
     },
   };
 }
@@ -172,6 +227,20 @@ export function editSchema() {
       key: 'allowLoops',
       kind: 'switch',
       label: { en: 'Allow interim AI feedback loops', de: 'Zwischenfeedback (KI) erlauben' },
+    },
+    {
+      key: 'requiredWords',
+      kind: 'list',
+      primitive: 'lines',
+      label: { en: 'Required words (word box — must be used in the text)', de: 'Pflichtwörter (Wortbox — müssen im Text verwendet werden)' },
+      help: { en: 'One word or short phrase per line (max 12). Used words are highlighted green in the text and struck through in the word box.', de: 'Ein Wort oder kurzer Ausdruck pro Zeile (max. 12). Verwendete Wörter werden im Text grün markiert und in der Wortbox durchgestrichen.' },
+    },
+    {
+      key: 'hints',
+      kind: 'list',
+      primitive: 'lines',
+      label: { en: 'Step-by-step hints (shown before writing starts, max 3)', de: 'Schritt-für-Schritt-Hinweise (vor Schreibbeginn, max. 3)' },
+      help: { en: 'Short hints the pupil clicks through one by one before the text field unlocks.', de: 'Kurze Hinweise, die der Schüler/die Schülerin vor dem Freischalten des Textfelds durchklickt.' },
     },
   ];
 }

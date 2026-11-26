@@ -1255,3 +1255,18 @@ span.item-pin {
 .item-vocab-feedback:empty { display: none; }
 .item-vocab-done { margin-top: 10px; font-weight: 600; }
 @keyframes vocab-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+/* writing item: word box (required words) + green highlight + step hints (v1.3) */
+.writing-wordbox { border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; background: var(--bg); }
+.writing-word-chip { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card, #fff); font-size: 0.85rem; font-weight: 600; transition: all 0.15s ease; }
+.writing-word-chip.is-used { background: var(--success-bg, #e6f6ec); border-color: var(--success, #1a7f4b); color: var(--success, #1a7f4b); text-decoration: line-through; }
+.writing-editor-wrap { position: relative; }
+.writing-editor-wrap .writing-highlight,
+.writing-editor-wrap .writing-textarea { display: block; width: 100%; margin: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem; font-family: inherit; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; tab-size: 4; }
+.writing-editor-wrap .writing-highlight { position: absolute; inset: 0; overflow: hidden; pointer-events: none; color: transparent; background: var(--card, #fff); }
+.writing-editor-wrap .writing-textarea { position: relative; background: transparent; color: var(--text); resize: vertical; min-height: 12em; }
+.writing-editor-wrap .writing-textarea:focus { background: transparent; }
+.writing-mark { background: var(--success-bg, #c9f2d9); color: transparent; border-radius: 3px; padding: 0 1px; box-shadow: inset 0 -2px 0 var(--success, #1a7f4b); }
+.writing-hints-card { border-left: 4px solid var(--primary, #3b6fe0); }
+.writing-hint-text { font-size: 0.95rem; white-space: pre-wrap; }
+.writing-wordbox-ok { color: var(--success, #1a7f4b); font-weight: 600; }

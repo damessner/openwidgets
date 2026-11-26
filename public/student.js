@@ -69,6 +69,7 @@ registerMessages({
     'student.class_item_locked': 'Gesperrt — zuerst Nr. {position} erledigen',
     'student.class_item_open': 'Öffnen',
     'student.class_item_review': 'Ansehen',
+    'student.class_item_redo': 'Erneut versuchen',
     'student.class_item_done': 'Erledigt',
     'student.class_score': '{score} / {maxScore} P.',
     'student.class_back': 'Zur Klasse',
@@ -177,6 +178,7 @@ registerMessages({
     'student.class_item_locked': 'Locked — finish no. {position} first',
     'student.class_item_open': 'Open',
     'student.class_item_review': 'Review',
+    'student.class_item_redo': 'Try again',
     'student.class_item_done': 'Done',
     'student.class_score': '{score} / {maxScore} pts',
     'student.class_back': 'Back to class',
@@ -1991,6 +1993,18 @@ function buildResultScreen() {
   }
 
   const actions = h('div.student-result-actions');
+  // Class items may be redone as often as the pupil likes: a fresh attempt is
+  // simply a new join of the same assignment (the best attempt counts).
+  if (state.classInfo && state.classInfo.code && state.code) {
+    actions.appendChild(
+      h(
+        'a.btn.btn-primary',
+        { href: `/a/${encodeURIComponent(state.code)}?c=${encodeURIComponent(state.classInfo.code)}` },
+        h('span', { html: icon('refresh', { size: 18 }) }),
+        h('span', { text: t('student.class_item_redo') }),
+      ),
+    );
+  }
   if (state.classInfo && state.classInfo.code) {
     actions.appendChild(
       h(
@@ -2654,7 +2668,7 @@ function buildClassLobby() {
           h(
             'a.btn.btn-primary',
             { href: `/a/${encodeURIComponent(item.code)}?c=${encodeURIComponent(CODE)}` },
-            h('span', { text: item.state === 'done' ? t('student.class_item_review') : t('student.class_item_open') }),
+            h('span', { text: item.state === 'done' ? t('student.class_item_redo') : t('student.class_item_open') }),
           ),
         );
       }

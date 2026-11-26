@@ -146,7 +146,7 @@ install_os_packages() {
   log "installing base packages"
   apt-get update -y
   apt-get install -y --no-install-recommends \
-    ca-certificates curl gnupg git rsync sqlite3 openssl \
+    ca-certificates curl gnupg git rsync sqlite3 openssl ffmpeg \
     debian-keyring debian-archive-keyring apt-transport-https
 }
 

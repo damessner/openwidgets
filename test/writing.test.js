@@ -10,6 +10,9 @@ import {
   normalizeResponse,
   score,
   type,
+  findUsedWords,
+  MAX_REQUIRED_WORDS,
+  MAX_HINTS,
 } from '../shared/items/writing.js';
 import { validateActivity } from '../shared/activity.js';
 import { WRITING_TEMPLATES, writingTemplate } from '../shared/writing-templates.js';
@@ -103,4 +106,55 @@ test('writing feedback prompt + sanitizer', () => {
   assert.equal(fb.criteria.length, 2);
   assert.equal(fb.criteria[1].met, 1, 'met clamped to 1');
   assert.throws(() => sanitizeWritingFeedback({}, criteria), /empty/);
+});
+
+test('writing: requiredWords + hints normalize, validate and reach the student (sanitize)', () => {
+  const item = normalizeItem({
+    id: 'w5', type: 'writing', points: 5,
+    config: {
+      criteria: [{ id: 'c1', label: 'Inhalt', weight: 100 }],
+      requiredWords: ['pencil case', '  Nice to meet you ', 'pencil case', 'x'.repeat(50)],
+      hints: ['Schritt 1', 'Schritt 2', 'Schritt 3', 'zu viel'],
+    },
+  });
+  assert.deepEqual(item.config.requiredWords, ['pencil case', 'Nice to meet you', 'x'.repeat(40)], 'dedup + trim + cap at 40 chars');
+  assert.deepEqual(item.config.hints, ['Schritt 1', 'Schritt 2', 'Schritt 3'], 'max 3 hints');
+  assert.deepEqual(validateItem(item), []);
+
+  const safe = sanitizeItem(item);
+  assert.deepEqual(safe.config.requiredWords, item.config.requiredWords, 'students see the word box');
+  assert.deepEqual(safe.config.hints, item.config.hints, 'students see the hints');
+
+  const tooMany = {
+    id: 'w6', type: 'writing', points: 5,
+    config: { criteria: [{ id: 'c1', label: 'x', weight: 1 }], requiredWords: Array.from({ length: MAX_REQUIRED_WORDS + 1 }, (_, i) => `w${i}`), hints: Array.from({ length: MAX_HINTS + 1 }, (_, i) => `h${i}`) },
+  };
+  const errors = validateItem(tooMany);
+  assert.ok(errors.some((e) => e.includes('requiredWords')));
+  assert.ok(errors.some((e) => e.includes('hints')));
+});
+
+test('writing: findUsedWords matches word boundaries, case-insensitive, phrases', () => {
+  const words = ['pencil case', 'Favourite', 'glue stick'];
+  const text = 'My favourite colour is blue. In my pencil case I have got a glue stick. The PENCIL CASE is blue.';
+  const { used, missing } = findUsedWords(text, words);
+  assert.deepEqual(used.sort(), ['Favourite', 'glue stick', 'pencil case'].sort());
+  assert.deepEqual(missing, []);
+  // "pencils" must NOT match "pencil"
+  const strict = findUsedWords('I have two pencils here.', ['pencil']);
+  assert.deepEqual(strict.used, []);
+  assert.deepEqual(strict.missing, ['pencil']);
+  // empty text
+  const none = findUsedWords('', words);
+  assert.deepEqual(none.used, []);
+  assert.equal(none.missing.length, 3);
+});
+
+test('writing feedback prompt mentions the required word box when present', () => {
+  const criteria = [{ id: 'c1', label: 'Inhalt', weight: 100, description: '' }];
+  const withWords = buildWritingFeedbackPrompt({ locale: 'de', criteria, text: 'Mein Text …', requiredWords: ['beard', 'treasure'] });
+  assert.ok(withWords.system.includes('beard') && withWords.system.includes('treasure'), 'required words are in the system prompt');
+  assert.ok(/MUST use/i.test(withWords.system));
+  const without = buildWritingFeedbackPrompt({ locale: 'de', criteria, text: 'Mein Text …' });
+  assert.ok(!without.system.includes('MUST use'), 'no word-box rule without requiredWords');
 });

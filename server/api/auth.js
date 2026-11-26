@@ -14,7 +14,9 @@ import {
   createStudentSession,
   destroyStudentSession,
   findStudentByUsername,
+  findStudentsByName,
   studentPublic,
+  usernameBase,
 } from '../lib/students.js';
 
 // In-memory login throttle: 10 failures per 15 minutes per IP.
@@ -78,7 +80,9 @@ export function register(router) {
   });
 
   // -------------------------------------------------------------------------
-  // Student (roster) login — username + generated password
+  // Student (roster) login — username (slug) OR full name ("Sabrina Messner")
+  // plus the generated password. Names are not unique across classes, so the
+  // password disambiguates duplicate names.
   // -------------------------------------------------------------------------
   router.post('/api/auth/student-login', async (req, res) => {
     assertSameOrigin(req);
@@ -86,11 +90,21 @@ export function register(router) {
     assertNotThrottled(ip);
 
     const body = await readJson(req, 16 * 1024);
-    const username = String(body.username || '').trim().toLowerCase();
+    const input = String(body.username || '').trim();
     const password = String(body.password || '');
-    if (!username || !password) throw badRequest('missing_credentials', 'Username and password are required');
+    if (!input || !password) throw badRequest('missing_credentials', 'Username and password are required');
 
-    const row = findStudentByUsername(username);
+    let row = findStudentByUsername(input.toLowerCase());
+    if (!row) {
+      // Fall back to the full name, or to the slug of a typed name.
+      const candidates = findStudentsByName(input);
+      const bySlug = usernameBase(input);
+      if (bySlug !== input.toLowerCase()) {
+        const slugRow = findStudentByUsername(bySlug);
+        if (slugRow && !candidates.includes(slugRow)) candidates.push(slugRow);
+      }
+      row = candidates.find((candidate) => verifyPassword(password, candidate.password_hash)) || null;
+    }
     if (!row || !verifyPassword(password, row.password_hash)) {
       bumpFailure(ip);
       throw unauthorized('invalid_credentials');

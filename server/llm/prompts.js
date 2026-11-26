@@ -6,9 +6,9 @@ import { shortId } from '../../shared/util.js';
 import { HttpError } from '../lib/http.js';
 
 export const LENGTH_PRESETS = {
-  short: { min: 4, max: 6, minutes: '5–10' },
-  medium: { min: 7, max: 10, minutes: '10–15' },
-  long: { min: 11, max: 14, minutes: '15–20' },
+  short: { min: 6, max: 9, minutes: '5–10' },
+  medium: { min: 10, max: 14, minutes: '10–15' },
+  long: { min: 15, max: 20, minutes: '15–20' },
 };
 
 export const MIX_PRESETS = {
@@ -88,7 +88,7 @@ export function buildWorksheetPrompt({ topic, subject = '', grade = '', locale =
  * canonical activity definition that passes validateActivity.
  * @returns {{definition: object, dropped: number, total: number}}
  */
-export function sanitizeGeneratedDefinition(raw, { locale = 'de', template = 'worksheet', maxItems = 20 } = {}) {
+export function sanitizeGeneratedDefinition(raw, { locale = 'de', template = 'worksheet', maxItems = 24 } = {}) {
   const source = raw && typeof raw === 'object' && raw.definition && typeof raw.definition === 'object' ? raw.definition : raw;
   const src = source && typeof source === 'object' && !Array.isArray(source) ? source : {};
   const rawItems = Array.isArray(src.items) ? src.items : [];
@@ -184,8 +184,9 @@ export function buildFeedbackPrompt({ locale = 'de', activityTitle = '', results
  * @param criteria [{id, label, weight, description}]
  * @param text the student's current draft (truncated server-side)
  */
-export function buildWritingFeedbackPrompt({ locale = 'de', gradeLevel = '', criteria = [], sourceText = '', text = '', loop = 1, previous = null } = {}) {
+export function buildWritingFeedbackPrompt({ locale = 'de', gradeLevel = '', criteria = [], sourceText = '', text = '', loop = 1, previous = null, requiredWords = [] } = {}) {
   const lang = localeName(locale);
+  const words = (Array.isArray(requiredWords) ? requiredWords : []).map((w) => String(w).trim()).filter(Boolean);
   const system = [
     `You are a supportive school teacher giving formative feedback on a pupil's written text in ${lang}.`,
     'Answer with a single JSON object and NOTHING else:',
@@ -196,6 +197,9 @@ export function buildWritingFeedbackPrompt({ locale = 'de', gradeLevel = '', cri
     `- "comment": 1–2 sentences per criterion in ${lang}, specific to the text. "tip": one concrete, actionable revision tip per criterion.`,
     '- Base everything strictly on the pupil\'s text and the criteria. Do not invent content the pupil did not write.',
     gradeLevel ? `- Target grade level: ${gradeLevel} — calibrate vocabulary and expectations accordingly.` : '',
+    words.length
+      ? `- The pupil MUST use these words/phrases in the text (word box): ${JSON.stringify(words)}. Check each one: if it is missing, say so explicitly in the summary and in the most relevant criterion comment, and give a tip how to include it naturally.`
+      : '',
     `This is feedback loop ${loop}${previous ? ' (a previous feedback round exists — acknowledge progress if the draft improved)' : ''}.`,
     'Criteria (id, label, weight %, description):',
     JSON.stringify(criteria.map((c) => ({ id: c.id, label: c.label, weight: c.weight, description: c.description || '' })), null, 1),

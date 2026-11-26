@@ -7,6 +7,7 @@ import { definitionFromRow, requireOwnedAssignment, requireParticipantAuth } fro
 import { chatJson, isLlmEnabled, llmRateLimit } from '../llm/core.js';
 import { buildWritingFeedbackPrompt, sanitizeWritingFeedback } from '../llm/prompts.js';
 import { normalizeItem } from '../../shared/items/index.js';
+import { findUsedWords } from '../../shared/items/writing.js';
 import { log } from '../config.js';
 
 const FEEDBACK_LIMIT_PER_HOUR = 10;
@@ -57,10 +58,17 @@ export function register(router) {
       text,
       loop,
       previous,
+      requiredWords: config.requiredWords,
     });
     const raw = await chatJson({ system, user: prompt, temperature: 0.5 });
     const feedback = sanitizeWritingFeedback(raw, config.criteria);
     feedback.loop = loop;
+    // Deterministic word-box check (students see the same rule as the UI):
+    // which required words are used / still missing in this draft.
+    const wordCheck = Array.isArray(config.requiredWords) && config.requiredWords.length
+      ? findUsedWords(text, config.requiredWords)
+      : null;
+    if (wordCheck) feedback.requiredWords = { used: wordCheck.used, missing: wordCheck.missing };
 
     run(
       'INSERT INTO writing_feedback (id, participant_id, item_id, loop, text, feedback, created_at) VALUES (?,?,?,?,?,?,?)',

@@ -11,6 +11,11 @@
 
 FROM node:24-bookworm-slim
 
+# ffmpeg is optional at runtime: uploaded audio (WAV/OGG/M4A/WebM) is
+# transcoded to MP3 when the binary is present, otherwise stored as-is.
+RUN apt-get update -y && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 # Contract defaults for a container. HOST=0.0.0.0 is correct *inside* the
 # container because docker-compose publishes the port on 127.0.0.1 only.
 # The native systemd deployment uses HOST=127.0.0.1 instead.

@@ -17,6 +17,7 @@ const EMAIL = process.env.OW_ADMIN_EMAIL || '';
 const PASSWORD = process.env.OW_ADMIN_PASSWORD || '';
 const CLASS_NAME = process.env.OW_CLASS_NAME || '1G — Englisch (MORE 1)';
 const DRY_RUN = process.argv.includes('--dry-run');
+const REPLACE = process.argv.includes('--replace');
 
 if (!DRY_RUN && (!EMAIL || !PASSWORD)) {
   console.error('Set OW_ADMIN_EMAIL and OW_ADMIN_PASSWORD (or use --dry-run to only validate content).');
@@ -60,12 +61,23 @@ async function main() {
   await api('POST', '/api/auth/login', { email: EMAIL, password: PASSWORD });
   console.log('Logged in as admin.');
 
-  // Idempotency: skip if the class already exists with courses.
+  // Idempotency: skip if the class already exists with courses — unless
+  // --replace is given, which deletes the old class (and its assignments)
+  // and seeds fresh. Safe before pupils/responses exist.
   const classesData = await api('GET', '/api/classes');
   const existing = (classesData.classes || []).find((cls) => cls.name === CLASS_NAME);
-  if (existing && existing.courseCount > 0) {
+  if (existing && existing.courseCount > 0 && !REPLACE) {
     console.log(`Class "${CLASS_NAME}" already exists (id ${existing.id}, ${existing.courseCount} courses, ${existing.itemCount} items) — nothing to do.`);
     return;
+  }
+  if (existing && REPLACE) {
+    const detail = await api('GET', `/api/classes/${existing.id}`);
+    for (const item of detail.class.items || []) {
+      await api('DELETE', `/api/assignments/${item.assignmentId}`);
+      console.log(`  - deleted old assignment ${item.code || item.assignmentId} (${item.title})`);
+    }
+    await api('DELETE', `/api/classes/${existing.id}`);
+    console.log(`Replaced existing class "${CLASS_NAME}" (${existing.id}).`);
   }
 
   const created = await api('POST', '/api/classes', {

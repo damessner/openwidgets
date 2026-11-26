@@ -5,6 +5,7 @@
 // ctx.writingFeedback shows the stored final feedback.
 import { registerMessages, t } from '../lib/i18n.js';
 import { h, clear, renderRichText } from '../lib/dom.js';
+import { findUsedWords } from '/shared/items/writing.js';
 import {
   normalizeCtx,
   isReadOnly,
@@ -43,6 +44,13 @@ registerMessages({
     'item.writing.loops_disabled': 'Zwischenfeedback ist für diese Aufgabe deaktiviert.',
     'item.writing.final_feedback_title': 'Abschlussfeedback',
     'item.writing.locked': 'Diese Aufgabe ist bereits abgegeben.',
+    'item.writing.wordbox': 'Wortbox — verwende diese Wörter in deinem Text:',
+    'item.writing.wordbox_used': '{used} von {total} verwendet',
+    'item.writing.hints_title': 'So gehst du vor — Schritt für Schritt',
+    'item.writing.hints_step': 'Schritt {current} von {total}',
+    'item.writing.hints_next': 'Weiter',
+    'item.writing.hints_start': 'Los geht’s — Text schreiben',
+    'item.writing.wordbox_feedback': 'Wortbox: verwendet: {used} · fehlt noch: {missing}',
   },
   en: {
     'item.writing.legend': 'Write your text.',
@@ -62,12 +70,39 @@ registerMessages({
     'item.writing.loops_disabled': 'Interim feedback is disabled for this task.',
     'item.writing.final_feedback_title': 'Final feedback',
     'item.writing.locked': 'This task has already been submitted.',
+    'item.writing.wordbox': 'Word box — use these words in your text:',
+    'item.writing.wordbox_used': '{used} of {total} used',
+    'item.writing.hints_title': 'How to approach this — step by step',
+    'item.writing.hints_step': 'Step {current} of {total}',
+    'item.writing.hints_next': 'Next',
+    'item.writing.hints_start': 'Let’s go — start writing',
+    'item.writing.wordbox_feedback': 'Word box: used: {used} · still missing: {missing}',
   },
 });
 
 function wordCount(text) {
   const trimmed = String(text || '').trim();
   return trimmed ? trimmed.split(/\s+/).length : 0;
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Highlight every occurrence of `used` words inside the escaped text HTML. */
+function highlightUsedWords(escapedText, usedWords) {
+  let out = escapedText;
+  for (const word of usedWords) {
+    const escaped = escapeHtml(word);
+    if (!escaped) continue;
+    const pattern = new RegExp(`(^|[^\\p{L}\\p{N}])${escaped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=[^\\p{L}\\p{N}]|$)`, 'giu');
+    out = out.replace(pattern, (match, prefix) => `${prefix}<mark class="writing-mark">${match.slice(prefix.length)}</mark>`);
+  }
+  return `${out}\n`;
 }
 
 function metLabel(met) {
@@ -88,6 +123,14 @@ function renderFeedbackPanel(host, feedback, titleKey) {
   ));
   if (feedback.summary) {
     host.appendChild(h('p', { text: feedback.summary }));
+  }
+  if (feedback.requiredWords && (feedback.requiredWords.used.length || feedback.requiredWords.missing.length)) {
+    const missing = feedback.requiredWords.missing || [];
+    const used = feedback.requiredWords.used || [];
+    host.appendChild(h('p.small.mt-1', {
+      text: t('item.writing.wordbox_feedback', { used: used.join(', ') || '—', missing: missing.join(', ') || '—' }),
+      class: missing.length ? '' : 'writing-wordbox-ok',
+    }));
   }
   if (Array.isArray(feedback.criteria) && feedback.criteria.length) {
     for (const criterion of feedback.criteria) {
@@ -151,18 +194,74 @@ export function mount(container, rawCtx) {
 
   const field = fieldset(t('item.writing.legend'));
   const textareaId = `writing-${item.id || 'x'}`;
+  const requiredWords = Array.isArray(config.requiredWords) ? config.requiredWords.filter((w) => String(w).trim()) : [];
+  const hints = Array.isArray(config.hints) ? config.hints.filter((entry) => String(entry).trim()) : [];
+
+  // Word box: required words as chips; used ones get struck through, and their
+  // occurrences in the text are highlighted green via the backdrop layer.
+  let wordChips = [];
+  let wordUsedEl = null;
+  if (requiredWords.length) {
+    const box = h('div.writing-wordbox.mb-1');
+    box.appendChild(h('p.label.mb-1', { text: t('item.writing.wordbox') }));
+    const chipRow = h('div.row.gap-1.wrap.writing-wordbox-chips');
+    for (const word of requiredWords) {
+      const chip = h('span.writing-word-chip', { text: String(word) });
+      chipRow.appendChild(chip);
+      wordChips.push({ word: String(word), chip });
+    }
+    wordUsedEl = h('span.tiny.muted.ml-1', { text: t('item.writing.wordbox_used', { used: 0, total: requiredWords.length }) });
+    box.append(chipRow, h('div.mt-1', wordUsedEl));
+    field.appendChild(box);
+  }
+
+  const editorWrap = h('div.writing-editor-wrap');
+  const backdrop = h('div.writing-highlight', { 'aria-hidden': 'true' });
   const textarea = h('textarea.textarea.writing-textarea', {
     id: textareaId,
     rows: 12,
     placeholder: '…',
     disabled: readonly || undefined,
   });
+  editorWrap.append(backdrop, textarea);
   const metaRow = h('div.row.between.wrap.mt-1');
   const countEl = h('span.small.muted', { text: t('item.writing.words', { count: 0 }) });
   const minEl = minWords > 0 ? h('span.tiny.muted', { text: t('item.writing.min_words', { n: minWords }) }) : null;
   metaRow.append(countEl, minEl);
-  field.append(textarea, metaRow);
+  field.append(editorWrap, metaRow);
   root.appendChild(field);
+
+  // Step-by-step hints before writing starts (only on a fresh, empty attempt).
+  const initialText = String((ctx.response && ctx.response.text) || '');
+  if (hints.length && !readonly && ctx.mode !== 'review' && !initialText.trim()) {
+    let step = 0;
+    const stepText = h('p.writing-hint-text');
+    const stepCounter = h('span.tiny.muted');
+    const nextBtn = h('button.btn.btn-primary.btn-sm', { type: 'button' });
+    const card = h('div.card.writing-hints-card.mb-2',
+      h('p.label.mb-1', { text: t('item.writing.hints_title') }),
+      stepText,
+      h('div.row.between.wrap.mt-2', stepCounter, nextBtn),
+    );
+    const renderStep = () => {
+      stepText.textContent = String(hints[step]);
+      stepCounter.textContent = t('item.writing.hints_step', { current: step + 1, total: hints.length });
+      nextBtn.textContent = step + 1 >= hints.length ? t('item.writing.hints_start') : t('item.writing.hints_next');
+    };
+    nextBtn.addEventListener('click', () => {
+      if (step + 1 >= hints.length) {
+        card.remove();
+        textarea.disabled = false;
+        textarea.focus();
+      } else {
+        step += 1;
+        renderStep();
+      }
+    });
+    renderStep();
+    textarea.disabled = true;
+    root.insertBefore(card, field);
+  }
 
   // feedback loop (student mode only, when enabled and not readonly)
   const feedbackHost = h('div.writing-feedback.mt-2');
@@ -220,11 +319,34 @@ export function mount(container, rawCtx) {
     countEl.textContent = t('item.writing.words', { count });
     countEl.classList.toggle('text-danger', maxWords > 0 && count > maxWords);
   }
-  textarea.addEventListener('input', updateCount);
+
+  function updateWordbox() {
+    if (!wordChips.length) return;
+    const { used, missing } = findUsedWords(textarea.value, requiredWords);
+    const usedSet = new Set(used.map((w) => w.toLowerCase()));
+    for (const { word, chip } of wordChips) {
+      chip.classList.toggle('is-used', usedSet.has(word.toLowerCase()));
+    }
+    if (wordUsedEl) wordUsedEl.textContent = t('item.writing.wordbox_used', { used: used.length, total: requiredWords.length });
+    // green highlight of used words in the backdrop behind the textarea
+    backdrop.innerHTML = highlightUsedWords(escapeHtml(textarea.value), used);
+    backdrop.scrollTop = textarea.scrollTop;
+    backdrop.scrollLeft = textarea.scrollLeft;
+    return missing;
+  }
+  textarea.addEventListener('input', () => {
+    updateCount();
+    updateWordbox();
+  });
+  textarea.addEventListener('scroll', () => {
+    backdrop.scrollTop = textarea.scrollTop;
+    backdrop.scrollLeft = textarea.scrollLeft;
+  });
 
   function setResponse(response) {
     textarea.value = response && typeof response.text === 'string' ? response.text : '';
     updateCount();
+    updateWordbox();
   }
   setResponse(ctx.response);
   container.replaceChildren(root);
