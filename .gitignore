@@ -21,3 +21,4 @@ tools/e2e/screenshots/*.png
 *.sqlite-shm
 backups/
 .DS_Store
+MORE1/
