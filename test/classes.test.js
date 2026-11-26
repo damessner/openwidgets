@@ -173,6 +173,43 @@ test('redo: a worse redo does not lower the recorded score', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Bonus items (⭐): never locked, never block the sequence
+// ---------------------------------------------------------------------------
+
+test('bonus items are never locked and never block the next item', () => {
+  const bonusItem = { ...item(2, 'a2'), bonus: 1 };
+  const items = [item(1, 'a1'), bonusItem, item(3, 'a3')];
+  // nothing submitted: a1 open, bonus a2 open (not locked!), a3 locked
+  const states = computeItemStates(classRow(), items, []);
+  assert.deepEqual(states.map((s) => [s.position, s.state, s.bonus]), [
+    [1, 'open', false],
+    [2, 'open', true],
+    [3, 'locked', false],
+  ]);
+
+  // a1 done → a3 opens even though the bonus a2 is still open
+  const after = computeItemStates(classRow(), items, [participantRow('a1')]);
+  assert.equal(after[2].state, 'open', 'bonus item does not block');
+  assert.equal(after[1].state, 'open', 'bonus stays open');
+
+  // bonus submitted → done with bonus flag
+  const done = computeItemStates(classRow(), items, [participantRow('a1'), participantRow('a2')]);
+  assert.equal(done[1].state, 'done');
+  assert.equal(done[1].bonus, true);
+  assert.equal(done[2].state, 'open');
+});
+
+test('bonus flag flows through with unlock threshold', () => {
+  const cls = classRow({ unlock_min_percent: 100 });
+  const bonusItem = { ...item(1, 'a1'), bonus: 1 };
+  const items = [bonusItem, item(2, 'a2')];
+  // bonus not passed (0%) → a2 still opens because bonus never blocks
+  const states = computeItemStates(cls, items, [participantRow('a1', { score: 0, max_score: 4 })]);
+  assert.equal(states[0].passed, false);
+  assert.equal(states[1].state, 'open');
+});
+
+// ---------------------------------------------------------------------------
 // firstBlockingPosition / isAssignmentUnlocked
 // ---------------------------------------------------------------------------
 

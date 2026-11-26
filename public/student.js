@@ -70,6 +70,7 @@ registerMessages({
     'student.class_item_open': 'Öffnen',
     'student.class_item_review': 'Ansehen',
     'student.class_item_redo': 'Erneut versuchen',
+    'student.class_item_bonus': '⭐ Bonus',
     'student.class_item_done': 'Erledigt',
     'student.class_score': '{score} / {maxScore} P.',
     'student.class_back': 'Zur Klasse',
@@ -179,6 +180,7 @@ registerMessages({
     'student.class_item_open': 'Open',
     'student.class_item_review': 'Review',
     'student.class_item_redo': 'Try again',
+    'student.class_item_bonus': '⭐ Bonus',
     'student.class_item_done': 'Done',
     'student.class_score': '{score} / {maxScore} pts',
     'student.class_back': 'Back to class',
@@ -2654,6 +2656,9 @@ function buildClassLobby() {
       main.appendChild(h('div.strong', { text: String(item.title || `#${item.position}`) }));
       const sub = h('div.row.gap-2.small.muted');
       sub.appendChild(h('span.badge', { text: t(item.template === 'quiz' ? 'student.template_quiz' : 'student.template_worksheet') }));
+      if (item.bonus) {
+        sub.appendChild(h('span.badge.badge-warning', { text: t('student.class_item_bonus') }));
+      }
       if (item.state === 'done' && Number(item.maxScore) > 0) {
         sub.appendChild(h('span', { text: t('student.class_score', { score: fmtScore(item.score), maxScore: fmtScore(item.maxScore) }) }));
       }

@@ -143,6 +143,7 @@ CREATE TABLE IF NOT EXISTS class_items (
   class_id TEXT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
   assignment_id TEXT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
   course_id TEXT REFERENCES class_courses(id) ON DELETE SET NULL,
+  bonus INTEGER NOT NULL DEFAULT 0,
   position INTEGER NOT NULL,
   UNIQUE (class_id, assignment_id),
   UNIQUE (class_id, position)
@@ -236,7 +237,7 @@ CREATE INDEX IF NOT EXISTS idx_writing_fb_participant ON writing_feedback(partic
 
 export const db = new DatabaseSync(config.dbPath);
 
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 
 /**
  * Migration ladder. When the schema changes in v0.2+, append
@@ -371,6 +372,16 @@ const MIGRATIONS = [
         db.exec('ALTER TABLE class_items ADD COLUMN course_id TEXT REFERENCES class_courses(id) ON DELETE SET NULL');
       }
       db.exec('CREATE INDEX IF NOT EXISTS idx_class_items_course ON class_items(course_id)');
+    },
+  },
+  {
+    version: 8,
+    up() {
+      // Bonus items (⭐) never block the sequence and are never locked.
+      const cols = db.prepare('PRAGMA table_info(class_items)').all().map((col) => col.name);
+      if (!cols.includes('bonus')) {
+        db.exec('ALTER TABLE class_items ADD COLUMN bonus INTEGER NOT NULL DEFAULT 0');
+      }
     },
   },
 ];

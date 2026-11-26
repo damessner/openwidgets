@@ -525,7 +525,7 @@ test('classes: update fields (name/mode/percent) round-trips', async () => {
   await admin.delete(`/api/classes/${created.class.id}`);
 });
 
-test('classes: courses within a class — CRUD, item assignment, student payload groups by course', async () => {
+test('classes: courses within a class ï¿½ CRUD, item assignment, student payload groups by course', async () => {
   const admin = state.admin;
   const created = expectStatus(
     await admin.post('/api/classes', { name: 'Kurs-Test', orderMode: 'sequence', unlockMinPercent: 0 }),
@@ -535,12 +535,12 @@ test('classes: courses within a class — CRUD, item assignment, student payload g
   const classId = created.class.id;
 
   // create two courses
-  const c1 = expectStatus(await admin.post(`/api/classes/${classId}/courses`, { title: 'Unit 1 — Time for School' }), 201, 'course 1');
-  const c2 = expectStatus(await admin.post(`/api/classes/${classId}/courses`, { title: 'Unit 2 — At the Zoo' }), 201, 'course 2');
+  const c1 = expectStatus(await admin.post(`/api/classes/${classId}/courses`, { title: 'Unit 1 ï¿½ Time for School' }), 201, 'course 1');
+  const c2 = expectStatus(await admin.post(`/api/classes/${classId}/courses`, { title: 'Unit 2 ï¿½ At the Zoo' }), 201, 'course 2');
   const courses = c2.class.courses;
   assert.equal(courses.length, 2);
-  assert.equal(courses[0].title, 'Unit 1 — Time for School');
-  assert.equal(courses[1].title, 'Unit 2 — At the Zoo');
+  assert.equal(courses[0].title, 'Unit 1 ï¿½ Time for School');
+  assert.equal(courses[1].title, 'Unit 2 ï¿½ At the Zoo');
   const course1 = courses[0].id;
   const course2 = courses[1].id;
 
@@ -566,6 +566,22 @@ test('classes: courses within a class — CRUD, item assignment, student payload g
   const bad = await admin.put(`/api/classes/${classId}/items`, { items: [{ assignmentId: state.a.id, courseId: 'nope' }] });
   assert.equal(bad.status, 400);
 
+  // bonus flag round-trips on the class item (â­ never blocks the sequence)
+  const bonusRes = expectStatus(
+    await admin.put(`/api/classes/${classId}/items`, {
+      items: [
+        { assignmentId: state.a.id, courseId: course1, bonus: true },
+        { assignmentId: state.b.id, courseId: course1 },
+        { assignmentId: state.c.id, courseId: course2 },
+      ],
+    }),
+    200,
+    'set items with bonus flag',
+  );
+  const bonusByAssignment = new Map(bonusRes.class.items.map((item) => [item.assignmentId, item.bonus]));
+  assert.equal(bonusByAssignment.get(state.a.id), true);
+  assert.equal(bonusByAssignment.get(state.b.id), false);
+
   // legacy assignmentIds still accepted (courseId null)
   const legacy = expectStatus(
     await admin.put(`/api/classes/${classId}/items`, { assignmentIds: [state.a.id, state.b.id] }),
@@ -573,7 +589,8 @@ test('classes: courses within a class — CRUD, item assignment, student payload g
     'legacy items',
   );
   assert.ok(legacy.class.items.every((item) => item.courseId === null));
-  // restore course assignment
+  assert.ok(legacy.class.items.every((item) => item.bonus === false));
+  // restore course assignment (without bonus, so later sequence-lock assertions hold)
   await admin.put(`/api/classes/${classId}/items`, {
     items: [
       { assignmentId: state.a.id, courseId: course1 },
@@ -584,11 +601,11 @@ test('classes: courses within a class — CRUD, item assignment, student payload g
 
   // rename + reorder course
   const renamed = expectStatus(
-    await admin.put(`/api/classes/${classId}/courses/${course2}`, { title: 'Unit 2 — Zoo', position: 1 }),
+    await admin.put(`/api/classes/${classId}/courses/${course2}`, { title: 'Unit 2 ï¿½ Zoo', position: 1 }),
     200,
     'rename/reorder course',
   );
-  assert.equal(renamed.class.courses[0].title, 'Unit 2 — Zoo');
+  assert.equal(renamed.class.courses[0].title, 'Unit 2 ï¿½ Zoo');
   assert.equal(renamed.class.courses[0].id, course2);
 
   // publish and check the student payload carries courses + courseId
@@ -599,7 +616,7 @@ test('classes: courses within a class — CRUD, item assignment, student payload g
   const anon = new Client(baseUrl);
   const joinInfo = expectStatus(await anon.get(`/api/classes/join/${classCode}`), 200, 'join info');
   assert.ok(joinInfo.class);
-  const joined = expectStatus(await anon.post('/api/classes/join', { code: classCode, name: 'Kurs-Schüler' }), 200, 'class join');
+  const joined = expectStatus(await anon.post('/api/classes/join', { code: classCode, name: 'Kurs-Schï¿½ler' }), 200, 'class join');
   const payload = joined.class;
   assert.equal(payload.courses.length, 2);
   assert.ok(payload.items.every((item) => typeof item.courseId === 'string'));

@@ -45,7 +45,7 @@ export async function mount(root, ctx) {
     cls = classData.class;
     assignments = Array.isArray(assignmentsData.assignments) ? assignmentsData.assignments : [];
     roster = Array.isArray(rosterData.students) ? rosterData.students : [];
-    itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null }));
+    itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null, bonus: !!item.bonus }));
     courses = Array.isArray(cls.courses) ? cls.courses : [];
     statsCache = null; // item list may have changed — refetch stats on next render
     ctx.setTitle(cls.name || t('teacher.edit_class'));
@@ -60,7 +60,7 @@ export async function mount(root, ctx) {
     try {
       const data = await put(`/api/classes/${encodeURIComponent(classId)}`, { name, description, orderMode, unlockMinPercent: percent });
       cls = data.class;
-      itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null }));
+      itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null, bonus: !!item.bonus }));
       courses = Array.isArray(cls.courses) ? cls.courses : [];
       toast(t('teacher.class_saved'), 'success');
       renderAll();
@@ -72,10 +72,10 @@ export async function mount(root, ctx) {
   async function saveItems() {
     try {
       const data = await put(`/api/classes/${encodeURIComponent(classId)}/items`, {
-        items: itemEntries.map((entry) => ({ assignmentId: entry.assignmentId, courseId: entry.courseId })),
+        items: itemEntries.map((entry) => ({ assignmentId: entry.assignmentId, courseId: entry.courseId, bonus: entry.bonus === true })),
       });
       cls = data.class;
-      itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null }));
+      itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null, bonus: !!item.bonus }));
       courses = Array.isArray(cls.courses) ? cls.courses : [];
       statsCache = null; // item list changed — refetch stats on next render
       toast(t('teacher.items_saved'), 'success');
@@ -126,7 +126,7 @@ export async function mount(root, ctx) {
     const data = await get(`/api/classes/${encodeURIComponent(classId)}`, { signal: ctx.signal });
     if (disposed) return;
     cls = data.class;
-    itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null }));
+    itemEntries = (cls.items || []).map((item) => ({ assignmentId: item.assignmentId, courseId: item.courseId || null, bonus: !!item.bonus }));
     courses = Array.isArray(cls.courses) ? cls.courses : [];
     statsCache = null;
   }
@@ -179,6 +179,13 @@ export async function mount(root, ctx) {
   function setItemCourse(assignmentId, courseId) {
     itemEntries = itemEntries.map((entry) =>
       entry.assignmentId === assignmentId ? { ...entry, courseId: courseId || null } : entry,
+    );
+    saveItems();
+  }
+
+  function setItemBonus(assignmentId, bonus) {
+    itemEntries = itemEntries.map((entry) =>
+      entry.assignmentId === assignmentId ? { ...entry, bonus } : entry,
     );
     saveItems();
   }
@@ -258,7 +265,7 @@ export async function mount(root, ctx) {
   }
 
   // --- items card with course sections ---------------------------------------
-  function renderItemRow(assignmentId, index, courseId) {
+  function renderItemRow(assignmentId, index, courseId, bonus) {
     const byId = new Map(assignments.map((a) => [a.id, a]));
     const a = byId.get(assignmentId);
     const courseSelect = h('select.select.select-sm.item-course-select', {
@@ -270,16 +277,26 @@ export async function mount(root, ctx) {
     for (const course of courses) {
       courseSelect.appendChild(h('option', { value: course.id, selected: course.id === courseId }, course.title));
     }
+    const bonusBtn = h('button.btn.btn-icon.btn-sm.item-bonus-toggle', {
+      type: 'button',
+      class: bonus ? 'is-active' : '',
+      title: t('teacher.item_bonus_label'),
+      'aria-label': t('teacher.item_bonus_label'),
+      'aria-pressed': bonus ? 'true' : 'false',
+      on: { click: () => setItemBonus(assignmentId, !bonus) },
+    }, h('span', { html: '⭐' }));
     return h('li.item-order-row.class-item-row',
       h('span.item-order-number', { text: String(index + 1) }),
       h('div.grow.min-w-0',
         h('div.strong.truncate', { text: a ? a.title : assignmentId }),
         h('div.small.muted.row.gap-2',
           a ? h('span.badge', { text: templateLabel(a.template) }) : null,
+          bonus ? h('span.badge.badge-warning', { text: '⭐ ' + t('teacher.item_bonus_label') }) : null,
           a ? statusBadge(a.status, t(a.status === 'open' ? 'teacher.status_open' : 'teacher.status_closed')) : null,
           a ? h('span', { text: t('teacher.class_participants', { n: a.participantCount || 0 }) }) : null,
         ),
       ),
+      bonusBtn,
       courseSelect,
       h('div.item-order-controls',
         h('button.btn.btn-ghost.btn-icon.btn-sm.item-order-btn', { type: 'button', title: t('teacher.move_up'), 'aria-label': t('teacher.move_up'), disabled: index === 0, on: { click: () => move(index, -1) } }, h('span', { html: icon('chevron-up', { size: 16 }) })),
@@ -319,7 +336,7 @@ export async function mount(root, ctx) {
     );
     const list = h('ul.item-order-list.class-item-list');
     itemEntries.forEach((entry, index) => {
-      if (entry.courseId === course.id) list.appendChild(renderItemRow(entry.assignmentId, index, entry.courseId));
+      if (entry.courseId === course.id) list.appendChild(renderItemRow(entry.assignmentId, index, entry.courseId, entry.bonus));
     });
     if (!list.children.length) list.appendChild(h('li.empty-inline.small.muted', { text: t('teacher.course_empty') }));
     section.appendChild(list);
@@ -361,7 +378,7 @@ export async function mount(root, ctx) {
       ));
       const list = h('ul.item-order-list.class-item-list');
       itemEntries.forEach((entry, index) => {
-        if (!entry.courseId) list.appendChild(renderItemRow(entry.assignmentId, index, null));
+        if (!entry.courseId) list.appendChild(renderItemRow(entry.assignmentId, index, null, entry.bonus));
       });
       section.appendChild(list);
       itemsCard.appendChild(section);

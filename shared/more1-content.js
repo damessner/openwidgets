@@ -84,11 +84,13 @@ function textBlock(id, stem, text) {
   return item;
 }
 
-function vocabQuiz(id, entries, direction = 'both', points = 3) {
+function vocabQuiz(id, entries, direction = 'both', points = 3, mode = 'quiz') {
   const item = createItem('vocabulary', { id, points });
-  item.stem = 'Übersetze — ein Wort nach dem anderen (Quiz-Trainer).';
+  item.stem = mode === 'spell'
+    ? 'Rechtschreibung — tippe das englische Wort zur deutschen Bedeutung.'
+    : 'Übersetze — ein Wort nach dem anderen (Quiz-Trainer).';
   item.config = {
-    mode: 'quiz',
+    mode,
     direction,
     shuffle: true,
     caseSensitive: false,
@@ -101,6 +103,63 @@ function vocabQuiz(id, entries, direction = 'both', points = 3) {
       imageAssetId: '',
       audioAssetId: '',
     })),
+  };
+  return item;
+}
+
+// --- bonus builders (fun extra tasks for eager pupils) ----------------------
+
+function hangman(id, word, hint, points = 2) {
+  const item = createItem('hangman', { id, points });
+  item.stem = `Errate das englische Wort: ${hint}`;
+  item.config = { word, alternatives: [], hint, maxAttempts: 8, caseSensitive: false };
+  return item;
+}
+
+function crossword(id, title, words, points = 4) {
+  const item = createItem('crossword', { id, points });
+  item.stem = 'Kreuzworträtsel — löse die englischen Wörter anhand der Hinweise.';
+  item.config = {
+    title,
+    words: words.map((w, index) => ({
+      id: `w${index + 1}`,
+      word: w.word,
+      clue: w.clue,
+      row: w.row,
+      col: w.col,
+      direction: w.direction,
+    })),
+  };
+  return item;
+}
+
+function matchPairs(id, stem, pairs, points = 3) {
+  const item = createItem('match', { id, points });
+  item.stem = stem;
+  item.config = {
+    pairs: pairs.map((pair, index) => ({ id: `p${index + 1}`, left: pair[0], right: pair[1] })),
+    shuffle: true,
+  };
+  return item;
+}
+
+function groups(id, stem, zones, items, points = 3) {
+  const item = createItem('groups', { id, points });
+  item.stem = stem;
+  item.config = {
+    zones: zones.map((label, index) => ({ id: `z${index + 1}`, label })),
+    items: items.map((entry, index) => ({ id: `i${index + 1}`, side: { kind: 'text', text: entry.text }, zoneId: `z${entry.zone}` })),
+    shuffle: true,
+  };
+  return item;
+}
+
+function strike(id, stem, words, points = 2) {
+  const item = createItem('mark_sentence', { id, points });
+  item.stem = stem;
+  item.config = {
+    mode: 'correct',
+    words: words.map((w) => ({ text: w.text, target: w.target || 'none', fix: w.fix || '' })),
   };
   return item;
 }
@@ -130,6 +189,38 @@ function writingTask(id, spec, points = 5) {
 // ---------------------------------------------------------------------------
 // Unit content (from the revision worksheets + book-style texts)
 // ---------------------------------------------------------------------------
+
+// Spelling-trainer word subsets for the ⭐ bonus rounds.
+const SPELL_U1 = [
+  { term: 'pencil case', translation: 'das Federpennal' },
+  { term: 'rubber', translation: 'der Radiergummi' },
+  { term: 'glue stick', translation: 'der Klebestift' },
+  { term: 'exercise book', translation: 'das Schulheft' },
+  { term: 'favourite colour', translation: 'Lieblingsfarbe' },
+  { term: 'Nice to meet you', translation: 'Schön, dich kennenzulernen!' },
+  { term: 'board', translation: 'die Tafel' },
+  { term: 'sunglasses', translation: 'die Sonnenbrille' },
+];
+const SPELL_U2 = [
+  { term: 'monkey', translation: 'der Affe' },
+  { term: 'giraffe', translation: 'die Giraffe' },
+  { term: 'parrot', translation: 'der Papagei' },
+  { term: 'penguin', translation: 'der Pinguin' },
+  { term: 'lion', translation: 'der Löwe' },
+  { term: 'feed', translation: 'füttern' },
+  { term: 'guide', translation: 'der/die Reiseführer/in' },
+  { term: 'What’s up?', translation: 'Was ist los?' },
+];
+const SPELL_U3 = [
+  { term: 'treasure', translation: 'der Schatz' },
+  { term: 'cutlass', translation: 'der Piratensäbel' },
+  { term: 'famous', translation: 'berühmt' },
+  { term: 'captain', translation: 'der Kapitän' },
+  { term: 'hook', translation: 'der Haken' },
+  { term: 'scared of', translation: 'Angst haben vor' },
+  { term: 'wooden leg', translation: 'das Holzbein' },
+  { term: 'Good idea', translation: 'Gute Idee!' },
+];
 
 const UNITS = [
   {
@@ -368,6 +459,38 @@ Miss Green: "Yes, you can. But don't speak during the lesson! Close your books n
       fb(`${p}-x10`, 'Imperativ: „<<1>> your books!“ (open)', { 1: ['Open'] }),
       sa(`${p}-x11`, 'Tafel auf Englisch?', ['board']),
       sa(`${p}-x12`, '„My name is …“ — schreibe einen Satz: „My name is Leo.“', ['My name is Leo']),
+    ],
+    // ⭐ Bonus tasks (never block the sequence)
+    bonus: (courseTitle, p) => [
+      def(`${courseTitle}: ⭐ Bonus 1 — Hangman & Kreuzworträtsel`, 'Spaßige Bonusrunde: Hangman + Kreuzworträtsel mit Unit-Wörtern.', [
+        hangman(`${p}-b1-h1`, 'RULER', 'Schulmaterial: ein Lineal (engl.)'),
+        hangman(`${p}-b1-h2`, 'WINDOW', 'am Klassenzimmer: ein Fenster (engl.)'),
+        hangman(`${p}-b1-h3`, 'SCHOOLBAG', 'die Schultasche (engl.)'),
+        crossword(`${p}-b1-x`, 'Kreuzworträtsel Unit 1', [
+          { word: 'SCHOOL', clue: 'Schule (engl.)', row: 0, col: 0, direction: 'across' },
+          { word: 'CLASS', clue: 'Klasse (engl.)', row: 0, col: 1, direction: 'down' },
+          { word: 'HAT', clue: 'Hut (engl.)', row: 0, col: 2, direction: 'down' },
+          { word: 'ORANGE', clue: 'Farbe Orange (engl.)', row: 0, col: 3, direction: 'down' },
+          { word: 'OPEN', clue: 'Imperativ: „___ your books!“ (engl.)', row: 0, col: 4, direction: 'down' },
+        ]),
+      ]),
+      def(`${courseTitle}: ⭐ Bonus 2 — Zuordnen, Rechtschreibung & Fehler streichen`, 'Ordne zu, tippe die Wörter richtig und streiche die Fehler.', [
+        matchPairs(`${p}-b2-m`, 'Ordne Deutsch ↔ Englisch zu:', [
+          ['das Federpennal', 'pencil case'],
+          ['der Radiergummi', 'rubber'],
+          ['die Tafel', 'board'],
+          ['das Fenster', 'window'],
+          ['der Stuhl', 'chair'],
+          ['die Krawatte', 'tie'],
+        ]),
+        vocabQuiz(`${p}-b2-spell`, SPELL_U1, 'both', 2, 'spell'),
+        strike(`${p}-b2-s1`, 'Streiche das falsche Wort und korrigiere es: „There is five monkeys in the tree.“', [
+          { text: 'There' }, { text: 'is', target: 'wrong', fix: 'are' }, { text: 'five' }, { text: 'monkeys' }, { text: 'in' }, { text: 'the' }, { text: 'tree.' },
+        ]),
+        strike(`${p}-b2-s2`, 'Streiche das falsche Wort und korrigiere es: „My name are Leo.“', [
+          { text: 'My' }, { text: 'name' }, { text: 'are', target: 'wrong', fix: 'is' }, { text: 'Leo.' },
+        ]),
+      ]),
     ],
   },
   {
@@ -610,6 +733,45 @@ Dogs are welcome, but they can't run around near the animals. Bring your camera!
       sa(`${p}-x10`, 'Affe auf Englisch?', ['monkey']),
       fb(`${p}-x11`, '<<1>> you at the zoo today? — Yes, I am.', { 1: ['Are'] }),
       tf(`${p}-x12`, 'There are two lions in Brightside Wildlife Park.', true),
+    ],
+    // ⭐ Bonus tasks (never block the sequence)
+    bonus: (courseTitle, p) => [
+      def(`${courseTitle}: ⭐ Bonus 1 — Hangman & Kreuzworträtsel`, 'Spaßige Bonusrunde: Hangman + Kreuzworträtsel mit Unit-Wörtern.', [
+        hangman(`${p}-b1-h1`, 'MONKEY', 'Tier, das gern in Bäumen klettert (engl.)'),
+        hangman(`${p}-b1-h2`, 'GIRAFFE', 'großes Tier mit langem Hals (engl.)'),
+        hangman(`${p}-b1-h3`, 'PENGUIN', 'schwarz-weißer Vogel, der nicht fliegen kann (engl.)'),
+        hangman(`${p}-b1-h4`, 'PARROT', 'bunter sprechender Vogel (engl.)'),
+        crossword(`${p}-b1-x`, 'Kreuzworträtsel Unit 2', [
+          { word: 'ZOO', clue: 'Zoo (engl.) — Brightside Wildlife ___', row: 0, col: 0, direction: 'across' },
+          { word: 'ZEBRA', clue: 'Tier mit schwarzen Streifen (engl.)', row: 0, col: 0, direction: 'down' },
+          { word: 'OTTER', clue: 'Tier, das gern im Wasser schwimmt (engl.)', row: 0, col: 1, direction: 'down' },
+          { word: 'OWL', clue: 'Eule (engl.)', row: 0, col: 2, direction: 'down' },
+        ]),
+      ]),
+      def(`${courseTitle}: ⭐ Bonus 2 — In Zonen sortieren & Fehler streichen`, 'Ziehe die Tiere in die richtige Zone und streiche die Fehler.', [
+        groups(`${p}-b2-g`, 'Ziehe jedes Tier in die richtige Zone:', ['im Wasser', 'in den Bäumen', 'im Park (auf dem Boden)'], [
+          { text: 'der Pinguin', zone: 1 },
+          { text: 'der Affe', zone: 2 },
+          { text: 'der Papagei', zone: 2 },
+          { text: 'der Löwe', zone: 3 },
+          { text: 'die Giraffe', zone: 3 },
+        ]),
+        matchPairs(`${p}-b2-m`, 'Ordne Deutsch ↔ Englisch zu:', [
+          ['der Affe', 'monkey'],
+          ['die Giraffe', 'giraffe'],
+          ['der Pinguin', 'penguin'],
+          ['füttern', 'feed'],
+          ['der/die Reiseführer/in', 'guide'],
+          ['Was ist los?', 'What’s up?'],
+        ]),
+        vocabQuiz(`${p}-b2-spell`, SPELL_U2, 'both', 2, 'spell'),
+        strike(`${p}-b2-s1`, 'Streiche das falsche Wort und korrigiere es: „There are a giraffe in the zoo.“', [
+          { text: 'There' }, { text: 'are', target: 'wrong', fix: 'is' }, { text: 'a' }, { text: 'giraffe' }, { text: 'in' }, { text: 'the' }, { text: 'zoo.' },
+        ]),
+        strike(`${p}-b2-s2`, 'Streiche das falsche Wort und korrigiere es: „The monkeys is funny.“', [
+          { text: 'The' }, { text: 'monkeys' }, { text: 'is', target: 'wrong', fix: 'are' }, { text: 'funny.' },
+        ]),
+      ]),
     ],
   },
   {
@@ -865,6 +1027,44 @@ Mia: "Great! On Saturday let's go skateboarding in the park! It's my turn!"`,
       sa(`${p}-x11`, '„Gute Idee!“ auf Englisch?', ['Good idea']),
       tf(`${p}-x12`, 'Captain Scarlet is scared of cannonballs.', false),
     ],
+    // ⭐ Bonus tasks (never block the sequence)
+    bonus: (courseTitle, p) => [
+      def(`${courseTitle}: ⭐ Bonus 1 — Hangman & Kreuzworträtsel`, 'Spaßige Bonusrunde: Hangman + Kreuzworträtsel mit Unit-Wörtern.', [
+        hangman(`${p}-b1-h1`, 'TREASURE', 'der Schatz der Piraten (engl.)'),
+        hangman(`${p}-b1-h2`, 'CUTLASS', 'das Piratenschwert (engl.)'),
+        hangman(`${p}-b1-h3`, 'PIRATE', 'der Pirat (engl.)'),
+        hangman(`${p}-b1-h4`, 'BEARD', 'der Bart (engl.)'),
+        crossword(`${p}-b1-x`, 'Kreuzworträtsel Unit 3', [
+          { word: 'SHIP', clue: 'Schiff (engl.)', row: 0, col: 0, direction: 'across' },
+          { word: 'SWORD', clue: 'Schwert (engl.)', row: 0, col: 0, direction: 'down' },
+          { word: 'HOOK', clue: 'Haken (engl.) — Captain Hook has got one', row: 0, col: 1, direction: 'down' },
+          { word: 'PARROT', clue: 'Papagei (engl.) — Kiwi is one', row: 0, col: 3, direction: 'down' },
+        ]),
+      ]),
+      def(`${courseTitle}: ⭐ Bonus 2 — has got / hasn’t got & Fehler streichen`, 'Sortiere in „hat …“ / „hat nicht …“ und streiche die Fehler.', [
+        groups(`${p}-b2-g`, 'Ziehe jede Sache in die richtige Zone:', ['hat er … (has got)', 'hat er nicht … (hasn’t got)'], [
+          { text: 'ein großes Schiff', zone: 1 },
+          { text: 'einen grauen Bart', zone: 1 },
+          { text: 'ein Holzbein', zone: 2 },
+          { text: 'einen Papagei', zone: 2 },
+        ]),
+        matchPairs(`${p}-b2-m`, 'Ordne Deutsch ↔ Englisch zu:', [
+          ['der Schatz', 'treasure'],
+          ['der Haken', 'hook'],
+          ['der Kapitän', 'captain'],
+          ['der Bart', 'beard'],
+          ['das Schiff', 'ship'],
+          ['Angst haben vor', 'scared of'],
+        ]),
+        vocabQuiz(`${p}-b2-spell`, SPELL_U3, 'both', 2, 'spell'),
+        strike(`${p}-b2-s1`, 'Streiche das falsche Wort und korrigiere es: „Greybeard have got a long beard.“', [
+          { text: 'Greybeard' }, { text: 'have', target: 'wrong', fix: 'has' }, { text: 'got' }, { text: 'a' }, { text: 'long' }, { text: 'beard.' },
+        ]),
+        strike(`${p}-b2-s2`, 'Streiche das falsche Wort und korrigiere es: „She have got a silver hook.“', [
+          { text: 'She' }, { text: 'have', target: 'wrong', fix: 'has' }, { text: 'got' }, { text: 'a' }, { text: 'silver' }, { text: 'hook.' },
+        ]),
+      ]),
+    ],
   },
 ];
 
@@ -873,9 +1073,11 @@ Mia: "Great! On Saturday let's go skateboarding in the park! It's my turn!"`,
 // ---------------------------------------------------------------------------
 
 /**
- * Build the ten activities of one MORE1 unit course.
+ * Build the activities of one MORE1 unit course: the ten regular activities
+ * plus the ⭐ bonus activities (returned separately in `bonusTitles` so the
+ * seeder can flag those class items as bonus — they never block the sequence).
  * @param {1|2|3} unitNumber
- * @returns {{courseTitle: string, unit: number, activities: object[]}} validated definitions
+ * @returns {{courseTitle: string, unit: number, activities: object[], bonusTitles: string[]}}
  */
 export function buildUnitCourse(unitNumber) {
   const unit = UNITS.find((entry) => entry.unit === Number(unitNumber));
@@ -927,13 +1129,22 @@ export function buildUnitCourse(unitNumber) {
     def(`${courseTitle}: Exit-Check`, 'Test dich selbst — schaffst du alles richtig?', unit.exit(p), 'quiz'),
   );
 
+  // ⭐ Bonus activities (flagged as bonus on the class item — no blocking).
+  const bonusTitles = [];
+  if (typeof unit.bonus === 'function') {
+    for (const bonusActivity of unit.bonus(courseTitle, p)) {
+      activities.push(bonusActivity);
+      bonusTitles.push(bonusActivity.title);
+    }
+  }
+
   for (const activity of activities) {
     const check = validateActivity(activity);
     if (!check.ok) {
       throw new Error(`MORE1 unit ${unit.unit} activity "${activity.title}" is invalid: ${check.errors.map((e) => `${e.path}: ${e.message}`).join('; ')}`);
     }
   }
-  return { courseTitle, unit: unit.unit, activities };
+  return { courseTitle, unit: unit.unit, activities, bonusTitles };
 }
 
 /** All three unit courses (Unit 1–3). */

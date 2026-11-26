@@ -19,14 +19,17 @@ test('more1: three unit courses with book titles', () => {
 
 test('more1: every activity of every unit validates and has the expected structure', () => {
   for (const course of buildMore1Courses()) {
-    assert.equal(course.activities.length, 10, `${course.courseTitle}: 10 activities`);
+    assert.equal(course.activities.length, 12, `${course.courseTitle}: 12 activities (10 + 2 ⭐ bonus)`);
     const kinds = course.activities.map((a) => a.title.split(': ')[1]);
-    assert.deepEqual(kinds, [
+    assert.deepEqual(kinds.slice(0, 10), [
       'Vokabeln', 'Grammatik',
       'Lesen 1', 'Lesen 2', 'Lesen 3',
       'Hören 1', 'Hören 2', 'Hören 3',
       'Schreiben', 'Exit-Check',
     ]);
+    assert.ok(kinds[10].startsWith('⭐ Bonus') && kinds[11].startsWith('⭐ Bonus'), 'two bonus activities per unit');
+    assert.equal(course.bonusTitles.length, 2);
+    assert.ok(course.bonusTitles.every((title) => course.activities.some((a) => a.title === title)), 'bonusTitles match activity titles');
     for (const activity of course.activities) {
       const check = validateActivity(activity);
       assert.ok(check.ok, `${activity.title}: ${JSON.stringify(check.errors)}`);
@@ -35,6 +38,15 @@ test('more1: every activity of every unit validates and has the expected structu
     // sized for ~15–20 minutes per unit course: plenty of items everywhere
     const totalItems = course.activities.reduce((sum, a) => sum + a.items.length, 0);
     assert.ok(totalItems >= 60, `${course.courseTitle} has ${totalItems} items (>= 60)`);
+    // bonus rounds use the fun types
+    const bonusDump = JSON.stringify(course.activities.slice(10).map((a) => a.items));
+    assert.ok(bonusDump.includes('"hangman"') && bonusDump.includes('"crossword"'), `${course.courseTitle} bonus has hangman + crossword`);
+    assert.ok(bonusDump.includes('"spell"'), `${course.courseTitle} bonus includes a spelling trainer`);
+  }
+  // across all units the bonus rounds cover all fun types
+  const allBonus = JSON.stringify(buildMore1Courses().flatMap((c) => c.activities.slice(10).flatMap((a) => a.items)));
+  for (const type of ['hangman', 'crossword', 'match', 'groups', 'mark_sentence']) {
+    assert.ok(allBonus.includes(`"${type}"`), `bonus rounds use ${type}`);
   }
 });
 

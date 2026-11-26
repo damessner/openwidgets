@@ -1087,3 +1087,5 @@
 .course-header { margin-bottom: 0.35rem; }
 .course-title-input { max-width: 420px; font-weight: 600; }
 .class-item-row .item-course-select { max-width: 200px; }
+.class-item-row .item-bonus-toggle { opacity: 0.45; }
+.class-item-row .item-bonus-toggle.is-active { opacity: 1; background: var(--warning-bg, #fff4d6); border-radius: 6px; }

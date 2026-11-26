@@ -89,13 +89,14 @@ export function computeItemStates(classRow, items, participantRows) {
 
     let state;
     if (submitted) state = 'done';
-    else if (sequence && !previousPassed) state = 'locked';
+    else if (sequence && !previousPassed && !item.bonus) state = 'locked';
     else state = 'open';
 
     const result = {
       itemId: item.id,
       assignmentId: item.assignment_id,
       position: Number(item.position),
+      bonus: !!item.bonus,
       state,
       status: row ? row.status : 'not_started',
       score,
@@ -103,7 +104,8 @@ export function computeItemStates(classRow, items, participantRows) {
       passed,
       unlocked: state !== 'locked',
     };
-    if (!passed) previousPassed = false;
+    // Bonus items (⭐) never block the chain — extra tasks for the eager.
+    if (!passed && !item.bonus) previousPassed = false;
     return result;
   });
 }

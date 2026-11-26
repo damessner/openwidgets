@@ -104,7 +104,7 @@ function classListItem(row) {
 
 function itemRowsFor(classId) {
   return all(
-    `SELECT ci.id AS item_id, ci.position, ci.course_id AS course_id, s.id AS assignment_id, s.code AS assignment_code, s.title AS assignment_title,
+    `SELECT ci.id AS item_id, ci.position, ci.course_id AS course_id, ci.bonus AS bonus, s.id AS assignment_id, s.code AS assignment_code, s.title AS assignment_title,
             s.status AS assignment_status, a.title AS activity_title, a.template AS template, a.locale AS locale,
             (SELECT COUNT(*) FROM participants p WHERE p.assignment_id = s.id) AS participant_count
      FROM class_items ci JOIN assignments s ON s.id = ci.assignment_id LEFT JOIN activities a ON a.id = s.activity_id
@@ -138,6 +138,7 @@ function classDetail(row) {
       id: item.item_id,
       position: item.position,
       courseId: item.course_id || null,
+      bonus: !!item.bonus,
       assignmentId: item.assignment_id,
       code: item.assignment_code,
       title: item.assignment_title,
@@ -179,6 +180,7 @@ function classStudentPayload(classRow, participantRows) {
         position: state.position,
         assignmentId: state.assignmentId,
         courseId: m.course_id || null,
+        bonus: state.bonus || !!m.bonus,
         title: m.assignment_title || m.activity_title || '',
         template: m.template || 'worksheet',
         state: state.state,
@@ -390,9 +392,10 @@ export function register(router) {
       entries = body.items.map((entry) => ({
         assignmentId: String(entry && entry.assignmentId),
         courseId: entry && entry.courseId ? String(entry.courseId) : null,
+        bonus: entry && entry.bonus === true,
       }));
     } else if (Array.isArray(body.assignmentIds)) {
-      entries = body.assignmentIds.map((value) => ({ assignmentId: String(value), courseId: null }));
+      entries = body.assignmentIds.map((value) => ({ assignmentId: String(value), courseId: null, bonus: false }));
     } else {
       throw badRequest('invalid_items', 'items or assignmentIds must be an array');
     }
@@ -412,11 +415,12 @@ export function register(router) {
       run('DELETE FROM class_items WHERE class_id = ?', row.id);
       entries.forEach((entry, index) => {
         run(
-          'INSERT INTO class_items (id, class_id, assignment_id, course_id, position) VALUES (?,?,?,?,?)',
+          'INSERT INTO class_items (id, class_id, assignment_id, course_id, bonus, position) VALUES (?,?,?,?,?,?)',
           uid(),
           row.id,
           entry.assignmentId,
           entry.courseId,
+          entry.bonus ? 1 : 0,
           index + 1,
         );
       });

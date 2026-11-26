@@ -116,8 +116,8 @@ async function main() {
       });
       const pub = await api('POST', `/api/activities/${activity.id}/publish`, { title: definition.title });
       const assignmentId = pub.assignment.id;
-      itemEntries.push({ assignmentId, courseId });
-      console.log(`  + ${definition.title} (assignment ${pub.assignment.code})`);
+      itemEntries.push({ assignmentId, courseId, bonus: (course.bonusTitles || []).includes(definition.title) });
+      console.log(`  + ${definition.title} (assignment ${pub.assignment.code})${(course.bonusTitles || []).includes(definition.title) ? ' ⭐ bonus' : ''}`);
     }
   }
 
