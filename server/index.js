@@ -18,7 +18,7 @@ import { register as registerAssets } from './api/assets.js';
 import { register as registerVocab } from './api/vocab.js';
 import { register as registerLlm } from './api/llm.js';
 import { register as registerWriting } from './api/writing.js';
-import { isLlmEnabled } from './llm/core.js';
+import { isLlmEnabled, isTtsAvailable } from './llm/core.js';
 import { register as registerAssignments } from './api/assignments.js';
 import { register as registerClasses } from './api/classes.js';
 import { register as registerGrading } from './api/grading.js';
@@ -96,6 +96,7 @@ router.get('/api/capabilities', async (req, res) => {
       classes: true,
       studentAccounts: true,
       llm: isLlmEnabled(),
+      tts: isTtsAvailable(),
     },
   };
   if (!user) {

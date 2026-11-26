@@ -1007,3 +1007,11 @@ body.student-page {
 .student-class-course-head { padding: 0.4rem 0.6rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .student-class-course-title { margin: 0; font-size: 1.02rem; }
 .student-class-course-desc { margin: 0.35rem 0 0; }
+
+/* compact worksheet list: many items, tight spacing (v1.3.2) */
+.student-items.compact { gap: var(--space-2); }
+.student-items.compact > li > .student-item { padding: 0.55rem 0.8rem; }
+.student-items.compact .ow-item { gap: var(--space-2); font-size: 0.95rem; line-height: 1.45; }
+.student-items.compact .item-stem { font-size: 1em; }
+.student-items.compact .item-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.35rem; }
+.student-items.compact .item-help, .student-items.compact .item-hint { font-size: 0.85rem; }

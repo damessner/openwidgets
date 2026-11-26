@@ -259,6 +259,8 @@ const UNITS = [
       { term: 'der Stundenplan', translation: 'timetable' },
       { term: 'Englisch', translation: 'English' },
       { term: 'Mathe', translation: 'maths', alternatives: ['math'] },
+      { term: 'der Kalender', translation: 'calendar' },
+      { term: 'der Globus', translation: 'globe' },
     ],
     grammar: (p) => [
       fb(`${p}-g1`, 'Schreibe die Mehrzahl (Plural):', '1 dog → 4 <<1>>  ·  1 desk → 8 <<2>>  ·  1 apple → 3 <<3>>  ·  1 ball → 10 <<4>>', {
@@ -293,6 +295,15 @@ const UNITS = [
       fb(`${p}-g14`, 'Schreibe die E-Mail-Adresse aus: mia point green at telfs dot at → mia<<1>>green<<2>>telfs<<3>>at', {
         1: ['.'], 2: ['@'], 3: ['.'],
       }),
+      fb(`${p}-g15`, 'Weitere Pluralformen (y → ies, unregelmäßig):', '1 knife → 3 <<1>>  ·  1 wolf → 2 <<2>>  ·  1 shelf → 4 <<3>>  ·  1 leaf → 2 <<4>>', {
+        1: ['knives'], 2: ['wolves'], 3: ['shelves'], 4: ['leaves'],
+      }),
+      fb(`${p}-g16`, 'Weitere Imperative:', '„Komm her!“ → „<<1>> here!“  ·  „Mach die Tür auf!“ → „<<2>> the door!“  ·  „Sei leise!“ → „<<3>> quiet!“', {
+        1: ['Come'], 2: ['Open'], 3: ['Be'],
+      }),
+      sa(`${p}-g17`, 'Zahl in Englisch: 17 = ?', ['seventeen']),
+      sa(`${p}-g18`, 'Zahl in Englisch: 21 = ?', ['twenty-one']),
+      fb(`${p}-g19`, 'Frage bilden: „<<1>> your favourite colour?“ — „It’s light blue.“', { 1: ["What's", 'What is'] }),
     ],
     readings: [
       {
@@ -459,6 +470,9 @@ Miss Green: "Yes, you can. But don't speak during the lesson! Close your books n
       fb(`${p}-x10`, 'Imperativ: „<<1>> your books!“ (open)', { 1: ['Open'] }),
       sa(`${p}-x11`, 'Tafel auf Englisch?', ['board']),
       sa(`${p}-x12`, '„My name is …“ — schreibe einen Satz: „My name is Leo.“', ['My name is Leo']),
+      fb(`${p}-x13`, 'Plural: 1 knife → 2 <<1>>  ·  1 leaf → 3 <<2>>', { 1: ['knives'], 2: ['leaves'] }),
+      sa(`${p}-x14`, 'Zahl in Englisch: 18 = ?', ['eighteen']),
+      fb(`${p}-x15`, 'Imperativ: „<<1>> quiet, please!“ (sei)', { 1: ['Be'] }),
     ],
     // ⭐ Bonus tasks (never block the sequence)
     bonus: (courseTitle, p) => [
@@ -526,6 +540,8 @@ Miss Green: "Yes, you can. But don't speak during the lesson! Close your books n
       { term: 'das Café', translation: 'café' },
       { term: 'klug', translation: 'clever' },
       { term: 'laut', translation: 'loud' },
+      { term: 'der Pfad', translation: 'path' },
+      { term: 'das Gehege', translation: 'enclosure' },
     ],
     grammar: (p) => [
       fb(`${p}-g1`, 'there is (1) oder there are (2+):', '<<1>> a big lion in the park.  ·  <<2>> five monkeys in the tree.  ·  <<3>> two penguins in the water.  ·  <<4>> three children on the train.', {
@@ -564,6 +580,19 @@ Miss Green: "Yes, you can. But don't speak during the lesson! Close your books n
       ord(`${p}-g12`, 'Unscramble:', ['I', 'am', 'at', 'the', 'zoo', 'today.']),
       tf(`${p}-g13`, '„There are a parrot on the tree.“ — this sentence is correct.', false),
       sa(`${p}-g14`, '„Can I sit here?“ — „Yes, you <<1>>.“ Ergänze:', ['can']),
+      fb(`${p}-g15`, 'there is / there are — mehr: <<1>> a café in the park.  ·  <<2>> two lions in the zoo.  ·  <<3>> my dog Buddy with us.', {
+        1: ['There is', "There's"], 2: ['There are', "There're"], 3: ['There is', "There's"],
+      }),
+      fb(`${p}-g16`, 'Präpositionen — mehr: The ball is <<1>> the chair (unter).  ·  The picture is <<2>> the wall (an).  ·  The cat is <<3>> the table (neben).', {
+        1: ['under'], 2: ['on'], 3: ['next to'],
+      }),
+      fb(`${p}-g17`, 'can / can’t: Dogs <<1>> run around near the animals. (nicht dürfen/können)', { 1: ["can't", 'cannot', 'can not'] }),
+      sa(`${p}-g18`, 'Gegenteil von „happy“?', ['sad']),
+      mc(`${p}-g19`, 'Spot the mistake: „I are at the zoo today.“ — correct?', [
+        { text: 'I are at the zoo today.' },
+        { text: 'I am at the zoo today.', correct: true },
+        { text: 'I is at the zoo today.' },
+      ]),
     ],
     readings: [
       {
@@ -733,6 +762,9 @@ Dogs are welcome, but they can't run around near the animals. Bring your camera!
       sa(`${p}-x10`, 'Affe auf Englisch?', ['monkey']),
       fb(`${p}-x11`, '<<1>> you at the zoo today? — Yes, I am.', { 1: ['Are'] }),
       tf(`${p}-x12`, 'There are two lions in Brightside Wildlife Park.', true),
+      fb(`${p}-x13`, 'Frage bilden: „<<1>> a parrot on the tree?“ — „Yes, <<2>> is.“', { 1: ['Is there', 'Is there'], 2: ['there'] }),
+      sa(`${p}-x14`, 'glücklich auf Englisch?', ['happy']),
+      sa(`${p}-x15`, 'klein auf Englisch?', ['small']),
     ],
     // ⭐ Bonus tasks (never block the sequence)
     bonus: (courseTitle, p) => [
@@ -813,6 +845,8 @@ Dogs are welcome, but they can't run around near the animals. Bring your camera!
       { term: 'der Arm', translation: 'arm' },
       { term: 'scharf', translation: 'sharp' },
       { term: 'der Hafen', translation: 'harbour', alternatives: ['port'] },
+      { term: 'die Kanone', translation: 'cannon' },
+      { term: 'die Flagge', translation: 'flag' },
     ],
     grammar: (p) => [
       fb(`${p}-g1`, 'have got / has got (positiv) oder haven’t / hasn’t (negativ):', 'Captain Hook <<1>> a big ship. (+)  ·  I <<2>> a real pirate parrot. (–)  ·  Greybeard <<3>> a strong leg. (–)  ·  Tamara <<4>> blue eyes. (+)', {
@@ -845,6 +879,19 @@ Dogs are welcome, but they can't run around near the animals. Bring your camera!
       sa(`${p}-g12`, '„Mir ist langweilig.“ auf Englisch?', ["I'm bored", 'I am bored']),
       ord(`${p}-g13`, 'Unscramble:', ['He', 'has', 'got', 'a', 'grey', 'beard.']),
       tf(`${p}-g14`, '„Captain Hook has got a wooden leg.“ — this sentence is true.', false),
+      fb(`${p}-g15`, 'Unregelmäßige Plural — mehr: 1 man → 2 <<1>>  ·  1 woman → 3 <<2>>  ·  1 person → 4 <<3>>  ·  1 mouse → 5 <<4>>', {
+        1: ['men'], 2: ['women'], 3: ['people'], 4: ['mice'],
+      }),
+      fb(`${p}-g16`, 'have got / haven’t got — mehr: The pirates <<1>> a lot of gold. (+)  ·  I <<2>> a treasure map. (–)', {
+        1: ['have got', "'ve got", 'have'], 2: ["haven't got", "haven't", 'have not got'],
+      }),
+      fb(`${p}-g17`, 'Fragen bilden (have/has got): <<1>> the captain got a grey beard? — Yes, he <<2>>.', { 1: ['Has'], 2: ['has'] }),
+      sa(`${p}-g18`, '„langweilig“ auf Englisch (kurz)?', ['bored']),
+      mc(`${p}-g19`, 'Spot the mistake: „They has got a big ship.“ — correct?', [
+        { text: 'They has got a big ship.' },
+        { text: 'They have got a big ship.', correct: true },
+        { text: 'They have got a big ships.' },
+      ]),
     ],
     readings: [
       {
@@ -1026,6 +1073,9 @@ Mia: "Great! On Saturday let's go skateboarding in the park! It's my turn!"`,
       sa(`${p}-x10`, 'Schatz auf Englisch?', ['treasure']),
       sa(`${p}-x11`, '„Gute Idee!“ auf Englisch?', ['Good idea']),
       tf(`${p}-x12`, 'Captain Scarlet is scared of cannonballs.', false),
+      sa(`${p}-x13`, 'Plural: 1 man → 2 ?  ·  1 mouse → 3 ?', ['men', 'mice']),
+      fb(`${p}-x14`, 'Frage: „<<1>> she got a silver hook?“ — „No, she <<2>>.“', { 1: ['Has'], 2: ["hasn't", 'has not'] }),
+      sa(`${p}-x15`, 'Pirat auf Englisch?', ['pirate']),
     ],
     // ⭐ Bonus tasks (never block the sequence)
     bonus: (courseTitle, p) => [

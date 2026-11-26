@@ -154,7 +154,7 @@ test('config: env overrides db, key is masked in public config', () => {
   const pub = publicLlmConfig();
   assert.equal(pub.apiKeyMasked, 'db-s\u2022\u2022\u2022\u2022y-99');
   assert.ok(!JSON.stringify(pub).includes('db-secret-key-99'), 'public config must not leak the raw key');
-  assert.deepEqual(Object.keys(pub.providers), ['gemini', 'openrouter']);
+  assert.deepEqual(Object.keys(pub.providers), ['gemini', 'openrouter', 'mistral']);
   // env wins
   process.env.OW_LLM_API_KEY = 'env-key-12345678';
   process.env.OW_LLM_PROVIDER = 'openrouter';

@@ -27,6 +27,15 @@ export const PROVIDERS = {
       'deepseek/deepseek-chat-v3-0324:free',
     ],
   },
+  mistral: {
+    label: 'Mistral AI',
+    defaultBaseUrl: 'https://api.mistral.ai',
+    defaultModel: 'mistral-small-latest',
+    models: ['mistral-small-latest', 'mistral-medium-latest', 'mistral-large-latest', 'ministral-8b-latest', 'open-mistral-nemo'],
+    // Voxtral TTS (POST /v1/audio/speech) — used to generate listening audios.
+    ttsDefaultModel: 'voxtral-mini-tts-3-0',
+    ttsModels: ['voxtral-mini-tts-3-0', 'voxtral-mini-tts-latest'],
+  },
 };
 
 const DEFAULTS = { provider: 'gemini', enabled: true };
@@ -53,6 +62,8 @@ export function resolveLlmConfig() {
     model: (process.env.OW_LLM_MODEL || '').trim(),
     baseUrl: (process.env.OW_LLM_BASE_URL || '').trim(),
     enabled: (process.env.OW_LLM_ENABLED || '').trim(),
+    ttsModel: (process.env.OW_LLM_TTS_MODEL || '').trim(),
+    voice: (process.env.OW_LLM_VOICE || '').trim(),
   };
   const provider = env.provider || stored.provider || DEFAULTS.provider;
   const prov = PROVIDERS[provider] || null;
@@ -67,7 +78,9 @@ export function resolveLlmConfig() {
     model: env.model || (typeof stored.model === 'string' && stored.model ? stored.model : '') || (prov ? prov.defaultModel : ''),
     baseUrl: env.baseUrl || (typeof stored.baseUrl === 'string' && stored.baseUrl ? stored.baseUrl : '') || (prov ? prov.defaultBaseUrl : ''),
     enabled,
-    source: env.apiKey || env.provider || env.model || env.baseUrl || env.enabled ? 'env' : 'db',
+    ttsModel: env.ttsModel || (typeof stored.ttsModel === 'string' && stored.ttsModel ? stored.ttsModel : '') || (prov && prov.ttsDefaultModel ? prov.ttsDefaultModel : ''),
+    voice: env.voice || (typeof stored.voice === 'string' ? stored.voice : ''),
+    source: env.apiKey || env.provider || env.model || env.baseUrl || env.enabled || env.ttsModel || env.voice ? 'env' : 'db',
   };
 }
 
@@ -96,8 +109,12 @@ export function publicLlmConfig() {
     apiKeyMasked: maskKey(cfg.apiKey),
     hasApiKey: !!cfg.apiKey,
     keySource: cfg.source,
+    ttsModel: cfg.ttsModel,
+    ttsModels: prov.ttsModels || [],
+    voice: cfg.voice,
+    ttsAvailable: isTtsAvailable(),
     providers: Object.fromEntries(
-      Object.entries(PROVIDERS).map(([id, p]) => [id, { label: p.label, models: p.models, defaultModel: p.defaultModel }]),
+      Object.entries(PROVIDERS).map(([id, p]) => [id, { label: p.label, models: p.models, defaultModel: p.defaultModel, ttsModels: p.ttsModels || [] }]),
     ),
   };
 }
@@ -117,9 +134,18 @@ export function saveLlmConfig(input) {
     model: typeof input.model === 'string' ? input.model.trim() : stored.model || '',
     baseUrl: typeof input.baseUrl === 'string' ? input.baseUrl.trim() : stored.baseUrl || '',
     enabled: typeof input.enabled === 'boolean' ? input.enabled : stored.enabled !== false,
+    ttsModel: typeof input.ttsModel === 'string' ? input.ttsModel.trim() : stored.ttsModel || '',
+    voice: typeof input.voice === 'string' ? input.voice.trim() : stored.voice || '',
   };
   run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', LLM_SETTINGS_KEY, JSON.stringify(next));
   return publicLlmConfig();
+}
+
+/** TTS (Voxtral speech generation) is available with the Mistral provider. */
+export function isTtsAvailable() {
+  const cfg = resolveLlmConfig();
+  if (!cfg.enabled || !cfg.apiKey) return false;
+  return cfg.provider === 'mistral' || /api\.mistral\.ai/i.test(cfg.baseUrl || '');
 }
 
 // ---------------------------------------------------------------------------
@@ -157,6 +183,30 @@ function openRouterRequest(cfg, { system, user, temperature }) {
         Authorization: `Bearer ${cfg.apiKey}`,
         'HTTP-Referer': 'https://openwidgets.local',
         'X-Title': 'OpenWidgets',
+      },
+      body: JSON.stringify({
+        model: cfg.model,
+        temperature,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+      }),
+    },
+  };
+}
+
+function mistralRequest(cfg, { system, user, temperature }) {
+  // Mistral's /v1/chat/completions is OpenAI-compatible.
+  const base = cfg.baseUrl.replace(/\/+$/, '');
+  return {
+    url: `${base}/v1/chat/completions`,
+    init: {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${cfg.apiKey}`,
       },
       body: JSON.stringify({
         model: cfg.model,
@@ -233,8 +283,8 @@ export async function chatJson({ system, user, temperature = 0.4, fetchImpl = gl
     cache.delete(oldest);
   }
 
-  const build = cfg.provider === 'openrouter' ? openRouterRequest : geminiRequest;
-  const parse = cfg.provider === 'openrouter' ? parseOpenRouterResponse : parseGeminiResponse;
+  const build = cfg.provider === 'gemini' ? geminiRequest : cfg.provider === 'mistral' ? mistralRequest : openRouterRequest;
+  const parse = cfg.provider === 'gemini' ? parseGeminiResponse : parseOpenRouterResponse;
   const { url, init } = build(cfg, { system, user, temperature });
   init.signal = AbortSignal.timeout(60_000);
 

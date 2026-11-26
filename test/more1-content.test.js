@@ -88,9 +88,9 @@ test('more1: per-unit item types — vocab quiz, 3 readings, 3 listenings, writi
     assert.ok((writing.items[0].config.requiredWords || []).length >= 5, 'writing has a required word box');
     assert.equal((writing.items[0].config.hints || []).length, 3, 'writing has 3 step hints');
 
-    // Exit-Check: quiz template, 12 typed items
+    // Exit-Check: quiz template, 15 typed items
     assert.equal(exit.template, 'quiz');
-    assert.equal(exit.items.length, 12, 'exit check has 12 items');
+    assert.equal(exit.items.length, 15, 'exit check has 15 items');
     assert.ok(exit.items.every((i) => i.type === 'short_answer' || i.type === 'fill_blanks' || i.type === 'multiple_choice'), 'exit check is typed answers');
   }
 });

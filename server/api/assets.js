@@ -89,6 +89,29 @@ function assetFile(id) {
   return safeJoin(config.assetsDir, `/${id}`);
 }
 
+/**
+ * Store raw bytes as an asset (used by uploads and by TTS generation).
+ * Returns the inserted assets row.
+ */
+export async function storeAssetBytes({ ownerId, bytes, mime, filename }) {
+  const id = uid();
+  const target = assetFile(id);
+  if (!target) throw badRequest('invalid_asset', 'Could not store the asset');
+  await fs.promises.writeFile(target, bytes);
+  const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
+  run(
+    'INSERT INTO assets (id, owner_id, filename, mime, size, sha256, created_at) VALUES (?,?,?,?,?,?,?)',
+    id,
+    ownerId,
+    sanitizeFilename(filename),
+    mime,
+    bytes.length,
+    sha256,
+    now(),
+  );
+  return one('SELECT * FROM assets WHERE id = ?', id);
+}
+
 export function assetJson(row, extra) {
   return {
     id: row.id,

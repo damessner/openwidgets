@@ -399,6 +399,13 @@ export async function mount(root, ctx) {
       ((providers[llm.provider || 'gemini'] || {}).models || []).map((m) => h('option', { value: m })),
     );
     const baseUrlInput = h('input.input', { type: 'text', value: llm.baseUrl || '', placeholder: 'https://…' });
+    const ttsModelInput = h('input.input', { type: 'text', list: 'admin-llm-tts-models', value: llm.ttsModel || '', placeholder: (providers[llm.provider || 'gemini'] || {}).ttsModels?.[0] || 'voxtral-mini-tts-3-0' });
+    const ttsModelList = h(
+      'datalist',
+      { id: 'admin-llm-tts-models' },
+      ((providers[llm.provider || 'gemini'] || {}).ttsModels || ['voxtral-mini-tts-3-0']).map((m) => h('option', { value: m })),
+    );
+    const voiceInput = h('input.input', { type: 'text', value: llm.voice || '', placeholder: 'voice_592 (optional — erste englische Stimme sonst)' });
     const enabledInput = h('input', { type: 'checkbox' });
     if (llm.active !== false) enabledInput.checked = true;
 
@@ -421,6 +428,8 @@ export async function mount(root, ctx) {
           model: modelInput.value.trim(),
           baseUrl: baseUrlInput.value.trim(),
           enabled: enabledInput.checked,
+          ttsModel: ttsModelInput.value.trim(),
+          voice: voiceInput.value.trim(),
         });
         state.llm = saved;
         keyInput.value = '';
@@ -445,6 +454,8 @@ export async function mount(root, ctx) {
           model: modelInput.value.trim(),
           baseUrl: baseUrlInput.value.trim(),
           enabled: enabledInput.checked,
+          ttsModel: ttsModelInput.value.trim(),
+          voice: voiceInput.value.trim(),
         });
         state.llm = saved;
         keyInput.value = '';
@@ -462,6 +473,9 @@ export async function mount(root, ctx) {
       const models = (providers[providerSelect.value] || {}).models || [];
       modelList.replaceChildren(...models.map((m) => h('option', { value: m })));
       modelInput.placeholder = (providers[providerSelect.value] || {}).defaultModel || '';
+      const ttsModels = (providers[providerSelect.value] || {}).ttsModels || [];
+      ttsModelList.replaceChildren(...ttsModels.map((m) => h('option', { value: m })));
+      ttsModelInput.placeholder = ttsModels[0] || 'voxtral-mini-tts-3-0';
     });
 
     return h(
@@ -480,6 +494,10 @@ export async function mount(root, ctx) {
         h('div.field', h('label.label', t('teacher.llm_model')), modelInput, modelList),
       ),
       h('div.field', h('label.label', t('teacher.llm_base_url')), baseUrlInput, h('p.help', t('teacher.llm_base_url_help'))),
+      h('div.row.gap-2.wrap',
+        h('div.field', h('label.label', t('teacher.llm_tts_model')), ttsModelInput, ttsModelList, h('p.help', t('teacher.llm_tts_model_help'))),
+        h('div.field', h('label.label', t('teacher.llm_voice')), voiceInput, h('p.help', t('teacher.llm_voice_help'))),
+      ),
       h('div.row.gap-2', saveButton, testButton),
       resultBox,
       note,

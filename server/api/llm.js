@@ -4,7 +4,9 @@ import { all, now, one, run, uid } from '../db.js';
 import { assertSameOrigin, badRequest, HttpError, json, readJson } from '../lib/http.js';
 import { requireAdmin, requireUser } from '../lib/auth.js';
 import { activityJson, definitionFromRow, requireParticipantAuth } from './_helpers.js';
-import { chatJson, isLlmEnabled, llmRateLimit, PROVIDERS, publicLlmConfig, resolveLlmConfig, saveLlmConfig } from '../llm/core.js';
+import { chatJson, isLlmEnabled, isTtsAvailable, llmRateLimit, PROVIDERS, publicLlmConfig, resolveLlmConfig, saveLlmConfig } from '../llm/core.js';
+import { listVoices, MAX_TTS_CHARS, synthesizeSpeech } from '../llm/tts.js';
+import { assetJson, storeAssetBytes } from './assets.js';
 import { buildFeedbackPrompt, buildWorksheetPrompt, LENGTH_PRESETS, MIX_PRESETS, sanitizeFeedback, sanitizeGeneratedDefinition } from '../llm/prompts.js';
 import { getType } from '../../shared/items/index.js';
 import { itemIsScoreable } from '../../shared/activity.js';
@@ -79,6 +81,40 @@ export function register(router) {
       }
       throw error;
     }
+  });
+
+  // -------------------------------------------------------------------------
+  // Teacher: text-to-speech (Mistral Voxtral) — generate a listening audio
+  // from a text and store it as an asset (mp3) the teacher can attach.
+  // -------------------------------------------------------------------------
+  router.get('/api/llm/tts/voices', async (req, res) => {
+    requireUser(req);
+    if (!isTtsAvailable()) throw new HttpError(409, 'tts_unavailable', 'TTS needs the Mistral provider with an API key');
+    const voices = await listVoices();
+    json(res, 200, { voices });
+  });
+
+  router.post('/api/llm/tts', async (req, res) => {
+    assertSameOrigin(req);
+    const user = requireUser(req);
+    if (!isTtsAvailable()) throw new HttpError(409, 'tts_unavailable', 'TTS needs the Mistral provider with an API key (admin → LLM settings)');
+    llmRateLimit(`tts:${user.id}`, 30);
+    const body = await readJson(req, 256 * 1024);
+    const text = String(body.text || '');
+    if (!text.trim()) throw badRequest('tts_empty', 'text is required');
+    if (text.length > MAX_TTS_CHARS) throw badRequest('tts_too_long', `text must be at most ${MAX_TTS_CHARS} characters`);
+    const voice = typeof body.voice === 'string' ? body.voice.trim().slice(0, 100) : '';
+
+    const result = await synthesizeSpeech({ text, voice });
+    const slug = text.trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 60).toLowerCase() || 'tts';
+    const row = await storeAssetBytes({
+      ownerId: user.id,
+      bytes: result.bytes,
+      mime: result.mime,
+      filename: `${slug}.mp3`,
+    });
+    log(`LLM: TTS for user ${user.id} (${result.model}, voice ${result.voice || 'default'}, ${result.bytes.length} bytes)`);
+    json(res, 201, { asset: assetJson(row), voice: result.voice, model: result.model, characters: text.length });
   });
 
   // -------------------------------------------------------------------------

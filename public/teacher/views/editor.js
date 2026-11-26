@@ -1,6 +1,6 @@
 // #/edit?id= — activity authoring: item list, generated config forms, live
 // preview, settings and debounced autosave with revision-conflict handling.
-import { get, put, uploadAsset, ApiError, errorMessage } from '/lib/api.js';
+import { get, put, post, uploadAsset, ApiError, errorMessage } from '/lib/api.js';
 import { h, clear, toast, confirmDialog, debounce, modal } from '/lib/dom.js';
 import { t, getLocale } from '/lib/i18n.js';
 import { icon } from '/lib/icons.js';
@@ -899,6 +899,36 @@ export async function mount(root, ctx) {
       return select;
     }
 
+    /** "Generate audio with AI voice" — speaks the item's text via Mistral TTS. */
+    function ttsButton() {
+      const btn = h('button.btn.btn-sm.btn-secondary.tts-generate', { type: 'button' }, '🎙️ ' + t('teacher.tts_generate'));
+      btn.addEventListener('click', async () => {
+        const text = item.type === 'text' && item.config && item.config.text
+          ? String(item.config.text)
+          : String(item.stem || '');
+        if (!text.trim()) {
+          toast(t('teacher.tts_no_text'), 'error');
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = '🎙️ ' + t('teacher.tts_generating');
+        try {
+          const res = await post('/api/llm/tts', { text });
+          if (res && res.asset) {
+            rememberAssetUrl(res.asset);
+            setMedia({ type: 'audio', assetId: res.asset.id });
+            toast(t('teacher.tts_done'), 'success');
+          }
+        } catch (error) {
+          toast(errorMessage(error), 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '🎙️ ' + t('teacher.tts_generate');
+        }
+      });
+      return btn;
+    }
+
     function paint() {
       clear(host);
       const current = item.media || { type: 'none' };
@@ -948,6 +978,7 @@ export async function mount(root, ctx) {
               'div.row.gap-2.wrap',
               h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => audioInput.click() } }, t('teacher.replace_audio')),
               librarySelect('audio', current.assetId, (id) => setMedia({ type: 'audio', assetId: id })),
+              ttsButton(),
               h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => setMedia({ type: 'none' }) } }, t('common.remove')),
             ),
           ),
@@ -979,6 +1010,7 @@ export async function mount(root, ctx) {
             'div.row.wrap.gap-2.media-actions',
             h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => imageInput.click() } }, t('teacher.upload_image')),
             h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => audioInput.click() } }, t('teacher.upload_audio')),
+            ttsButton(),
             librarySelect(null, '', (id) => {
               fetchAssetLibrary().then((assets) => {
                 const asset = assets.find((a) => a.id === id);

@@ -1802,7 +1802,7 @@ function buildWorksheetScreen() {
     wrap.appendChild(h('div.card.empty', h('p.empty-title', { text: t('student.no_items') })));
     return wrap;
   }
-  const list = h('ul.student-items');
+  const list = h('ul.student-items.compact');
   state.items.forEach((item, index) => {
     const li = h('li');
     li.appendChild(createItemCard(item, index));
@@ -2272,7 +2272,7 @@ function buildReviewScreen() {
   wrap.appendChild(toolbar);
   wrap.appendChild(h('p.student-review-note', { role: 'note', text: t('student.review_note') }));
 
-  const list = h('ul.student-items');
+  const list = h('ul.student-items.compact');
   state.items.forEach((item, index) => {
     const li = h('li');
     li.appendChild(createItemCard(item, index, { mode: 'review', disabled: true }));
