@@ -88,29 +88,39 @@ export function buildVocabCourse({ title, description = '', sourceLang = 'de', t
       items: [vocabItem('example', withExample)],
     }));
   } else {
-    push(`${base} — Level 2: Beidseitig tippen`, levelDefinition({
-      title: `${base} — Level 2: Beidseitig tippen`,
-      description: 'Übersetze in beide Richtungen.',
-      items: [vocabItem('translate', vocabEntries, 'both', 2)],
+    push(`${base} — Level 2: Beidseitiges Quiz`, levelDefinition({
+      title: `${base} — Level 2: Beidseitiges Quiz`,
+      template: 'quiz',
+      description: 'Übersetze in beide Richtungen — ein Wort nach dem anderen.',
+      items: [vocabItem('quiz', vocabEntries, 'both', 2)],
     }));
   }
 
-  push(`${base} — Level 3: Übersetzen (${sourceLang} → ${targetLang})`, levelDefinition({
-    title: `${base} — Level 3: Übersetzen`,
-    description: `Übersetze und schreibe die ${langLabel}-Wörter richtig.`,
-    items: [vocabItem('translate', vocabEntries, 'term_to_translation', 3)],
+  push(`${base} — Level 3: Vokabel-Quiz (${sourceLang} → ${targetLang})`, levelDefinition({
+    title: `${base} — Level 3: Vokabel-Quiz`,
+    template: 'quiz',
+    description: `Quiz-Trainer: ein Wort nach dem anderen übersetzen — mit Sofort-Check, Serie und Fortschritt.`,
+    items: [vocabItem('quiz', vocabEntries, 'term_to_translation', 3)],
   }));
 
-  push(`${base} — Level 4: Übersetzen (${targetLang} → ${sourceLang})`, levelDefinition({
-    title: `${base} — Level 4: Rückwärts übersetzen`,
-    description: `Übersetze zurück ins ${sourceLang}.`,
-    items: [vocabItem('translate', vocabEntries, 'translation_to_term', 3)],
+  push(`${base} — Level 4: Rückwärts-Quiz (${targetLang} → ${sourceLang})`, levelDefinition({
+    title: `${base} — Level 4: Rückwärts-Quiz`,
+    template: 'quiz',
+    description: `Quiz-Trainer rückwärts: Übersetze zurück ins ${sourceLang}.`,
+    items: [vocabItem('quiz', vocabEntries, 'translation_to_term', 3)],
+  }));
+
+  push(`${base} — Level 5: Buchstabieren`, levelDefinition({
+    title: `${base} — Level 5: Buchstabieren`,
+    template: 'quiz',
+    description: 'Rechtschreib-Trainer: Sieh die Übersetzung und tippe das Wort selbst richtig.',
+    items: [vocabItem('spell', vocabEntries, 'translation_to_term', 3)],
   }));
 
   const withAudio = vocabEntries.filter((e) => e.audioAssetId);
   if (withAudio.length >= 3) {
-    push(`${base} — Level 5: Hören & Schreiben`, levelDefinition({
-      title: `${base} — Level 5: Hören & Schreiben`,
+    push(`${base} — Level 6: Hören & Schreiben`, levelDefinition({
+      title: `${base} — Level 6: Hören & Schreiben`,
       description: 'Höre das Wort und schreibe es richtig (Aussprache + Rechtschreibung).',
       items: [vocabItem('listen', withAudio, 'term_to_translation', 3)],
     }));

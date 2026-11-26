@@ -111,19 +111,21 @@ test('vocab-course: builds escalating levels, all valid, final level tests spell
   const { levels, levelTitles } = buildVocabCourse({
     title: 'Unit 5', sourceLang: 'de', targetLang: 'en', entries: ENTRIES,
   });
-  // flashcards, example (no images in fixture), translate, translate reverse, listen (3 audio), final quiz
-  assert.equal(levels.length, 6);
+  // flashcards, example (no images in fixture), quiz, quiz reverse, spell, listen (3 audio), final quiz
+  assert.equal(levels.length, 7);
   assert.ok(levelTitles.some((t) => t.includes('Abschluss')));
   for (const level of levels) {
     const check = validateActivity(level);
     assert.ok(check.ok, `level "${level.title}" must validate: ${JSON.stringify(check.errors)}`);
   }
-  const modes = levels.slice(0, 5).map((l) => l.items[0].config.mode);
-  assert.deepEqual(modes, ['flashcards', 'example', 'translate', 'translate', 'listen']);
-  const listenLevel = levels[4];
+  const modes = levels.slice(0, 6).map((l) => l.items[0].config.mode);
+  assert.deepEqual(modes, ['flashcards', 'example', 'quiz', 'quiz', 'spell', 'listen']);
+  const listenLevel = levels[5];
   assert.ok(listenLevel.items[0].config.entries.every((e) => e.audioAssetId), 'listen level only uses entries with audio');
+  const spellLevel = levels[4];
+  assert.equal(spellLevel.items[0].config.mode, 'spell', 'spelling level uses the spell mode');
 
-  const final = levels[5];
+  const final = levels[6];
   assert.equal(final.template, 'quiz');
   const types = final.items.map((i) => i.type);
   assert.ok(types.includes('short_answer'), 'final level contains typed answers');
@@ -140,6 +142,7 @@ test('vocab-course: fewer than 3 entries throws; no audio -> no listen level', (
   assert.throws(() => buildVocabCourse({ title: 'X', entries: ENTRIES.slice(0, 2) }), /3/);
   const noAudio = ENTRIES.map((e) => ({ ...e, audioAssetId: '' }));
   const { levels } = buildVocabCourse({ title: 'Unit 5', entries: noAudio });
-  assert.equal(levels.length, 5, 'no listen level without audio');
+  assert.equal(levels.length, 6, 'no listen level without audio');
   assert.ok(!levels.some((l) => l.items[0] && l.items[0].config.mode === 'listen'));
+  assert.ok(levels.some((l) => l.items[0] && l.items[0].config.mode === 'spell'), 'spelling level always present');
 });

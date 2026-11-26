@@ -40,6 +40,13 @@ registerMessages({
     'item.vocab.review_rating_known': 'gewusst',
     'item.vocab.review_rating_unknown': 'nicht gewusst',
     'item.vocab.review_rating_none': 'nicht bewertet',
+    'item.vocab.check': 'Prüfen',
+    'item.vocab.correct': 'Richtig!',
+    'item.vocab.incorrect': 'Nicht richtig — nochmal versuchen oder weiter.',
+    'item.vocab.next_btn': 'Weiter →',
+    'item.vocab.streak': 'Serie {n}',
+    'item.vocab.trainer_done': 'Geschafft: {correct} von {total} richtig · beste Serie {best}',
+    'item.vocab.reveal_ph': 'Antwort eingeben …',
   },
   en: {
     'item.vocab.legend': 'Vocabulary',
@@ -56,6 +63,13 @@ registerMessages({
     'item.vocab.review_rating_known': 'known',
     'item.vocab.review_rating_unknown': 'not known',
     'item.vocab.review_rating_none': 'not rated',
+    'item.vocab.check': 'Check',
+    'item.vocab.correct': 'Correct!',
+    'item.vocab.incorrect': 'Not quite — try again or continue.',
+    'item.vocab.next_btn': 'Next →',
+    'item.vocab.streak': 'Streak {n}',
+    'item.vocab.trainer_done': 'Done: {correct} of {total} correct · best streak {best}',
+    'item.vocab.reveal_ph': 'Type your answer …',
   },
 });
 
@@ -332,6 +346,246 @@ export function mount(container, rawCtx) {
       setResult,
       focus() {
         if (!focusFirst(root, 'select:enabled')) focusRoot(root);
+      },
+      destroy() {
+        container.replaceChildren();
+      },
+    };
+  }
+
+  // ---------------------------------------------------------------------
+  // Trainer modes (quiz / spell): one entry at a time, instant server-checked
+  // feedback via ctx.checkEntry(entryId, answers) -> { correct, given } | null,
+  // streak counter + progress bar. Response model identical to typed modes.
+  // ---------------------------------------------------------------------
+  if (config.mode === 'quiz' || config.mode === 'spell') {
+    const isSpell = config.mode === 'spell';
+    const answers = {}; // entryId -> string
+    const results = {}; // entryId -> { correct, given }
+    let cursor = 0;
+    let streak = 0;
+    let bestStreak = 0;
+    let busy = false;
+
+    const stage = h('div.item-vocab-trainer');
+    const bar = h('div.progress.item-vocab-progressbar', { role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': 0 });
+    const barFill = h('span');
+    bar.appendChild(barFill);
+    const metaRow = h('div.row.between.wrap.mt-1',
+      h('span.small.muted.item-vocab-progress-text'),
+      h('span.badge.badge-warning.item-vocab-streak', { hidden: true }),
+    );
+    const card = h('div.item-vocab-trainer-card');
+    const promptMedia = h('div.item-vocab-card-media');
+    const promptText = h('div.item-vocab-trainer-prompt');
+    const hintLine = h('p.small.muted.mb-1');
+    const inputRow = h('div.row.gap-2.mt-2',
+      h('input.input.item-vocab-input', {
+        type: 'text',
+        placeholder: t('item.vocab.reveal_ph'),
+        autocomplete: 'off',
+        spellcheck: 'false',
+        disabled: readonly || undefined,
+      }),
+      h('button.btn.btn-primary.btn-sm.item-vocab-check', { type: 'button' }, t('item.vocab.check')),
+      h('button.btn.btn-secondary.btn-sm.item-vocab-next', { type: 'button', hidden: true }, t('item.vocab.next_btn')),
+    );
+    const feedback = h('p.item-vocab-feedback.mt-2.mb-0', { role: 'status' });
+    const doneBox = h('div.item-vocab-done', { hidden: true });
+    card.append(promptMedia, promptText, hintLine, inputRow, feedback);
+    stage.append(bar, metaRow, card, doneBox);
+    root.appendChild(stage);
+
+    const input = inputRow.querySelector('input');
+    const checkBtn = inputRow.querySelector('.item-vocab-check');
+    const nextBtn = inputRow.querySelector('.item-vocab-next');
+    const progressText = metaRow.querySelector('.item-vocab-progress-text');
+    const streakBadge = metaRow.querySelector('.item-vocab-streak');
+
+    function currentEntry() {
+      const idx = order[cursor];
+      return idx === undefined ? null : entries[idx];
+    }
+
+    function promptOfEntry(entry, index) {
+      // quiz: direction-aware (same as typed translate); spell: translation prompt
+      if (isSpell) return entry.translation || '';
+      const dir = entryDirection(config, index);
+      return dir === 'translation_to_term' ? entry.translation || '' : entry.term || '';
+    }
+
+    function updateMeta() {
+      const total = order.length;
+      const done = cursor;
+      progressText.textContent = t('item.vocab.progress', { n: String(Math.min(done + 1, total)), total: String(total) });
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      barFill.style.width = `${pct}%`;
+      bar.setAttribute('aria-valuenow', String(pct));
+      streakBadge.hidden = streak < 2;
+      streakBadge.textContent = t('item.vocab.streak', { n: String(streak) });
+    }
+
+    function renderCard() {
+      const entry = currentEntry();
+      busy = false;
+      if (!entry) {
+        const correct = Object.values(results).filter((r) => r && r.correct).length;
+        doneBox.hidden = false;
+        doneBox.textContent = t('item.vocab.trainer_done', {
+          correct: String(correct),
+          total: String(order.length),
+          best: String(bestStreak),
+        });
+        card.classList.add('is-done');
+        card.querySelector('.item-vocab-trainer-prompt').textContent = '';
+        inputRow.querySelectorAll('input,button').forEach((el) => { el.disabled = true; el.hidden = true; });
+        feedback.textContent = '';
+        updateMeta();
+        announce(live, doneBox.textContent);
+        return;
+      }
+      card.classList.remove('is-done', 'is-correct', 'is-incorrect');
+      const index = order[cursor];
+      const prompt = promptOfEntry(entry, index);
+      promptText.textContent = prompt || '—';
+      promptMedia.replaceChildren();
+      const audioUrl = assetUrlOf(entry.audioAssetId);
+      if (audioUrl && !isSpell) promptMedia.appendChild(h('audio.item-vocab-audio', { controls: true, preload: 'metadata', src: audioUrl }));
+      // spell: no letter hint — the term is stripped from the student payload,
+      // any hint derived from it would leak the answer
+      hintLine.textContent = '';
+      input.value = typeof answers[entry.id] === 'string' ? answers[entry.id] : '';
+      input.disabled = readonly;
+      checkBtn.hidden = readonly;
+      nextBtn.hidden = true;
+      feedback.textContent = '';
+      feedback.className = 'item-vocab-feedback mt-2 mb-0';
+      updateMeta();
+      announce(live, `${progressText.textContent} ${prompt}`);
+      if (!readonly) input.focus();
+    }
+
+    async function check() {
+      const entry = currentEntry();
+      if (!entry || busy || readonly) return;
+      const value = input.value;
+      answers[entry.id] = value;
+      if (typeof rawCtx.checkEntry !== 'function') {
+        // preview without a session: just advance
+        advance();
+        return;
+      }
+      busy = true;
+      checkBtn.disabled = true;
+      try {
+        const allAnswers = { ...answers };
+        const res = await rawCtx.checkEntry(entry.id, allAnswers);
+        const correct = !!(res && res.correct);
+        results[entry.id] = { correct, given: value };
+        if (correct) {
+          streak += 1;
+          bestStreak = Math.max(bestStreak, streak);
+          card.classList.add('is-correct');
+          feedback.textContent = t('item.vocab.correct');
+          feedback.classList.add('text-success');
+          updateMeta();
+          setTimeout(() => advance(), 650);
+        } else {
+          streak = 0;
+          card.classList.add('is-incorrect');
+          feedback.textContent = t('item.vocab.incorrect');
+          feedback.classList.add('text-danger');
+          nextBtn.hidden = false;
+          updateMeta();
+        }
+      } catch {
+        feedback.textContent = t('item.vocab.incorrect');
+        feedback.classList.add('text-danger');
+        nextBtn.hidden = false;
+      } finally {
+        busy = false;
+        checkBtn.disabled = false;
+      }
+    }
+
+    function advance() {
+      cursor += 1;
+      renderCard();
+    }
+
+    checkBtn.addEventListener('click', check);
+    nextBtn.addEventListener('click', advance);
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        if (nextBtn.hidden) check();
+        else advance();
+      }
+    });
+    input.addEventListener('input', () => {
+      const entry = currentEntry();
+      if (entry) answers[entry.id] = input.value;
+    });
+
+    function setResponse(response) {
+      const given = response && response.answers && typeof response.answers === 'object' ? response.answers : {};
+      for (const key of Object.keys(answers)) delete answers[key];
+      for (const key of Object.keys(results)) delete results[key];
+      for (const entry of entries) {
+        if (typeof given[entry.id] === 'string') answers[entry.id] = given[entry.id];
+      }
+      cursor = 0;
+      streak = 0;
+      bestStreak = 0;
+      if (readonly) {
+        // review: list prompt + given answer + mark per entry
+        clear(stage);
+        const list = h('div.item-vocab-review-list');
+        for (const index of order) {
+          const entry = entries[index];
+          const res = results[entry.id];
+          list.appendChild(
+            h('div.item-vocab-review-row',
+              h('span.item-vocab-review-term', { text: promptOfEntry(entry, index) || '—' }),
+              h('span.muted', { text: '→' }),
+              h('span.item-vocab-review-translation', { text: (answers[entry.id] || '—') }),
+              h('span.badge', { class: res && res.correct ? 'badge-success' : res ? 'badge-danger' : 'badge-info' }, res ? (res.correct ? '✓' : '✕') : '–'),
+            ),
+          );
+        }
+        stage.appendChild(list);
+      } else {
+        renderCard();
+      }
+    }
+
+    function setResult(result) {
+      applyResult(root, resultRegion, result);
+      const detail = result && result.detail && typeof result.detail === 'object' ? result.detail : {};
+      const perEntry = detail.answers && typeof detail.answers === 'object' ? detail.answers : {};
+      for (const entry of entries) {
+        const info = perEntry[entry.id];
+        if (info && typeof info === 'object') results[entry.id] = { correct: info.correct === true, given: String(info.given || '') };
+      }
+      if (readonly) setResponse(ctx.response);
+    }
+
+    setResponse(ctx.response);
+    root.appendChild(live);
+    root.appendChild(resultRegion);
+    if (ctx.result) setResult(ctx.result);
+    const keyBlock = solutionBlock(item, ctx);
+    if (keyBlock) root.appendChild(keyBlock);
+    container.replaceChildren(root);
+
+    return {
+      getResponse() {
+        return { answers: { ...answers } };
+      },
+      setResponse,
+      setResult,
+      focus() {
+        focusFirst(root, 'input:enabled, button:enabled') || focusRoot(root);
       },
       destroy() {
         container.replaceChildren();

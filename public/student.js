@@ -1484,6 +1484,23 @@ function createItemCard(item, index, options = {}) {
           post('/api/llm/writing-feedback', { itemId: item.id, text }, { headers: participantHeaders(state.token) })
             .then((data) => data.feedback)
       : undefined,
+    // vocabulary trainer (quiz/spell): check one entry server-side and return
+    // the student-safe per-entry result { correct, given } (never the answer key)
+    checkEntry: state.token
+      ? (entryId, allAnswers) => {
+          state.answers[item.id] = { answers: { ...allAnswers } };
+          return put(
+            `/api/participant/responses/${encodeURIComponent(item.id)}`,
+            { response: { answers: { ...allAnswers } } },
+            { headers: participantHeaders(state.token) },
+          ).then((data) => {
+            if (data && data.result) applyItemResult(item.id, data.result);
+            const detail = data && data.result && data.result.detail && data.result.detail.answers ? data.result.detail.answers : {};
+            const entry = detail[entryId];
+            return entry && typeof entry === 'object' ? { correct: entry.correct === true, given: String(entry.given || '') } : null;
+          });
+        }
+      : undefined,
     writingFeedback: mode === 'review' ? (storedResult && storedResult.writingFeedback) || null : null,
   });
 

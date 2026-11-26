@@ -8,6 +8,11 @@
 //     unknown cards are re-queued once at the end. Not auto-scored (points 0).
 //   - translate:  show one side, type the other (direction config, "both"
 //     alternates per entry). Auto-graded per entry.
+//   - quiz:       trainer flow — one entry at a time, instant server-checked
+//     feedback, streak + progress. Same answer model as translate.
+//   - spell:      spelling trainer — show the translation, type the word
+//     itself (the term is the only accepted answer). Media/example are
+//     stripped from the student payload (they would reveal the term).
 //   - listen:     play the entry's audio, type the word. Auto-graded.
 //   - example:    example sentence with the term masked, type the word.
 //   - match:      images on one side, terms as dropdown options on the other
@@ -39,7 +44,7 @@ export const meta = {
   category: 'assessment',
 };
 
-export const MODES = ['flashcards', 'translate', 'listen', 'example', 'match'];
+export const MODES = ['flashcards', 'translate', 'quiz', 'spell', 'listen', 'example', 'match'];
 export const DIRECTIONS = ['term_to_translation', 'translation_to_term', 'both'];
 
 const MAX_ENTRIES = 60;
@@ -114,7 +119,7 @@ export function validateItem(item) {
   const config = normalizeConfig(item.config);
   if (!item.config || typeof item.config !== 'object' || Array.isArray(item.config)) return errors;
 
-  if (!MODES.includes(config.mode)) errors.push('config.mode: must be flashcards|translate|listen|example');
+  if (!MODES.includes(config.mode)) errors.push('config.mode: must be flashcards|translate|quiz|spell|listen|example|match');
   if (!DIRECTIONS.includes(config.direction)) errors.push('config.direction: invalid');
   if (typeof config.shuffle !== 'boolean') errors.push('config.shuffle: must be a boolean');
   if (typeof config.caseSensitive !== 'boolean') errors.push('config.caseSensitive: must be a boolean');
@@ -151,6 +156,8 @@ export function promptOf(config, entry, index) {
   const dir = entryDirection(config, index);
   if (config.mode === 'listen') return { kind: 'audio', audioAssetId: entry.audioAssetId };
   if (config.mode === 'example') return { kind: 'example', text: maskTerm(entry.example, entry.term) };
+  // spell: the prompt is always the translation — the term (the answer) is typed
+  if (config.mode === 'spell') return { kind: 'text', text: entry.translation };
   if (dir === 'translation_to_term') return { kind: 'text', text: entry.translation };
   return { kind: 'text', text: entry.term };
 }
@@ -158,6 +165,8 @@ export function promptOf(config, entry, index) {
 export function acceptedOf(config, entry, index) {
   const dir = entryDirection(config, index);
   if (config.mode === 'listen' || config.mode === 'example') return [entry.term];
+  // spell: strict — only the term itself counts (it is a spelling exercise)
+  if (config.mode === 'spell') return [entry.term];
   if (dir === 'translation_to_term') return [entry.term];
   return [entry.translation, ...entry.alternatives].filter((value) => value.trim() !== '');
 }
@@ -347,6 +356,11 @@ export function sanitizeItem(item) {
 
   const entries = config.entries.map((entry, index) => {
     const dir = entryDirection(config, index);
+    if (config.mode === 'spell') {
+      // answer is the term: strip term, example and media (they reveal it) —
+      // the translation is the prompt
+      return { id: entry.id, term: '', translation: entry.translation, alternatives: [], example: '', imageAssetId: '', audioAssetId: '' };
+    }
     if (config.mode === 'listen') {
       return { id: entry.id, term: '', translation: '', alternatives: [], example: '', imageAssetId: '', audioAssetId: entry.audioAssetId };
     }
@@ -430,6 +444,8 @@ export function editSchema() {
       options: [
         { value: 'flashcards', label: { en: 'Flashcards (self-rated)', de: 'Karteikarten (selbst eingeschätzt)' } },
         { value: 'translate', label: { en: 'Translate (type it)', de: 'Übersetzen (tippen)' } },
+        { value: 'quiz', label: { en: 'Quiz trainer (one word at a time, streaks)', de: 'Quiz-Trainer (ein Wort nach dem anderen, Streaks)' } },
+        { value: 'spell', label: { en: 'Spelling (type the word itself)', de: 'Rechtschreibung (Wort selbst tippen)' } },
         { value: 'listen', label: { en: 'Listen and type', de: 'Hören und tippen' } },
         { value: 'example', label: { en: 'Example sentence with gap', de: 'Beispielsatz mit Lücke' } },
         { value: 'match', label: { en: 'Match images to words', de: 'Bilder den Wörtern zuordnen' } },

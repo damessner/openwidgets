@@ -1240,3 +1240,18 @@ span.item-pin {
 .item-match-text { display: block; }
 .ow-item[data-readonly='true'] .item-match-card { background: var(--surface-2); }
 @media (max-width: 640px) { .item-match-cols { grid-template-columns: 1fr; } }
+
+/* ------------------------------------------------- vocabulary trainer (quiz/spell) */
+.item-vocab-trainer { max-width: 560px; }
+.item-vocab-progressbar { height: 10px; margin-bottom: 4px; }
+.item-vocab-trainer-card { border: 2px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 20px; margin-top: 8px; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; }
+.item-vocab-trainer-card.is-correct { border-color: var(--success); background: var(--success-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 16%, transparent); }
+.item-vocab-trainer-card.is-incorrect { border-color: var(--danger); background: var(--danger-soft); animation: vocab-shake 0.3s; }
+.item-vocab-trainer-card.is-done { border-color: var(--primary); }
+.item-vocab-trainer-prompt { font-size: 1.6em; font-weight: 700; text-align: center; overflow-wrap: anywhere; }
+.item-vocab-card-media { display: flex; justify-content: center; margin-bottom: 8px; }
+.item-vocab-card-media img { max-width: 140px; max-height: 100px; object-fit: contain; border-radius: var(--radius-sm); }
+.item-vocab-card-media audio { max-width: 220px; }
+.item-vocab-feedback:empty { display: none; }
+.item-vocab-done { margin-top: 10px; font-weight: 600; }
+@keyframes vocab-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }

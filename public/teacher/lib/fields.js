@@ -2583,7 +2583,7 @@ function renderCrosswordEditor(container, { item, onChange }) {
 // pickers + "load from saved vocab list".
 // ---------------------------------------------------------------------------
 
-const VOCAB_MODES = ['flashcards', 'translate', 'listen', 'example', 'match'];
+const VOCAB_MODES = ['flashcards', 'translate', 'quiz', 'spell', 'listen', 'example', 'match'];
 const VOCAB_DIRECTIONS = ['term_to_translation', 'translation_to_term', 'both'];
 
 function renderVocabularyEditor(container, { item, onChange }) {

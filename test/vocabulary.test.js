@@ -176,3 +176,41 @@ test('parseVocabCsv: term;translation;example, tab support, header skip, limits'
   assert.equal(entries[1].term, 'Baum');
   assert.equal(entries[1].translation, 'tree');
 });
+
+test('vocabulary quiz mode: validates, scores like translate per direction, sanitize strips answer side', () => {
+  const quiz = makeItem({ mode: 'quiz', direction: 'term_to_translation' });
+  assert.deepEqual(validateItem(quiz), []);
+  const result = scoreItem(quiz, { answers: { e1: 'house', e2: 'birch' } });
+  assert.equal(result.correctParts, 1);
+  assert.equal(result.totalParts, 2);
+  assert.equal(result.autoScore, 2); // 4 points * 1/2
+  const san = sanitizeItem(quiz);
+  assert.equal(san.config.entries[0].term, 'Haus', 'prompt side (term) kept');
+  assert.equal(san.config.entries[0].translation, '', 'answer side (translation) stripped');
+
+  const quizRev = makeItem({ mode: 'quiz', direction: 'translation_to_term' });
+  const sanRev = sanitizeItem(quizRev);
+  assert.equal(sanRev.config.entries[0].translation, 'house', 'prompt side (translation) kept');
+  assert.equal(sanRev.config.entries[0].term, '', 'answer side (term) stripped');
+  const resRev = scoreItem(quizRev, { answers: { e1: 'Haus', e2: 'Baum' } });
+  assert.equal(resRev.correctParts, 2);
+});
+
+test('vocabulary spell mode: answer is strictly the term; sanitize strips term, example and media', () => {
+  const spell = makeItem({ mode: 'spell' });
+  assert.deepEqual(validateItem(spell), []);
+  // alternatives do NOT count in spell mode — it is a spelling exercise
+  const wrongAlt = scoreItem(spell, { answers: { e1: 'home', e2: 'Baum' } });
+  assert.equal(wrongAlt.correctParts, 1);
+  const right = scoreItem(spell, { answers: { e1: 'Haus', e2: 'Baum' } });
+  assert.equal(right.correctParts, 2);
+  assert.equal(right.correct, true);
+  const san = sanitizeItem(spell);
+  for (const entry of san.config.entries) {
+    assert.equal(entry.term, '', 'term (the answer) stripped');
+    assert.equal(entry.example, '', 'example stripped (contains the term)');
+    assert.equal(entry.imageAssetId, '', 'image stripped (depicts the term)');
+    assert.equal(entry.audioAssetId, '', 'audio stripped (says the term)');
+    assert.ok(entry.translation, 'translation kept as the prompt');
+  }
+});

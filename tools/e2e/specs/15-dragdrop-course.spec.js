@@ -167,7 +167,7 @@ test.describe('v0.9: drag&drop gaps, worksheet preview, vocab course', () => {
     const drafts = await request.post(`/api/vocab-lists/${list.id}/generate-course`, { data: {} });
     expect(drafts.status()).toBe(201);
     const draftBody = await drafts.json();
-    expect(draftBody.activities.length).toBe(5); // flashcards, example, translate, translate reverse, final
+    expect(draftBody.activities.length).toBe(6); // flashcards, example, quiz, quiz reverse, spell, final
     expect(draftBody.levelTitles.some((t) => t.includes('Abschluss'))).toBe(true);
     expect(draftBody.classId).toBeFalsy();
 
@@ -179,11 +179,11 @@ test.describe('v0.9: drag&drop gaps, worksheet preview, vocab course', () => {
     expect(intoClass.status()).toBe(201);
     const body = await intoClass.json();
     expect(body.classId).toBe(cls.id);
-    expect(body.assignmentIds.length).toBe(5);
+    expect(body.assignmentIds.length).toBe(6);
 
     const classDetail = await request.get(`/api/classes/${cls.id}`);
     const detail = await classDetail.json();
     expect(detail.class.orderMode).toBe('sequence');
-    expect(detail.class.items.length).toBe(5);
+    expect(detail.class.items.length).toBe(6);
   });
 });
