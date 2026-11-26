@@ -14,6 +14,8 @@ registerMessages({
     'item.answer_key': 'Lösung',
     'item.media_missing': 'Der Medieninhalt konnte nicht geladen werden.',
     'item.media_image_alt': 'Abbildung zur Aufgabe',
+    'item.media_speed_normal': '▶ Normal',
+    'item.media_speed_slow': '🐢 Langsam',
     'item.unknown_type': 'Dieser Aufgabentyp kann in dieser Ansicht nicht angezeigt werden.',
     'item.unknown_type_hint': 'Bitte wenden Sie sich an Ihre Lehrkraft.',
     'item.result.correct': 'Richtig',
@@ -27,6 +29,8 @@ registerMessages({
     'item.answer_key': 'Answer',
     'item.media_missing': 'The media content could not be loaded.',
     'item.media_image_alt': 'Image for the question',
+    'item.media_speed_normal': '▶ Normal',
+    'item.media_speed_slow': '🐢 Slow',
     'item.unknown_type': 'This item type cannot be displayed in this view.',
     'item.unknown_type_hint': 'Please contact your teacher.',
     'item.result.correct': 'Correct',
@@ -120,6 +124,16 @@ export function mediaUrl(media) {
   return `/assets/${id}/${name}`;
 }
 
+/** URL of the slow-speed variant of an audio media (TTS "langsam"), or null. */
+export function slowMediaUrl(media) {
+  if (!media || typeof media !== 'object') return null;
+  if (typeof media.slowUrl === 'string' && media.slowUrl.trim()) return media.slowUrl;
+  if (!media.slowAssetId) return null;
+  const id = encodeURIComponent(String(media.slowAssetId));
+  const name = encodeURIComponent(String(media.slowFilename || media.slowAssetId));
+  return `/assets/${id}/${name}`;
+}
+
 /** Render item.media (image/audio/video) as a safe DOM block, or null. */
 export function mediaBlock(media) {
   if (!media || typeof media !== 'object') return null;
@@ -128,6 +142,7 @@ export function mediaBlock(media) {
   const url = mediaUrl(media);
   if (!url) return null;
   let node = null;
+  let mediaEl = null; // the actual <img>/<audio>/<video> for the error handler
   if (mediaType === 'image') {
     node = h('img.item-media-img', {
       src: url,
@@ -135,20 +150,42 @@ export function mediaBlock(media) {
       loading: 'lazy',
       decoding: 'async',
     });
+    mediaEl = node;
   } else if (mediaType === 'audio') {
-    node = h('audio.item-media-audio', { controls: true, preload: 'metadata', src: url });
+    const audio = h('audio.item-media-audio', { controls: true, preload: 'metadata', src: url });
+    mediaEl = audio;
+    const slowUrl = slowMediaUrl(media);
+    if (slowUrl) {
+      // normal + slow version: small toggle above the player switches the source
+      const normalBtn = h('button.btn.btn-sm.btn-secondary.audio-speed-btn.is-active', { type: 'button', dataset: { speed: 'normal' } }, t('item.media_speed_normal'));
+      const slowBtn = h('button.btn.btn-sm.btn-secondary.audio-speed-btn', { type: 'button', dataset: { speed: 'slow' } }, t('item.media_speed_slow'));
+      const switchSpeed = (btn, targetUrl) => {
+        audio.src = targetUrl;
+        audio.load();
+        normalBtn.classList.toggle('is-active', btn === normalBtn);
+        slowBtn.classList.toggle('is-active', btn === slowBtn);
+      };
+      normalBtn.addEventListener('click', () => switchSpeed(normalBtn, url));
+      slowBtn.addEventListener('click', () => switchSpeed(slowBtn, slowUrl));
+      node = h('div.item-media-audio-wrap', h('div.row.gap-1.mb-1', normalBtn, slowBtn), audio);
+    } else {
+      node = audio;
+    }
   } else if (mediaType === 'video') {
     node = h('video.item-media-video', { controls: true, preload: 'metadata', src: url });
+    mediaEl = node;
   }
   if (!node) return null;
   const wrap = h('div.item-media', { dataset: { mediaType } });
-  node.addEventListener(
-    'error',
-    () => {
-      wrap.replaceChildren(h('p.item-media-error', { text: t('item.media_missing') }));
-    },
-    { once: true },
-  );
+  if (mediaEl) {
+    mediaEl.addEventListener(
+      'error',
+      () => {
+        wrap.replaceChildren(h('p.item-media-error', { text: t('item.media_missing') }));
+      },
+      { once: true },
+    );
+  }
   wrap.appendChild(node);
   return wrap;
 }

@@ -406,6 +406,11 @@ export async function mount(root, ctx) {
       ((providers[llm.provider || 'gemini'] || {}).ttsModels || ['voxtral-mini-tts-3-0']).map((m) => h('option', { value: m })),
     );
     const voiceInput = h('input.input', { type: 'text', value: llm.voice || '', placeholder: 'voice_592 (optional — erste englische Stimme sonst)' });
+    const voiceMapInput = h('textarea.input', {
+      rows: 3,
+      placeholder: 'Tom=voice_3150\nMia=voice_478',
+      value: Object.entries(llm.voiceMap || {}).map(([k, v]) => `${k}=${v}`).join('\n'),
+    });
     const enabledInput = h('input', { type: 'checkbox' });
     if (llm.active !== false) enabledInput.checked = true;
 
@@ -430,6 +435,7 @@ export async function mount(root, ctx) {
           enabled: enabledInput.checked,
           ttsModel: ttsModelInput.value.trim(),
           voice: voiceInput.value.trim(),
+          voiceMap: voiceMapInput.value,
         });
         state.llm = saved;
         keyInput.value = '';
@@ -456,6 +462,7 @@ export async function mount(root, ctx) {
           enabled: enabledInput.checked,
           ttsModel: ttsModelInput.value.trim(),
           voice: voiceInput.value.trim(),
+          voiceMap: voiceMapInput.value,
         });
         state.llm = saved;
         keyInput.value = '';
@@ -498,6 +505,7 @@ export async function mount(root, ctx) {
         h('div.field', h('label.label', t('teacher.llm_tts_model')), ttsModelInput, ttsModelList, h('p.help', t('teacher.llm_tts_model_help'))),
         h('div.field', h('label.label', t('teacher.llm_voice')), voiceInput, h('p.help', t('teacher.llm_voice_help'))),
       ),
+      h('div.field', h('label.label', t('teacher.llm_voice_map')), voiceMapInput, h('p.help', t('teacher.llm_voice_map_help'))),
       h('div.row.gap-2', saveButton, testButton),
       resultBox,
       note,

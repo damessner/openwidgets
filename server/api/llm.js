@@ -104,17 +104,18 @@ export function register(router) {
     if (!text.trim()) throw badRequest('tts_empty', 'text is required');
     if (text.length > MAX_TTS_CHARS) throw badRequest('tts_too_long', `text must be at most ${MAX_TTS_CHARS} characters`);
     const voice = typeof body.voice === 'string' ? body.voice.trim().slice(0, 100) : '';
+    const speed = body.speed === 'slow' ? 'slow' : 'normal';
 
-    const result = await synthesizeSpeech({ text, voice });
+    const result = await synthesizeSpeech({ text, voice, speed });
     const slug = text.trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 60).toLowerCase() || 'tts';
     const row = await storeAssetBytes({
       ownerId: user.id,
       bytes: result.bytes,
       mime: result.mime,
-      filename: `${slug}.mp3`,
+      filename: `${slug}${speed === 'slow' ? '-langsam' : ''}.mp3`,
     });
-    log(`LLM: TTS for user ${user.id} (${result.model}, voice ${result.voice || 'default'}, ${result.bytes.length} bytes)`);
-    json(res, 201, { asset: assetJson(row), voice: result.voice, model: result.model, characters: text.length });
+    log(`LLM: TTS for user ${user.id} (${result.model}, voice ${result.voice || 'default'}, ${result.speed}${result.speedApplied ? '' : ' (tempo n/a)'}, ${result.bytes.length} bytes)`);
+    json(res, 201, { asset: assetJson(row), voice: result.voice, model: result.model, characters: text.length, speakers: result.speakers, speed: result.speed, speedApplied: result.speedApplied });
   });
 
   // -------------------------------------------------------------------------

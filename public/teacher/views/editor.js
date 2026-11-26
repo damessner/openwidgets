@@ -900,8 +900,10 @@ export async function mount(root, ctx) {
     }
 
     /** "Generate audio with AI voice" — speaks the item's text via Mistral TTS. */
-    function ttsButton() {
-      const btn = h('button.btn.btn-sm.btn-secondary.tts-generate', { type: 'button' }, '🎙️ ' + t('teacher.tts_generate'));
+    function ttsButton(speed = 'normal') {
+      const slow = speed === 'slow';
+      const label = slow ? t('teacher.tts_slow_generate') : t('teacher.tts_generate');
+      const btn = h('button.btn.btn-sm.btn-secondary.tts-generate', { type: 'button' }, (slow ? '🐢 ' : '🎙️ ') + label);
       btn.addEventListener('click', async () => {
         const text = item.type === 'text' && item.config && item.config.text
           ? String(item.config.text)
@@ -911,19 +913,24 @@ export async function mount(root, ctx) {
           return;
         }
         btn.disabled = true;
-        btn.textContent = '🎙️ ' + t('teacher.tts_generating');
+        btn.textContent = (slow ? '🐢 ' : '🎙️ ') + t('teacher.tts_generating');
         try {
-          const res = await post('/api/llm/tts', { text });
+          const res = await post('/api/llm/tts', { text, speed });
           if (res && res.asset) {
             rememberAssetUrl(res.asset);
-            setMedia({ type: 'audio', assetId: res.asset.id });
-            toast(t('teacher.tts_done'), 'success');
+            if (slow) {
+              const current = item.media && typeof item.media === 'object' ? item.media : { type: 'audio', assetId: res.asset.id };
+              setMedia({ ...current, type: 'audio', slowAssetId: res.asset.id });
+            } else {
+              setMedia({ type: 'audio', assetId: res.asset.id });
+            }
+            toast(slow && res.speedApplied === false ? t('teacher.tts_slow_unavailable') : t('teacher.tts_done'), slow && res.speedApplied === false ? 'warning' : 'success');
           }
         } catch (error) {
           toast(errorMessage(error), 'error');
         } finally {
           btn.disabled = false;
-          btn.textContent = '🎙️ ' + t('teacher.tts_generate');
+          btn.textContent = (slow ? '🐢 ' : '🎙️ ') + label;
         }
       });
       return btn;
@@ -970,15 +977,23 @@ export async function mount(root, ctx) {
         );
       } else if (current.type === 'audio' && current.assetId) {
         const audio = h('audio', { controls: true, src: assetUrl(current.assetId) });
+        const slowNote = current.slowAssetId
+          ? h('div.small.muted.mt-1', '🐢 ' + t('teacher.tts_slow_attached'))
+          : null;
         host.appendChild(
           h(
             'div.media-preview.media-preview-audio',
             audio,
+            slowNote,
             h(
               'div.row.gap-2.wrap',
               h('button.btn.btn-sm.btn-secondary', { type: 'button', on: { click: () => audioInput.click() } }, t('teacher.replace_audio')),
-              librarySelect('audio', current.assetId, (id) => setMedia({ type: 'audio', assetId: id })),
-              ttsButton(),
+              librarySelect('audio', current.assetId, (id) => setMedia({ ...current, type: 'audio', assetId: id })),
+              ttsButton('normal'),
+              ttsButton('slow'),
+              current.slowAssetId
+                ? h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => setMedia({ ...current, slowAssetId: undefined }) } }, t('teacher.tts_slow_remove'))
+                : null,
               h('button.btn.btn-sm.btn-ghost', { type: 'button', on: { click: () => setMedia({ type: 'none' }) } }, t('common.remove')),
             ),
           ),

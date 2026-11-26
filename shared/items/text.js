@@ -33,6 +33,54 @@ export function splitVorlesetext(text) {
   return { marker: match[0], text: source.slice(match[0].length) };
 }
 
+/**
+ * Dialogue speaker line: `Tom: "Hi Mia!"` — a name followed by a colon and a
+ * QUOTED sentence. Unquoted `Word: text` (e.g. "Tickets: adults …") stays
+ * narrator text. Continuation lines (still inside an open quote) are appended
+ * to the previous segment.
+ */
+export const SPEAKER_LINE_RE = /^\s*([A-Za-z][A-Za-z .'’\-]{0,30}):\s*(".*)$/;
+
+/**
+ * Split a (VORLESETEXT) script into spoken segments:
+ * [{ speaker: 'Tom' | '' (narrator), text }] with surrounding quotes removed.
+ * Used by TTS so each speaker can get their own voice and the speaker name is
+ * never read aloud.
+ */
+export function parseDialogue(text) {
+  const { text: body } = splitVorlesetext(text);
+  const segments = [];
+  const quoteCount = (s) => (String(s).match(/"/g) || []).length;
+  for (const rawLine of String(body).split('\n')) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const m = line.match(SPEAKER_LINE_RE);
+    if (m) {
+      const speaker = m[1].trim();
+      const last = segments[segments.length - 1];
+      if (last && last.speaker === speaker) last.text += ' ' + m[2];
+      else segments.push({ speaker, text: m[2] });
+      continue;
+    }
+    const last = segments[segments.length - 1];
+    if (last && quoteCount(last.text) % 2 === 1) {
+      // continuation of an open quote from the previous line
+      last.text += ' ' + line;
+    } else if (last && last.speaker === '') {
+      last.text += ' ' + line;
+    } else {
+      segments.push({ speaker: '', text: line });
+    }
+  }
+  return segments
+    .map((s) => {
+      let text = s.text.trim();
+      if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) text = text.slice(1, -1).trim();
+      return { speaker: s.speaker, text };
+    })
+    .filter((s) => s.text);
+}
+
 /** Parse <<answer|alt>> gaps in order. Returns [{ index, accepted, raw }]. */
 export function parseGaps(text) {
   const gaps = [];

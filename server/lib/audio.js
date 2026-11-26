@@ -127,3 +127,91 @@ export function mp3Filename(filename) {
   const base = cleaned.replace(/\.[^.]*$/, '');
   return `${base || 'audio'}.mp3`;
 }
+
+async function withTempFiles(files, fn) {
+  const paths = [];
+  try {
+    for (const [name, bytes] of files) {
+      const p = path.join(os.tmpdir(), `ow-${name}-${crypto.randomBytes(6).toString('hex')}.mp3`);
+      await fs.promises.writeFile(p, bytes);
+      paths.push(p);
+    }
+    return await fn(paths);
+  } finally {
+    for (const p of paths) {
+      try { await fs.promises.unlink(p); } catch { /* ignore */ }
+    }
+  }
+}
+
+/**
+ * Concatenate MP3 buffers into one MP3 with a short pause between parts
+ * (dialogue turns). Uses ffmpeg (re-encode, 96 kbit/s speech) when available;
+ * falls back to a plain buffer concatenation (MP3 frames are self-contained,
+ * players cope fine) so TTS dialogues still work without ffmpeg.
+ */
+export async function concatMp3Buffers(parts, { pauseSec = 0.45, timeoutMs = 120000 } = {}) {
+  const buffers = (parts || []).filter((b) => b && b.length);
+  if (buffers.length === 0) return null;
+  if (buffers.length === 1) return buffers[0];
+  if (!isFfmpegAvailable()) return Buffer.concat(buffers);
+  return withTempFiles(buffers.map((b, i) => [`seg${i}`, b]), async (paths) => {
+    const silence = path.join(os.tmpdir(), `ow-sil-${crypto.randomBytes(6).toString('hex')}.mp3`);
+    const listFile = path.join(os.tmpdir(), `ow-list-${crypto.randomBytes(6).toString('hex')}.txt`);
+    const out = path.join(os.tmpdir(), `ow-cat-${crypto.randomBytes(6).toString('hex')}.mp3`);
+    try {
+      const sil = await runFfmpeg(
+        ['-y', '-f', 'lavfi', '-i', `anullsrc=r=24000:cl=mono:d=${pauseSec}`, '-codec:a', 'libmp3lame', '-b:a', '96k', silence],
+        30000,
+      );
+      if (!sil.ok) return Buffer.concat(buffers);
+      const entries = [];
+      for (let i = 0; i < paths.length; i++) {
+        entries.push(paths[i]);
+        if (i < paths.length - 1) entries.push(silence);
+      }
+      await fs.promises.writeFile(listFile, entries.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join('\n'));
+      const result = await runFfmpeg(
+        ['-y', '-f', 'concat', '-safe', '0', '-i', listFile, '-vn', '-codec:a', 'libmp3lame', '-b:a', '96k', out],
+        timeoutMs,
+      );
+      if (!result.ok) return Buffer.concat(buffers);
+      const bytes = await fs.promises.readFile(out);
+      const looksMp3 = (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0);
+      return looksMp3 && bytes.length > 100 ? bytes : Buffer.concat(buffers);
+    } catch {
+      return Buffer.concat(buffers);
+    } finally {
+      try { await fs.promises.unlink(silence); } catch { /* ignore */ }
+      try { await fs.promises.unlink(listFile); } catch { /* ignore */ }
+      try { await fs.promises.unlink(out); } catch { /* ignore */ }
+    }
+  });
+}
+
+/**
+ * Change playback tempo of an MP3 (factor 0.5–2.0; <1 = slower, e.g. 0.72 for
+ * a "slow" listening version). Returns the original bytes when ffmpeg is
+ * unavailable or the filter fails.
+ */
+export async function changeTempoMp3(bytes, factor = 0.75, { timeoutMs = 120000 } = {}) {
+  if (!bytes || !bytes.length || !isFfmpegAvailable()) return bytes;
+  const clamped = Math.min(2, Math.max(0.5, Number(factor) || 0.75));
+  return withTempFiles([['in', bytes]], async ([tmpIn]) => {
+    const tmpOut = path.join(os.tmpdir(), `ow-tempo-${crypto.randomBytes(6).toString('hex')}.mp3`);
+    try {
+      const result = await runFfmpeg(
+        ['-y', '-i', tmpIn, '-vn', '-filter:a', `atempo=${clamped}`, '-codec:a', 'libmp3lame', '-b:a', '96k', tmpOut],
+        timeoutMs,
+      );
+      if (!result.ok) return bytes;
+      const out = await fs.promises.readFile(tmpOut);
+      const looksMp3 = (out[0] === 0x49 && out[1] === 0x44 && out[2] === 0x33) || (out[0] === 0xff && (out[1] & 0xe0) === 0xe0);
+      return looksMp3 && out.length > 100 ? out : bytes;
+    } catch {
+      return bytes;
+    } finally {
+      try { await fs.promises.unlink(tmpOut); } catch { /* ignore */ }
+    }
+  });
+}

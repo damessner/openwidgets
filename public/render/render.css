@@ -92,6 +92,12 @@
   max-width: 520px;
 }
 
+.item-media-audio-wrap .audio-speed-btn.is-active {
+  background: var(--accent, #2563eb);
+  border-color: var(--accent, #2563eb);
+  color: #fff;
+}
+
 .item-media-error {
   margin: 0;
   padding: var(--space-3);

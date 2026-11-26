@@ -475,7 +475,7 @@ function collectAssetIds(node, into) {
     return;
   }
   for (const [key, value] of Object.entries(node)) {
-    if (key === 'assetId' && typeof value === 'string' && value) into.add(value);
+    if ((key === 'assetId' || key === 'slowAssetId') && typeof value === 'string' && value) into.add(value);
     else if (value && typeof value === 'object') collectAssetIds(value, into);
   }
 }
@@ -489,6 +489,10 @@ function enrichAssetUrls(node, urlFor) {
   if (typeof node.assetId === 'string' && node.assetId && !node.url) {
     const url = urlFor(node.assetId);
     if (url) node.url = url;
+  }
+  if (typeof node.slowAssetId === 'string' && node.slowAssetId && !node.slowUrl) {
+    const url = urlFor(node.slowAssetId);
+    if (url) node.slowUrl = url;
   }
   for (const value of Object.values(node)) {
     if (value && typeof value === 'object') enrichAssetUrls(value, urlFor);

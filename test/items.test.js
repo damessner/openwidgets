@@ -530,7 +530,8 @@ test('regenerateItemIds changes item and nested ids but keeps answers', () => {
 // rich-media authoring: text gaps, image boxes, match media sides
 // ---------------------------------------------------------------------------
 
-import { parseGaps, maskGaps, splitVorlesetext } from '../shared/items/text.js';
+import { parseGaps, maskGaps, splitVorlesetext, parseDialogue } from '../shared/items/text.js';
+import { normalizeMedia } from '../shared/items/common.js';
 import { normalizeSide, rightEntryId, sideLabel } from '../shared/items/match.js';
 import { itemIsScoreable } from '../shared/activity.js';
 
@@ -564,6 +565,40 @@ test('text: splitVorlesetext removes the teacher marker line for students', () =
   // marker not at the start is kept (it is content then)
   const mid = splitVorlesetext('Line one\nVORLESETEXT later');
   assert.equal(mid.marker, '');
+});
+
+test('text: parseDialogue splits speaker lines and strips quotes, keeps narrator colons', () => {
+  const dlg = 'VORLESETEXT (vorlesen):\n\nTom: "Hi Mia! What\'s up?"\nMia: "Hi Tom! I\'m bored."\nTom: "Let\'s go bowling!"';
+  assert.deepEqual(parseDialogue(dlg), [
+    { speaker: 'Tom', text: 'Hi Mia! What\'s up?' },
+    { speaker: 'Mia', text: 'Hi Tom! I\'m bored.' },
+    { speaker: 'Tom', text: 'Let\'s go bowling!' },
+  ]);
+  // continuation line inside an open quote joins the previous speaker
+  const cont = 'Miss Green: "Take out your books at page\ntwelve!"\nLeo: "OK!"';
+  assert.deepEqual(parseDialogue(cont), [
+    { speaker: 'Miss Green', text: 'Take out your books at page twelve!' },
+    { speaker: 'Leo', text: 'OK!' },
+  ]);
+  // unquoted "Word: text" (e.g. Tickets:) stays narrator, not a speaker
+  const narrator = 'Welcome!\nTickets: adults four pounds, children nine pounds.';
+  assert.deepEqual(parseDialogue(narrator), [
+    { speaker: '', text: 'Welcome! Tickets: adults four pounds, children nine pounds.' },
+  ]);
+  // narrator line that starts with a quote is not a speaker either
+  const quoteNarrator = '"There are four monkeys," says Tom.';
+  assert.deepEqual(parseDialogue(quoteNarrator), [
+    { speaker: '', text: '"There are four monkeys," says Tom.' },
+  ]);
+});
+
+test('media: audio keeps slowAssetId (slow TTS variant), image drops it', () => {
+  const audio = normalizeMedia({ type: 'audio', assetId: 'a1', slowAssetId: 'a2' });
+  assert.deepEqual(audio, { type: 'audio', assetId: 'a1', slowAssetId: 'a2' });
+  const image = normalizeMedia({ type: 'image', assetId: 'a1', slowAssetId: 'a2', alt: 'x' });
+  assert.deepEqual(image, { type: 'image', assetId: 'a1', alt: 'x' });
+  const none = normalizeMedia({ type: 'audio', slowAssetId: 'a2' });
+  assert.deepEqual(none, { type: 'none' });
 });
 
 test('text: points require at least one gap; empty gap is a validation error', () => {

@@ -10,8 +10,9 @@ import path from 'node:path';
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'openwidgets-tts-'));
 process.env.DATA_DIR = dataDir;
 
-const { synthesizeSpeech, MAX_TTS_CHARS } = await import('../server/llm/tts.js');
-const { saveLlmConfig, resolveLlmConfig, isTtsAvailable } = await import('../server/llm/core.js');
+const { synthesizeSpeech, assignSpeakerVoices, MAX_TTS_CHARS } = await import('../server/llm/tts.js');
+const { saveLlmConfig, resolveLlmConfig, isTtsAvailable, normalizeVoiceMap } = await import('../server/llm/core.js');
+const { parseDialogue } = await import('../shared/items/text.js');
 const { initDb } = await import('../server/db.js');
 initDb();
 
@@ -122,4 +123,92 @@ test('tts: isTtsAvailable only with mistral provider + key', () => {
   saveLlmConfig({ provider: 'gemini', apiKey: 'gkey', model: 'gemini-2.0-flash', baseUrl: '', enabled: true, ttsModel: '', voice: '' });
   assert.equal(resolveLlmConfig().ttsModel, '', 'gemini has no tts default');
   assert.equal(isTtsAvailable(), false, 'gemini cannot do TTS');
+});
+
+// ---------------------------------------------------------------------------
+// Dialogues: per-speaker voices + voiceMap
+// ---------------------------------------------------------------------------
+
+const VOICES = { items: [
+  { name: 'James', slug: 'voice_en_1', languages: ['en_us'], gender: 'male' },
+  { name: 'Sheila', slug: 'voice_en_2', languages: ['en_us'], gender: 'female' },
+  { name: 'Rob', slug: 'voice_en_3', languages: ['en_us'], gender: 'male' },
+  { name: 'Greta', slug: 'voice_de_1', languages: ['de_de'], gender: 'female' },
+] };
+
+function fakeDialogueFetch() {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url: String(url), init });
+    if (String(url).endsWith('/v1/audio/voices')) return { ok: true, json: async () => VOICES };
+    if (String(url).endsWith('/v1/audio/speech')) {
+      const body = JSON.parse(init.body);
+      // distinct bytes per voice so we can verify the concat order/voices
+      const marker = Buffer.from(body.voice.slice(-1));
+      const part = Buffer.concat([Buffer.from([0xff, 0xfb, 0x90, 0x00]), marker, Buffer.alloc(200, 3)]);
+      return { ok: true, arrayBuffer: async () => part.buffer.slice(part.byteOffset, part.byteOffset + part.length) };
+    }
+    throw new Error(`unexpected url ${url}`);
+  };
+  return { fetchImpl, calls };
+}
+
+test('tts: normalizeVoiceMap parses lines, JSON and objects (lowercase keys, capped)', () => {
+  assert.deepEqual(normalizeVoiceMap('Tom=voice_3150\nMia=voice_478'), { tom: 'voice_3150', mia: 'voice_478' });
+  assert.deepEqual(normalizeVoiceMap('{"Tom":"voice_1"}'), { tom: 'voice_1' });
+  assert.deepEqual(normalizeVoiceMap({ MISS_GREEN: 'voice_9' }), { miss_green: 'voice_9' });
+  assert.deepEqual(normalizeVoiceMap('no-equals-sign'), {});
+  assert.deepEqual(normalizeVoiceMap(''), {});
+  assert.deepEqual(normalizeVoiceMap(null), {});
+});
+
+test('tts: dialogue gets one request per speaker with voiceMap voices, names never spoken', async () => {
+  saveLlmConfig({
+    provider: 'mistral', apiKey: 'test-key-123456', model: 'mistral-small-latest',
+    baseUrl: 'https://api.mistral.ai', enabled: true, ttsModel: 'voxtral-mini-tts-3-0',
+    voice: '', voiceMap: { tom: 'voice_en_1', mia: 'voice_en_2' },
+  });
+  const { fetchImpl, calls } = fakeDialogueFetch();
+  const text = 'VORLESETEXT (vorlesen):\n\nTom: "Hi Mia! What\'s up?"\nMia: "Hi Tom! I\'m bored."';
+  const result = await synthesizeSpeech({ text, fetchImpl });
+  const speechCalls = calls.filter((c) => c.url.endsWith('/v1/audio/speech'));
+  assert.equal(speechCalls.length, 2, 'one request per dialogue segment');
+  const bodies = speechCalls.map((c) => JSON.parse(c.init.body));
+  assert.deepEqual(bodies.map((b) => b.input), ['Hi Mia! What\'s up?', 'Hi Tom! I\'m bored.'], 'speaker names + quotes stripped');
+  assert.deepEqual(bodies.map((b) => b.voice), ['voice_en_1', 'voice_en_2'], 'voiceMap voices per speaker');
+  assert.equal(result.speakers.length, 2);
+  assert.ok(result.voice.includes('Tom=voice_en_1') && result.voice.includes('Mia=voice_en_2'));
+  // concatenated: ffmpeg absent → exact buffer concat (2×205B); ffmpeg present →
+  // re-encoded with pause, so at least as long and still a valid MP3
+  assert.ok(result.bytes.length >= 2 * 205, `concatenated audio (${result.bytes.length}B)`);
+  const looksMp3 = (result.bytes[0] === 0x49 && result.bytes[1] === 0x44 && result.bytes[2] === 0x33) || (result.bytes[0] === 0xff && (result.bytes[1] & 0xe0) === 0xe0);
+  assert.ok(looksMp3, 'result is a valid MP3');
+  assert.equal(result.speed, 'normal');
+});
+
+test('tts: unmapped speakers rotate through distinct preset voices', async () => {
+  saveLlmConfig({
+    provider: 'mistral', apiKey: 'test-key-123456', model: 'mistral-small-latest',
+    baseUrl: 'https://api.mistral.ai', enabled: true, ttsModel: 'voxtral-mini-tts-3-0',
+    voice: '', voiceMap: '',
+  });
+  const cfg = resolveLlmConfig();
+  const { fetchImpl } = fakeDialogueFetch();
+  const assignment = await assignSpeakerVoices(['Anna', 'Bob'], cfg, fetchImpl);
+  assert.notEqual(assignment.get('Anna'), assignment.get('Bob'), 'two speakers never share a voice');
+  assert.ok(/^voice_en_/.test(assignment.get('Anna')) && /^voice_en_/.test(assignment.get('Bob')), 'english presets used');
+});
+
+test('tts: speed=slow sets speed flag; tempo applied only when ffmpeg exists', async () => {
+  saveLlmConfig({
+    provider: 'mistral', apiKey: 'test-key-123456', model: 'mistral-small-latest',
+    baseUrl: 'https://api.mistral.ai', enabled: true, ttsModel: 'voxtral-mini-tts-3-0',
+    voice: 'voice_en_1', voiceMap: '',
+  });
+  const { fetchImpl, calls } = fakeDialogueFetch();
+  const result = await synthesizeSpeech({ text: 'Hello, this is a slow sentence.', speed: 'slow', fetchImpl });
+  assert.equal(result.speed, 'slow');
+  assert.equal(typeof result.speedApplied, 'boolean');
+  // single-segment text → exactly one speech request
+  assert.equal(calls.filter((c) => c.url.endsWith('/v1/audio/speech')).length, 1);
 });

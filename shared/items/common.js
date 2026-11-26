@@ -76,6 +76,11 @@ export function normalizeMedia(media) {
   if (!assetId) return { type: 'none' };
   const out = { type, assetId };
   if (type === 'image') out.alt = asString(media.alt);
+  if (type === 'audio') {
+    // optional slow-speed variant of the same audio (TTS "langsam")
+    const slowAssetId = asString(media.slowAssetId).trim();
+    if (slowAssetId) out.slowAssetId = slowAssetId;
+  }
   return out;
 }
 
@@ -99,6 +104,9 @@ export function validateMedia(media) {
   }
   if (typeof media.assetId !== 'string' || !media.assetId.trim()) {
     errors.push('media.assetId: an uploaded asset is required');
+  }
+  if (media.slowAssetId !== undefined && (typeof media.slowAssetId !== 'string' || media.slowAssetId.length > 100)) {
+    errors.push('media.slowAssetId: must be a string');
   }
   if (media.alt !== undefined && typeof media.alt !== 'string') {
     errors.push('media.alt: must be a string');

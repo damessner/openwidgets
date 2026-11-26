@@ -40,6 +40,37 @@ export const PROVIDERS = {
 
 const DEFAULTS = { provider: 'gemini', enabled: true };
 
+/**
+ * Normalize a speaker→voice map ("Tom=voice_3150" lines, JSON or object) to a
+ * clean object { lowercaseSpeaker: voiceSlug }. Max 20 entries.
+ */
+export function normalizeVoiceMap(input) {
+  let raw = input;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return {};
+    if (trimmed.startsWith('{')) {
+      try { raw = JSON.parse(trimmed); } catch { raw = {}; }
+    } else {
+      raw = Object.fromEntries(
+        trimmed.split('\n').map((line) => {
+          const idx = line.indexOf('=');
+          return idx > 0 ? [line.slice(0, idx), line.slice(idx + 1)] : null;
+        }).filter(Boolean),
+      );
+    }
+  }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const k = String(key || '').trim().toLowerCase().slice(0, 40);
+    const v = String(value || '').trim().slice(0, 100);
+    if (k && v) out[k] = v;
+    if (Object.keys(out).length >= 20) break;
+  }
+  return out;
+}
+
 function storedConfig() {
   try {
     const row = one('SELECT value FROM settings WHERE key = ?', LLM_SETTINGS_KEY);
@@ -64,6 +95,7 @@ export function resolveLlmConfig() {
     enabled: (process.env.OW_LLM_ENABLED || '').trim(),
     ttsModel: (process.env.OW_LLM_TTS_MODEL || '').trim(),
     voice: (process.env.OW_LLM_VOICE || '').trim(),
+    voiceMap: (process.env.OW_LLM_VOICE_MAP || '').trim(),
   };
   const provider = env.provider || stored.provider || DEFAULTS.provider;
   const prov = PROVIDERS[provider] || null;
@@ -80,7 +112,10 @@ export function resolveLlmConfig() {
     enabled,
     ttsModel: env.ttsModel || (typeof stored.ttsModel === 'string' && stored.ttsModel ? stored.ttsModel : '') || (prov && prov.ttsDefaultModel ? prov.ttsDefaultModel : ''),
     voice: env.voice || (typeof stored.voice === 'string' ? stored.voice : ''),
-    source: env.apiKey || env.provider || env.model || env.baseUrl || env.enabled || env.ttsModel || env.voice ? 'env' : 'db',
+    voiceMap: Object.keys(normalizeVoiceMap(env.voiceMap)).length
+      ? normalizeVoiceMap(env.voiceMap)
+      : normalizeVoiceMap(stored.voiceMap),
+    source: env.apiKey || env.provider || env.model || env.baseUrl || env.enabled || env.ttsModel || env.voice || env.voiceMap ? 'env' : 'db',
   };
 }
 
@@ -112,6 +147,7 @@ export function publicLlmConfig() {
     ttsModel: cfg.ttsModel,
     ttsModels: prov.ttsModels || [],
     voice: cfg.voice,
+    voiceMap: cfg.voiceMap,
     ttsAvailable: isTtsAvailable(),
     providers: Object.fromEntries(
       Object.entries(PROVIDERS).map(([id, p]) => [id, { label: p.label, models: p.models, defaultModel: p.defaultModel, ttsModels: p.ttsModels || [] }]),
@@ -136,6 +172,7 @@ export function saveLlmConfig(input) {
     enabled: typeof input.enabled === 'boolean' ? input.enabled : stored.enabled !== false,
     ttsModel: typeof input.ttsModel === 'string' ? input.ttsModel.trim() : stored.ttsModel || '',
     voice: typeof input.voice === 'string' ? input.voice.trim() : stored.voice || '',
+    voiceMap: input.voiceMap !== undefined ? normalizeVoiceMap(input.voiceMap) : normalizeVoiceMap(stored.voiceMap),
   };
   run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', LLM_SETTINGS_KEY, JSON.stringify(next));
   return publicLlmConfig();
