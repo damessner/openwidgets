@@ -59,6 +59,7 @@
 
 .item-text-content {
   overflow-wrap: anywhere;
+  line-height: 1.6;
 }
 
 .item-text-content .rt-line {
@@ -93,9 +94,9 @@
 }
 
 .item-media-audio-wrap .audio-speed-btn.is-active {
-  background: var(--accent, #2563eb);
-  border-color: var(--accent, #2563eb);
-  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-contrast);
 }
 
 .item-media-error {
@@ -909,7 +910,7 @@ span.item-pin {
   padding: 2px;
   border: 2px solid var(--primary);
   border-radius: var(--radius-sm);
-  background: rgb(79 70 229 / 14%);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
 .ib-box-num {
@@ -962,7 +963,7 @@ span.item-pin {
 }
 
 .ib-box.ib-drag-over {
-  background: rgb(79 70 229 / 32%);
+  background: color-mix(in srgb, var(--primary) 28%, transparent);
   border-color: var(--primary-hover);
 }
 

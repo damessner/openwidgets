@@ -1,45 +1,65 @@
 /* OpenWidgets design system — tokens + shared components.
    Page-specific CSS lives with each page (student.css, teacher/teacher.css,
-   render/render.css). This file is Lead-owned: add tokens/components here,
-   don't fork styling conventions. */
+   render/render.css). Generated & calibrated with ui-ux-pro-max-skill
+   (LMS Classroom Editorial + Soft UI Evolution + Accessible & Ethical). */
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('/fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('/fonts/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 :root {
   color-scheme: light;
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
-  --bg: #f4f5fb;
+  --bg: #f4f7f6;
   --surface: #ffffff;
-  --surface-2: #f7f8fd;
-  --surface-3: #e9ecf6;
-  --text: #141b2d;
-  --text-muted: #55617a;
-  --text-faint: #6d7889;
-  --border: #e3e7f2;
-  --border-strong: #c9d1e4;
+  --surface-2: #edf3f1;
+  --surface-3: #dce7e4;
+  --text: #0f2422;
+  --text-muted: #425956;
+  --text-faint: #576e6b;
+  --border: #d5e2df;
+  --border-strong: #a7c0ba;
 
-  --primary: #4f46e5;
-  --primary-2: #9333ea;
-  --primary-hover: #4338ca;
-  --primary-soft: #eef0fe;
+  --primary: #0f766e;
+  --primary-2: #0d9488;
+  --primary-hover: #115e59;
+  --primary-soft: #e3f5f2;
   --primary-contrast: #ffffff;
-  --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #9333ea 100%);
+  --accent: #d97706;
+  --accent-soft: #fef3c7;
+  --gradient-primary: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
   --success: #15803d;
-  --success-soft: #e7f6ec;
+  --success-soft: #e6f6ec;
   --danger: #c2261c;
   --danger-soft: #fdeceb;
   --warning: #a55a00;
-  --warning-soft: #fdf3e3;
-  --info: #0f6c8c;
-  --info-soft: #e6f4f9;
+  --warning-soft: #fef3df;
+  --info: #0369a1;
+  --info-soft: #e6f3fb;
 
-  --radius-sm: 9px;
-  --radius: 14px;
-  --radius-lg: 20px;
-  --shadow-sm: 0 1px 2px rgb(20 27 45 / 6%), 0 1px 3px rgb(20 27 45 / 5%);
-  --shadow: 0 6px 20px rgb(20 27 45 / 9%), 0 1px 3px rgb(20 27 45 / 5%);
-  --shadow-lg: 0 24px 60px rgb(20 27 45 / 20%), 0 4px 12px rgb(20 27 45 / 8%);
-  --shadow-primary: 0 8px 22px rgb(79 70 229 / 32%);
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgb(15 36 34 / 5%), 0 1px 2px rgb(15 36 34 / 4%);
+  --shadow: 0 4px 16px rgb(15 36 34 / 7%), 0 1px 3px rgb(15 36 34 / 4%);
+  --shadow-lg: 0 18px 44px rgb(15 36 34 / 14%), 0 4px 12px rgb(15 36 34 / 6%);
+  --shadow-primary: 0 4px 14px rgb(15 118 110 / 26%);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -49,7 +69,7 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  --focus-ring: 0 0 0 3px rgb(79 70 229 / 32%);
+  --focus-ring: 0 0 0 3px rgb(15 118 110 / 32%);
   --content-max: 1180px;
 }
 
@@ -61,19 +81,21 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 76px;
 }
 
 body {
   margin: 0;
   background-color: var(--bg);
   background-image:
-    radial-gradient(1100px 540px at 85% -10%, rgb(124 58 237 / 8%), transparent 62%),
-    radial-gradient(900px 480px at -12% -6%, rgb(79 70 229 / 9%), transparent 58%);
+    radial-gradient(1000px 480px at 88% -8%, rgb(15 118 110 / 6%), transparent 60%),
+    radial-gradient(860px 440px at -10% -4%, rgb(217 119 6 / 4%), transparent 56%);
   background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
@@ -85,7 +107,11 @@ h1, h2, h3, h4 {
   margin: 0 0 var(--space-3);
   line-height: 1.25;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+}
+
+h1, h2 {
+  text-wrap: balance;
 }
 
 h1 { font-size: 1.9rem; }
@@ -290,13 +316,12 @@ hr {
   box-shadow: var(--shadow-primary);
 }
 .btn-primary:hover {
-  background: var(--gradient-primary);
+  background: var(--primary-hover);
   border-color: transparent;
-  filter: brightness(1.07) saturate(1.05);
-  box-shadow: 0 12px 30px rgb(79 70 229 / 42%);
+  box-shadow: 0 8px 22px rgb(15 118 110 / 30%);
   color: #fff;
 }
-.btn-primary:active { filter: brightness(0.97); }
+.btn-primary:active { background: var(--primary-hover); filter: brightness(0.95); }
 
 .btn-secondary { --btn-bg: var(--surface); }
 
@@ -500,8 +525,10 @@ fieldset.fieldset > legend {
   background: var(--surface-2);
   color: var(--text-muted);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .badge-primary { background: var(--primary-soft); color: var(--primary-hover); }
+.badge-accent { background: var(--accent-soft); color: #92400e; }
 .badge-success { background: var(--success-soft); color: var(--success); }
 .badge-danger { background: var(--danger-soft); color: var(--danger); }
 .badge-warning { background: var(--warning-soft); color: var(--warning); }
@@ -560,11 +587,11 @@ fieldset.fieldset > legend {
 }
 .table th {
   background: var(--surface-2);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.055em;
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
 }
 .table tr:last-child td { border-bottom: 0; }
@@ -659,20 +686,6 @@ fieldset.fieldset > legend {
   background: var(--gradient-primary);
   border-radius: inherit;
   transition: width 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-.progress > span::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 25%, rgb(255 255 255 / 38%) 50%, transparent 75%);
-  background-size: 220% 100%;
-  animation: ow-shine 1.8s linear infinite;
-}
-@keyframes ow-shine {
-  from { background-position: 200% 0; }
-  to { background-position: -120% 0; }
 }
 
 .spinner {
@@ -775,11 +788,11 @@ dialog.modal::backdrop {
 }
 .toast {
   pointer-events: auto;
-  background: #232c3f;
+  background: #132624;
   color: #f9fafb;
   padding: 11px 16px;
   border-radius: var(--radius);
-  border: 1px solid rgb(255 255 255 / 10%);
+  border: 1px solid rgb(255 255 255 / 12%);
   box-shadow: var(--shadow-lg);
   font-size: 0.9rem;
   animation: ow-toast-in 0.18s ease-out;
@@ -812,15 +825,16 @@ dialog.modal::backdrop {
   padding: 5px 9px;
   cursor: pointer;
 }
-.lang-btn.is-active { background: var(--primary); color: #fff; }
+.lang-btn.is-active { background: var(--primary); color: var(--primary-contrast); }
 
 /* ------------------------------------------------------------------ header/footer */
 
 .app-header {
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  backdrop-filter: blur(14px) saturate(1.4);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
   border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -922,22 +936,24 @@ dialog.modal::backdrop {
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --bg: #0d1220;
-    --surface: #161d30;
-    --surface-2: #1c2440;
-    --surface-3: #273252;
-    --text: #e9edf8;
-    --text-muted: #a6b1cb;
-    --text-faint: #8291b3;
-    --border: #273252;
-    --border-strong: #3a4770;
+    --bg: #0b1315;
+    --surface: #121e21;
+    --surface-2: #18272b;
+    --surface-3: #22353a;
+    --text: #edf7f5;
+    --text-muted: #a2bab6;
+    --text-faint: #819c97;
+    --border: #243a40;
+    --border-strong: #35545c;
 
-    --primary: #a5b0ff;
-    --primary-2: #c4b5fd;
-    --primary-hover: #c0c7ff;
-    --primary-soft: rgb(129 140 248 / 16%);
-    --primary-contrast: #ffffff;
-    --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #a855f7 100%);
+    --primary: #2dd4bf;
+    --primary-2: #14b8a6;
+    --primary-hover: #5eead4;
+    --primary-soft: rgb(45 212 191 / 15%);
+    --primary-contrast: #042f2e;
+    --accent: #fbbf24;
+    --accent-soft: rgb(251 191 36 / 15%);
+    --gradient-primary: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
     --success: #4ade80;
     --success-soft: rgb(74 222 128 / 14%);
     --danger: #f87171;
@@ -948,24 +964,25 @@ dialog.modal::backdrop {
     --info-soft: rgb(56 189 248 / 14%);
 
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 45%);
-    --shadow: 0 8px 26px rgb(0 0 0 / 48%);
-    --shadow-lg: 0 30px 70px rgb(0 0 0 / 62%);
-    --shadow-primary: 0 8px 26px rgb(99 102 241 / 42%);
-    --focus-ring: 0 0 0 3px rgb(129 140 248 / 42%);
+    --shadow: 0 8px 24px rgb(0 0 0 / 48%);
+    --shadow-lg: 0 28px 64px rgb(0 0 0 / 60%);
+    --shadow-primary: 0 6px 20px rgb(13 148 136 / 36%);
+    --focus-ring: 0 0 0 3px rgb(45 212 191 / 42%);
   }
 
   body {
     background-image:
-      radial-gradient(1100px 540px at 85% -10%, rgb(139 92 246 / 13%), transparent 62%),
-      radial-gradient(900px 480px at -12% -6%, rgb(99 102 241 / 14%), transparent 58%);
+      radial-gradient(1000px 480px at 88% -8%, rgb(45 212 191 / 10%), transparent 60%),
+      radial-gradient(860px 440px at -10% -4%, rgb(251 191 36 / 6%), transparent 56%);
   }
 
+  .badge-accent { color: #fcd34d; }
   .btn-danger:hover { background: #dc2626; border-color: #dc2626; }
-  .toast { background: #2b3550; }
+  .toast { background: #1d3236; }
   .toast-success { background: #14532d; }
   .toast-error { background: #7f1d1d; }
   .toast-warning { background: #78350f; }
-  .switch .track::after { background: #e5e9f5; }
+  .switch .track::after { background: #e5f2ef; }
   .demo-mode-banner { border-color: rgb(251 191 36 / 30%); }
 }
 

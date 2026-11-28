@@ -92,18 +92,19 @@
 .landing-visual::before {
   content: '';
   position: absolute;
-  inset: -12% -14%;
+  inset: -10% -12%;
   background:
-    radial-gradient(closest-side, rgb(124 58 237 / 22%), transparent 70%),
-    radial-gradient(closest-side at 30% 80%, rgb(79 70 229 / 20%), transparent 70%);
-  filter: blur(10px);
+    radial-gradient(closest-side, rgb(15 118 110 / 13%), transparent 70%),
+    radial-gradient(closest-side at 28% 82%, rgb(217 119 6 / 9%), transparent 70%);
+  filter: blur(12px);
   z-index: 0;
 }
 
 .landing-mock {
   position: relative;
   z-index: 1;
-  transform: rotate(1.5deg);
+  transform: none;
+  border-top: 4px solid var(--primary);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -192,18 +193,17 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 13px;
+  padding: 7px 13px;
   border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   font-size: 0.8rem;
   font-weight: 700;
-  animation: ow-float 5s ease-in-out infinite;
 }
 
 .landing-chip-live {
-  top: -16px;
+  top: -14px;
   right: 8%;
   color: var(--success);
 }
@@ -211,21 +211,25 @@
 .landing-chip-points {
   bottom: -14px;
   left: -4%;
-  color: var(--primary-hover);
-  animation-delay: -2.5s;
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  color: #92400e;
 }
 
-@keyframes ow-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-7px); }
+@media (prefers-color-scheme: dark) {
+  .landing-chip-points {
+    color: var(--accent);
+  }
 }
 
 /* ---------------------------------------------------------------- join */
 
 .landing-join {
-  max-width: 600px;
+  max-width: 620px;
   margin: var(--space-7) auto 0;
   padding: var(--space-6);
+  border: 1.5px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  border-top: 4px solid var(--primary);
 }
 
 .landing-join-head {
@@ -268,9 +272,9 @@
 }
 
 .landing-feature:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
-  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--border));
 }
 
 .landing-feature .card-title { margin: 0; }
