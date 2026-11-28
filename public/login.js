@@ -14,6 +14,7 @@ registerMessages({
     'login.student_hint': 'Melde dich mit deinem Namen (z. B. „Sabrina Messner“) oder Benutzernamen und deinem Passwort an — das hat dir deine Lehrkraft gegeben.',
     'login.selfhosted_note':
       'Diese Instanz wird selbst gehostet. Passwort vergessen? Bitte an die Administration wenden.',
+    'login.compliance': 'DSGVO-konform · selbst gehostet · keine Drittanbieter-CDNs',
     'login.redirecting': 'Anmeldung erfolgreich — weiter …',
     'login.demo_title': 'Demo-Modus — nur zum Ausprobieren',
     'login.demo_hint':
@@ -29,6 +30,7 @@ registerMessages({
     'login.student_hint': 'Sign in with your full name (e.g. “Sabrina Messner”) or your username plus the password your teacher gave you.',
     'login.selfhosted_note':
       'This instance is self-hosted. Forgot your password? Please contact your administrator.',
+    'login.compliance': 'GDPR-compliant · self-hosted · no third-party CDNs',
     'login.redirecting': 'Signed in — continuing …',
     'login.demo_title': 'Demo mode — for trying things out only',
     'login.demo_hint':

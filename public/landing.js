@@ -17,6 +17,9 @@ registerMessages({
     'landing.subtitle':
       'OpenWidgets ist eine quelloffene, datenschutzfreundliche Plattform für interaktive Arbeitsblätter. Lehrkräfte erstellen Quizze und Arbeitsblätter, Schüler:innen bearbeiten sie im Browser, die Auswertung passiert automatisch — alles auf dem eigenen Schulserver.',
     'landing.nav_features': 'Funktionen',
+    'landing.trust_privacy': 'DSGVO-konform · eigener Schulserver',
+    'landing.trust_opensource': 'Open Source · AGPL-3.0',
+    'landing.trust_no_tracking': 'Keine Tracking-Cookies · keine Drittanbieter-CDNs',
     'landing.nav_join': 'Als Schüler:in beitreten',
     'landing.teacher_login': 'Lehrkräfte-Login',
     'landing.cta_teacher': 'Lehrkräfte-Login',
@@ -80,6 +83,9 @@ registerMessages({
     'landing.subtitle':
       'OpenWidgets is an open-source, privacy-friendly platform for interactive worksheets. Teachers author quizzes and worksheets, students complete them in the browser, grading is automatic — all on your own school server.',
     'landing.nav_features': 'Features',
+    'landing.trust_privacy': 'GDPR-compliant · your own school server',
+    'landing.trust_opensource': 'Open source · AGPL-3.0',
+    'landing.trust_no_tracking': 'No tracking cookies · no third-party CDNs',
     'landing.nav_join': 'Join as a student',
     'landing.teacher_login': 'Teacher login',
     'landing.cta_teacher': 'Teacher login',

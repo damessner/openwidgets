@@ -329,3 +329,52 @@
 .student-progress-bar.is-locked { background: repeating-linear-gradient(45deg, #9aa5b5, #9aa5b5 6px, #c3cad6 6px, #c3cad6 12px); }
 .student-progress-bar.is-open { background: transparent; }
 
+
+/* ---------------------------------------------------- redesign v2.4 upgrades */
+
+.landing-main { max-width: var(--content-max); padding-top: 40px; }
+
+.landing-hero { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }
+
+/* hero mock: status header + letter-chip choice rows, per mockup */
+.landing-mock { border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.landing-mock-choice {
+  border: 1px solid var(--outline-variant);
+  border-radius: 12px;
+  background: var(--surface-container-low);
+  min-height: 52px;
+  padding: 10px 14px;
+}
+.landing-mock-choice::before {
+  content: attr(data-letter);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--surface-container-highest);
+  color: var(--on-surface-variant);
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+.landing-mock-radio { display: none; }
+.landing-mock-choice.is-picked {
+  background: var(--primary-fixed);
+  border-color: transparent;
+  box-shadow: 0 0 0 1.5px var(--primary);
+}
+.landing-mock-choice.is-picked::before { background: var(--primary); color: var(--primary-contrast); }
+.landing-mock .progress { margin-top: 4px; }
+
+/* join card: prominent callout with accent top bar + big code input */
+.landing-join { max-width: 720px; border: 1px solid var(--outline-variant); box-shadow: var(--shadow); }
+.landing-join .input { min-height: 56px; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; text-align: center; font-size: 1.25rem; }
+.landing-join .btn { min-height: 56px; }
+
+/* features: 4-across on wide screens */
+@media (min-width: 1100px) { .landing-features { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.landing-feature { border-radius: var(--radius-lg); }
+
+/* student panel: dashboard-style cards */
+.landing-class { border: 1px solid var(--outline-variant); border-radius: var(--radius); padding: 12px; background: var(--surface-container-low); }
+.landing-student-item { border-radius: 10px; background: var(--surface-container-lowest); border-color: var(--outline-variant); }

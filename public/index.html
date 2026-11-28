@@ -25,6 +25,13 @@
   </header>
 
   <main class="container landing-main">
+    <div class="trust-bar" aria-hidden="false">
+      <div class="row gap-2 wrap">
+        <span class="trust-pill"><span class="dot dot-online" style="width:8px;height:8px;border-radius:50%;background:var(--primary);display:inline-block"></span><span data-i18n="landing.trust_privacy">DSGVO-konform · eigener Schulserver</span></span>
+        <span class="trust-pill" data-i18n="landing.trust_opensource">Open Source · AGPL-3.0</span>
+      </div>
+      <span class="small muted" data-i18n="landing.trust_no_tracking">Keine Tracking-Cookies · keine Drittanbieter-CDNs</span>
+    </div>
     <section class="landing-hero">
       <div class="landing-hero-text">
         <span class="badge badge-primary landing-eyebrow">
@@ -71,15 +78,15 @@
           </div>
           <div class="landing-mock-stem"></div>
           <div class="landing-mock-line w-80"></div>
-          <div class="landing-mock-choice">
+          <div class="landing-mock-choice" data-letter="A">
             <span class="landing-mock-radio"></span>
             <span class="landing-mock-line w-65"></span>
           </div>
-          <div class="landing-mock-choice is-picked">
+          <div class="landing-mock-choice is-picked" data-letter="B">
             <span class="landing-mock-radio"></span>
             <span class="landing-mock-line w-55"></span>
           </div>
-          <div class="landing-mock-choice">
+          <div class="landing-mock-choice" data-letter="C">
             <span class="landing-mock-radio"></span>
             <span class="landing-mock-line w-40"></span>
           </div>
@@ -99,7 +106,7 @@
 
     <div id="student-panel"></div>
 
-    <section id="join" class="card landing-join">
+    <section id="join" class="card landing-join accent-top">
       <div class="landing-join-head">
         <span class="icon-tile">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>

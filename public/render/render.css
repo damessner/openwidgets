@@ -166,23 +166,41 @@
 
 .item-choice {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-3);
-  padding: 12px 15px;
-  border: 1.5px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface);
+  padding: 14px 16px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 12px;
+  background: var(--surface-container-low);
   cursor: pointer;
-  min-height: 48px;
+  min-height: 52px;
   transition: border-color 0.13s, background-color 0.13s, box-shadow 0.13s, transform 0.13s;
 }
 
 .item-choice:hover {
-  background: var(--surface-2);
-  border-color: var(--text-faint);
+  background: var(--surface-container);
+  border-color: var(--outline);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
+
+/* letter chip (A/B/C …) shown before the choice text, per redesign mockup */
+.item-choice::before {
+  content: attr(data-letter);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 8px;
+  background: var(--surface-container-highest);
+  color: var(--on-surface-variant);
+  font-weight: 700;
+  font-size: 0.875rem;
+  transition: background-color 0.13s, color 0.13s;
+}
+.item-choice:hover::before { background: var(--primary-fixed); color: var(--on-primary-fixed); }
 
 .item-choice-input {
   appearance: none;
@@ -224,10 +242,11 @@
 }
 
 .item-choice.is-selected {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+  border-color: transparent;
+  background: var(--primary-fixed);
+  box-shadow: 0 0 0 1.5px var(--primary);
 }
+.item-choice.is-selected::before { background: var(--primary); color: var(--primary-contrast); }
 
 .item-choice.is-correct-answer {
   border-color: var(--success);

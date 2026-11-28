@@ -74,6 +74,9 @@ registerMessages({
     'student.class_item_done': 'Erledigt',
     'student.class_score': '{score} / {maxScore} P.',
     'student.class_back': 'Zur Klasse',
+    'student.exit': 'Beenden',
+    'student.task_nav_label': 'Aufgaben',
+    'student.task_nav': 'Aufgaben-Navigator',
     'student.class_via_link': 'Diese Aufgabe gehört zu einer Klasse. Treten Sie über den Klassen-Link bei:',
     'student.class_open_link': 'Zur Klasse',
     'student.class_invalid_code_title': 'Klassen-Code ungültig',
@@ -184,6 +187,9 @@ registerMessages({
     'student.class_item_done': 'Done',
     'student.class_score': '{score} / {maxScore} pts',
     'student.class_back': 'Back to class',
+    'student.exit': 'Exit',
+    'student.task_nav_label': 'Tasks',
+    'student.task_nav': 'Task navigator',
     'student.class_via_link': 'This assignment belongs to a class. Join via the class link:',
     'student.class_open_link': 'Open class',
     'student.class_invalid_code_title': 'Invalid class code',
@@ -668,6 +674,7 @@ function updateSaveStatus() {
   clear(saveStatusEl);
   saveStatusEl.appendChild(h('span', { html: icon(iconName, { size: 14 }) }));
   saveStatusEl.appendChild(h('span', { text }));
+  refreshTaskNav(); // redesign v2.4: navigator pills reflect answered state
 }
 
 function updateOfflineUI() {
@@ -699,6 +706,21 @@ function renderChrome() {
   if (MODE === 'c') saveStatusEl.hidden = true;
   else updateSaveStatus();
   updateOfflineUI();
+  // redesign v2.4 header chrome: exit button target + class PIN chip
+  const exit = qs('#student-exit');
+  if (exit) {
+    exit.href = state.classInfo && state.classInfo.code ? `/c/${encodeURIComponent(state.classInfo.code)}` : '/';
+  }
+  const pinChip = qs('#header-pin-chip');
+  if (pinChip) {
+    const code = state.classInfo && state.classInfo.code ? String(state.classInfo.code).toUpperCase() : '';
+    if (code) {
+      pinChip.hidden = false;
+      pinChip.textContent = `PIN: ${code}`;
+    } else {
+      pinChip.hidden = true;
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1403,6 +1425,78 @@ function updatePlayerProgress() {
   }
   const quizAnswered = qs('[data-quiz-answered]', app);
   if (quizAnswered) quizAnswered.textContent = label;
+  // redesign v2.4: header progress + task-navigator states
+  const hp = qs('#header-progress');
+  if (hp) {
+    const pct = stats.total ? Math.round((stats.answered / stats.total) * 100) : 0;
+    hp.hidden = !(state.screen === 'player' || state.screen === 'quiz');
+    const fill = qs('#header-progress-fill');
+    if (fill) fill.style.width = `${pct}%`;
+    const txt = qs('#header-progress-text');
+    if (txt) txt.textContent = `${formatNumber(pct)}%`;
+  }
+  refreshTaskNav();
+}
+
+/** Redesign v2.4: pill navigator over all items (worksheet scrolls, quiz jumps). */
+function buildTaskNav() {
+  const nav = h('nav.task-nav.no-print', { 'aria-label': t('student.task_nav') });
+  nav.appendChild(
+    h('span.task-nav-label', { html: icon('list', { size: 18 }) }, h('span', { text: t('student.task_nav_label') })),
+  );
+  const quizMode = state.template === 'quiz';
+  const openIdx = state.items.findIndex(
+    (item) => scoreableItems().some((s) => s.id === item.id) && !isAnswered(item),
+  );
+  state.items.forEach((item, index) => {
+    const btn = h(
+      'button',
+      { type: 'button', dataset: { taskNav: item.id }, title: itemTypeLabel(item) },
+      isAnswered(item) ? h('span', { html: icon('check', { size: 15 }) }) : null,
+      h('span', { text: String(index + 1) }),
+    );
+    btn.classList.toggle('is-done', isAnswered(item));
+    if (quizMode) {
+      btn.classList.toggle('is-active', index === state.currentIndex);
+      btn.addEventListener('click', () => {
+        if (index !== state.currentIndex) {
+          state.currentIndex = index;
+          renderScreen();
+        }
+      });
+    } else {
+      btn.classList.toggle('is-active', index === (openIdx >= 0 ? openIdx : 0));
+      btn.addEventListener('click', () => {
+        const el = document.getElementById(`item-${item.id}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+    nav.appendChild(btn);
+  });
+  const stats = answeredStats();
+  nav.appendChild(h('span.task-nav-count', { text: `${formatNumber(stats.answered)}/${formatNumber(stats.total)}` }));
+  return nav;
+}
+
+function refreshTaskNav() {
+  const nav = qs('.task-nav', app);
+  if (!nav) return;
+  const quizMode = state.template === 'quiz';
+  const openIdx = state.items.findIndex(
+    (item) => scoreableItems().some((s) => s.id === item.id) && !isAnswered(item),
+  );
+  nav.querySelectorAll('[data-task-nav]').forEach((btn) => {
+    const item = state.items.find((it) => it.id === btn.dataset.taskNav);
+    if (!item) return;
+    btn.classList.toggle('is-done', isAnswered(item));
+    if (quizMode) btn.classList.toggle('is-active', state.items.indexOf(item) === state.currentIndex);
+    else btn.classList.toggle('is-active', state.items.indexOf(item) === (openIdx >= 0 ? openIdx : 0));
+    const check = btn.querySelector('.icon');
+    if (isAnswered(item) && !check) btn.prepend(h('span', { html: icon('check', { size: 15 }) }));
+  });
+  const stats = answeredStats();
+  const count = nav.querySelector('.task-nav-count');
+  if (count) count.textContent = `${formatNumber(stats.answered)}/${formatNumber(stats.total)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1802,6 +1896,7 @@ function buildWorksheetScreen() {
     wrap.appendChild(h('div.card.empty', h('p.empty-title', { text: t('student.no_items') })));
     return wrap;
   }
+  wrap.appendChild(buildTaskNav());
   const list = h('ul.student-items.compact');
   state.items.forEach((item, index) => {
     const li = h('li');
@@ -1885,6 +1980,7 @@ function buildQuizScreen() {
   progressBar.appendChild(progressFill);
   progress.appendChild(progressBar);
   wrap.appendChild(progress);
+  wrap.appendChild(buildTaskNav());
 
   const host = h('div.student-quiz-item', { tabindex: -1 });
   host.appendChild(createItemCard(state.items[state.currentIndex], state.currentIndex));

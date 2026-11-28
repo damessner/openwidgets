@@ -75,7 +75,7 @@ export function mount(container, rawCtx) {
   /** @type {Array<{input: HTMLInputElement, choice: object, choiceLabel: HTMLElement}>} */
   const entries = [];
 
-  for (const choice of ordered) {
+  for (const [choiceIndex, choice] of ordered.entries()) {
     const inputId = choiceDomId(groupName, choice.id);
     const input = h('input.item-choice-input', {
       type: multi ? 'checkbox' : 'radio',
@@ -88,7 +88,11 @@ export function mount(container, rawCtx) {
     const text = h('span.item-choice-text');
     text.textContent = String(choice.text === undefined || choice.text === null ? '' : choice.text);
 
-    const choiceLabel = h('label.item-choice', { htmlFor: inputId }, input, text);
+    // redesign v2.4: letter chip A/B/C… rendered via .item-choice::before
+    const choiceLabel = h('label.item-choice', {
+      htmlFor: inputId,
+      dataset: { letter: String.fromCharCode(65 + choiceIndex) },
+    }, input, text);
 
     if (ctx.showAnswers && choice.correct === true) {
       choiceLabel.classList.add('is-correct-answer');

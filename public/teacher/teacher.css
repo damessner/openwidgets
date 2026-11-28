@@ -1107,3 +1107,41 @@
 .class-item-row .item-course-select { max-width: 200px; }
 .class-item-row .item-bonus-toggle { opacity: 0.45; }
 .class-item-row .item-bonus-toggle.is-active { opacity: 1; background: var(--warning-bg, #fff4d6); border-radius: 6px; }
+
+/* ---------------------------------------------------- redesign v2.4 upgrades */
+
+/* KPI stat cards: bigger tabular values, tile on the right (studio mockup) */
+.stat-card { justify-content: space-between; background: var(--surface-container-lowest); border-color: var(--outline-variant); border-radius: var(--radius-lg); }
+.stat-card .stat { align-items: flex-start; }
+.stat-card .stat-value { font-size: 1.5rem; line-height: 2rem; font-weight: 700; letter-spacing: -0.015em; }
+.stat-card .stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+.stat-icon { width: 48px; height: 48px; border-radius: 13px; box-shadow: none; }
+
+/* PIN code chip in mockup style */
+.code-chip {
+  background: var(--surface-container);
+  border-color: var(--outline-variant);
+  color: var(--primary);
+  font-family: var(--font-mono);
+  border-radius: 8px;
+}
+.code-chip:hover { background: var(--surface-container-high); color: var(--primary); box-shadow: none; }
+
+/* generic dense tables (session monitor style) */
+.teacher-main table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.teacher-main table thead th {
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  text-align: left; padding: 10px 12px; white-space: nowrap;
+}
+.teacher-main table tbody td { padding: 12px; border-top: 1px solid var(--surface-container); vertical-align: middle; }
+.teacher-main table tbody tr:hover { background: var(--surface-container-low); }
+.teacher-main .card table { border-radius: var(--radius-lg); }
+
+/* cards a bit rounder, per mockup */
+.teacher-main .card { border-radius: var(--radius-lg); }
+
+/* primary buttons solid, per mockup */
+.btn-primary { background: var(--primary); border-color: var(--primary); color: var(--primary-contrast); }
+.btn-primary:hover { background: var(--primary-container); border-color: var(--primary-container); color: var(--on-primary-container); }

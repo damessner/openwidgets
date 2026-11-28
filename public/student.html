@@ -16,12 +16,18 @@
 
   <header class="app-header student-header no-print">
     <div class="container student-header-inner">
+      <a class="btn btn-ghost btn-sm student-exit no-print" id="student-exit" href="/" data-i18n="student.exit">Beenden</a>
       <a class="brand student-brand" href="/">
         <span class="brand-mark" aria-hidden="true">OW</span>
         <span class="student-brand-text">OpenWidgets</span>
       </a>
       <h1 class="student-activity-title" id="activity-title" hidden></h1>
       <div class="student-header-tools">
+        <span class="header-progress" id="header-progress" hidden>
+          <span class="progress sm"><span id="header-progress-fill" style="width: 0%"></span></span>
+          <span id="header-progress-text">0%</span>
+        </span>
+        <span class="pin-chip header-pin" id="header-pin-chip" hidden></span>
         <span class="student-countdown badge badge-warning" id="countdown" role="timer" hidden></span>
         <span class="student-save-status" id="save-status" role="status" aria-live="polite" hidden></span>
         <div class="student-a11y" id="a11y-bar"></div>

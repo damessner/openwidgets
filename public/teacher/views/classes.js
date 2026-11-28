@@ -224,7 +224,7 @@ export async function mount(root, ctx) {
       if (cls.status === 'published' && cls.code) {
         const url = classUrl(cls.code);
         const codeChip = h(
-          'button.code-chip',
+          'button.code-chip.pin-chip',
           { type: 'button', title: t('teacher.copy_link'), on: { click: async () => {
             const ok = await copyText(url);
             toast(ok ? t('common.copied') : t('teacher.copy_manual'), ok ? 'success' : 'warning');
