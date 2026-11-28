@@ -1,0 +1,521 @@
+<!-- OpenWidgets — Schüler-Dashboard (redesign mockup v2.4, pasted 2026-11-28).
+     STATIC MOCKUP for review — uses Tailwind CDN + Google Fonts + external
+     images, which violate the production CSP (font-src 'self', no third-party
+     CDNs). Do NOT wire into public/ without porting to app.css tokens,
+     public/fonts/ and local SVG icons. See design-system/mockups/README.md -->
+<!DOCTYPE html>
+
+<html lang="de"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"outline":"#6e7977","on-surface":"#0f1e1c","background":"#ebfdf9","on-error-container":"#93000a","on-primary-fixed-variant":"#00504a","tertiary-fixed-dim":"#ffb598","on-secondary-fixed":"#2f1500","surface-variant":"#d4e6e2","on-secondary-container":"#663500","on-secondary-fixed-variant":"#6e3900","surface-container-high":"#daece7","error-container":"#ffdad6","tertiary":"#7f4025","on-primary-container":"#a3faef","surface-dim":"#ccded9","surface-tint":"#006a63","surface-container":"#e0f2ed","error":"#ba1a1a","on-tertiary-fixed":"#370e00","surface-container-lowest":"#ffffff","primary-fixed-dim":"#80d5cb","primary-fixed":"#9cf2e8","inverse-surface":"#243331","inverse-primary":"#80d5cb","primary-container":"#0f766e","inverse-on-surface":"#e2f5f0","tertiary-fixed":"#ffdbce","secondary":"#904d00","on-primary":"#ffffff","secondary-container":"#fe932c","on-error":"#ffffff","secondary-fixed":"#ffdcc3","on-primary-fixed":"#00201d","on-surface-variant":"#3e4947","tertiary-container":"#9c573a","surface-bright":"#ebfdf9","outline-variant":"#bdc9c6","surface":"#ebfdf9","surface-container-highest":"#d4e6e2","on-background":"#0f1e1c","secondary-fixed-dim":"#ffb77d","on-tertiary":"#ffffff","secondary-container":"#fe932c","on-tertiary-container":"#ffe5db","surface-container-low":"#e5f8f3","on-tertiary-fixed-variant":"#72361b","primary":"#005c55"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-xs":"0.25rem","gutter-mobile":"1rem","space-sm":"0.5rem","space-lg":"1.5rem","space-xl":"2.5rem","gutter":"1.5rem","margin-mobile":"1rem","margin":"2rem","space-md":"1rem"},"fontFamily":{"display-lg-mobile":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"body-lg":["Plus Jakarta Sans"],"body-sm":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"],"headline-lg-mobile":["Plus Jakarta Sans"],"code-tabular":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"],"label-lg":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"headline-sm":["Plus Jakarta Sans"],"headline-lg":["Plus Jakarta Sans"]},"fontSize":{"display-lg-mobile":["2.25rem",{"lineHeight":"2.75rem","letterSpacing":"-0.02em","fontWeight":"800"}],"display-lg":["3rem",{"lineHeight":"3.5rem","letterSpacing":"-0.025em","fontWeight":"800"}],"body-lg":["1.125rem",{"lineHeight":"1.75rem","fontWeight":"400"}],"body-sm":["0.875rem",{"lineHeight":"1.375rem","fontWeight":"400"}],"body-md":["1rem",{"lineHeight":"1.5rem","fontWeight":"400"}],"headline-lg-mobile":["1.625rem",{"lineHeight":"2.125rem","letterSpacing":"-0.015em","fontWeight":"700"}],"code-tabular":["1.25rem",{"lineHeight":"1.5rem","letterSpacing":"0.08em","fontWeight":"700"}],"headline-md":["1.5rem",{"lineHeight":"2rem","letterSpacing":"-0.015em","fontWeight":"600"}],"label-lg":["0.875rem",{"lineHeight":"1.25rem","letterSpacing":"0.01em","fontWeight":"600"}],"label-md":["0.75rem",{"lineHeight":"1rem","letterSpacing":"0.02em","fontWeight":"600"}],"headline-sm":["1.25rem",{"lineHeight":"1.75rem","letterSpacing":"-0.01em","fontWeight":"600"}],"headline-lg":["2rem",{"lineHeight":"2.5rem","letterSpacing":"-0.02em","fontWeight":"700"}]}}}};</script></head><body class="bg-surface font-body-md text-body-md text-on-surface min-h-screen"><header class="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 w-full px-gutter flex items-center justify-between"><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-sm"><div class="w-9 h-9 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center font-headline-sm text-headline-sm font-bold">OW</div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary font-bold leading-tight">OpenWidgets</span><span class="font-label-md text-label-md text-on-surface-variant font-medium">Schüler-Bereich</span></div></div><div class="hidden lg:flex items-center gap-space-xs bg-surface-container px-space-sm py-space-xs rounded-full"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span><span class="font-label-md text-label-md text-on-surface font-semibold">Lukas M. · Klasse 7b</span></div></div><nav class="hidden md:flex items-center gap-space-sm" data-active-classes="bg-primary-container text-on-primary-container font-semibold rounded-lg"><a aria-current="page" class="px-space-md py-space-xs transition-colors bg-primary-container text-on-primary-container font-semibold rounded-lg" data-path="meine-aufgaben" href="#">Meine Aufgaben</a><a class="px-space-md py-space-xs rounded-lg text-on-surface-variant font-label-lg text-label-lg hover:bg-surface-container hover:text-on-surface transition-colors" data-path="lernstationen" href="#">Lernstationen</a><a class="px-space-md py-space-xs rounded-lg text-on-surface-variant font-label-lg text-label-lg hover:bg-surface-container hover:text-on-surface transition-colors" data-path="erfolge-and-sterne" href="#">Erfolge &amp; Sterne</a></nav><div class="flex items-center gap-space-sm"><button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-colors font-code-tabular text-code-tabular" type="button"><span class="material-symbols-outlined text-[20px] text-primary">pin</span><span>PIN</span></button><div class="flex items-center bg-surface-container rounded-lg p-0.5"><button class="px-space-xs py-space-xs text-on-surface-variant hover:text-on-surface font-label-md text-label-md" title="Schrift verkleinern" type="button">A-</button><button class="px-space-xs py-space-xs text-on-surface-variant hover:text-on-surface font-label-md text-label-md font-bold" title="Schrift vergrößern" type="button">A+</button></div><button class="p-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" title="Ton umschalten" type="button"><span class="material-symbols-outlined text-[20px]">volume_up</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center ml-space-xs"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><a class="flex items-center p-space-xs rounded-lg text-on-surface-variant hover:bg-error-container hover:text-on-error-container transition-colors" data-path="logout" href="#" title="Sitzung beenden"><span class="material-symbols-outlined text-[20px]">logout</span></a></div></div></header><main class="w-full pt-16 bg-surface min-h-[calc(100vh-5rem)]"><div class="flex flex-col w-full">
+<div class="w-full px-gutter py-space-lg flex flex-col gap-space-xl max-w-7xl mx-auto">
+<!-- Top Student Header & Quick Join Banner -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-stretch">
+<!-- Greeting & Daily Focus (Col 7) -->
+<div class="lg:col-span-7 bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col justify-between relative overflow-hidden">
+<div class="absolute -right-8 -top-8 w-44 h-44 rounded-full bg-primary/5 pointer-events-none"></div>
+<div class="flex flex-col gap-space-sm relative z-10">
+<div class="flex items-center gap-space-xs">
+<span class="inline-flex items-center px-space-sm py-0.5 rounded-full bg-surface-container font-label-md text-label-md text-primary font-semibold">
+              Klasse 7b · St. Antonius Realschule
+            </span>
+<span class="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full bg-surface-container-low font-label-md text-label-md text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+              Donnerstag, 24. Oktober
+            </span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight mt-1">
+            Guten Morgen, Lukas! <span class="inline-block hover:rotate-12 transition-transform duration-200">👋</span>
+</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-xl">
+            Du bist heute voll im Plan. Zwei aktive Lerneinheiten warten auf deinen Abschluss vor der 6. Stunde.
+          </p>
+</div>
+<div class="mt-space-md pt-space-md bg-surface-container-low rounded-lg p-space-sm flex items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[18px]">target</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Didaktischer Tagesfokus</span>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate">Biologie Ökosysteme &amp; Lineare Terme</span>
+</div>
+</div>
+<span class="font-label-md text-label-md text-primary font-semibold flex-shrink-0 hidden sm:inline-flex items-center gap-1 bg-surface-container-lowest px-space-sm py-1 rounded-md shadow-xs">
+<span class="material-symbols-outlined text-[14px]">school</span> 2 Fächer aktiv
+          </span>
+</div>
+</div>
+<!-- Quick Room PIN Join Card (Col 5) -->
+<div class="lg:col-span-5 bg-gradient-to-br from-surface-container-lowest to-surface-container-low rounded-xl p-space-lg shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[18px]">key</span>
+              Live-Unterricht
+            </span>
+<span class="px-space-xs py-0.5 rounded text-primary bg-primary/10 font-label-md text-label-md font-semibold">Schul-PIN</span>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold mb-space-xs">
+            Mit Unterrichts-Code beitreten
+          </h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Gib den 6-stelligen Tafel-PIN deiner Lehrkraft ein:
+          </p>
+</div>
+<form class="mt-space-md flex flex-col gap-space-sm" onsubmit="event.preventDefault();">
+<div class="relative flex items-center">
+<input class="w-full h-11 px-space-md uppercase font-code-tabular text-code-tabular text-on-surface bg-surface-container-lowest rounded-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-xs tracking-widest placeholder:font-body-md placeholder:tracking-normal placeholder:text-outline-variant" maxlength="6" placeholder="z.B. QSZWAD" type="text"/>
+<span class="absolute right-3 font-label-md text-label-md text-outline-variant font-medium pointer-events-none">6 Zeichen</span>
+</div>
+<button class="h-11 px-space-lg rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg font-semibold flex items-center justify-center gap-space-xs transition-colors shadow-xs active:scale-[0.99]" type="submit">
+<span>Live-Station betreten</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</form>
+</div>
+</div>
+<!-- Gamified Learning Metrics (Calm Academic Feedback) -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-space-md">
+<!-- Weekly Tasks Done -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between">
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Aufgaben diese Woche</span>
+<div class="flex items-baseline gap-space-xs mt-1">
+<span class="font-headline-lg text-headline-lg text-on-surface font-bold">12</span>
+<span class="font-label-lg text-label-lg text-on-surface-variant">/ 15 erledigt</span>
+</div>
+<span class="font-label-md text-label-md text-primary font-semibold mt-1">80% Gesamtabschluss</span>
+</div>
+<div class="relative w-14 h-14 flex-shrink-0 flex items-center justify-center">
+<svg class="w-14 h-14 transform -rotate-90" viewbox="0 0 48 48">
+<circle class="text-surface-container fill-none" cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary fill-none" cx="24" cy="24" r="20" stroke="currentColor" stroke-dasharray="125.6" stroke-dashoffset="25.12" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+<span class="absolute material-symbols-outlined text-primary text-[18px]">check_circle</span>
+</div>
+</div>
+<!-- Bonus Stars Pill -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between">
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Bonus-Sterne · Fleiß</span>
+<div class="flex items-baseline gap-space-xs mt-1">
+<span class="font-headline-lg text-headline-lg text-secondary font-bold">18</span>
+<span class="font-label-lg text-label-lg text-secondary-container font-semibold">Sterne</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant mt-1">+3 diese Woche gesammelt</span>
+</div>
+<div class="w-12 h-12 rounded-xl bg-secondary-fixed/50 flex items-center justify-center text-secondary flex-shrink-0">
+<span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<!-- Open Units -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between">
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Offene Einheiten</span>
+<div class="flex items-baseline gap-space-xs mt-1">
+<span class="font-headline-lg text-headline-lg text-on-surface font-bold">3</span>
+<span class="font-label-lg text-label-lg text-on-surface-variant">Widgets aktiv</span>
+</div>
+<span class="font-label-md text-label-md text-error font-semibold mt-1">1 Abgabe fällig heute</span>
+</div>
+<div class="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[24px]">pending_actions</span>
+</div>
+</div>
+<!-- Pacing Status -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between">
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Lernrhythmus</span>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="font-headline-sm text-headline-sm text-primary font-bold">Auf Kurs</span>
+<span class="text-[18px]">🌿</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant mt-1">Alle Fristen eingehalten</span>
+</div>
+<div class="w-12 h-12 rounded-xl bg-surface-container-low flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[24px]">verified</span>
+</div>
+</div>
+</div>
+<!-- Main Workspace Dual-Pane Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- Primary Tasks Board (Col 8) -->
+<div class="lg:col-span-8 flex flex-col gap-space-lg">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<h2 class="font-headline-md text-headline-md text-on-surface font-bold">
+              Jetzt bearbeiten
+            </h2>
+<span class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container font-label-md text-label-md flex items-center justify-center font-bold">
+              3
+            </span>
+</div>
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+<span>Sortiert nach Dringlichkeit</span>
+</div>
+</div>
+<!-- Task Card 1: Urgent Biology Forest Ecosystem -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
+<div class="p-space-lg flex flex-col gap-space-md">
+<div class="flex flex-wrap items-center justify-between gap-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="px-space-sm py-1 rounded-md bg-secondary-fixed/40 text-on-secondary-fixed font-label-md text-label-md font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                  Fällig heute, 13:15 Uhr
+                </span>
+<span class="px-space-sm py-1 rounded-md bg-surface-container font-label-md text-label-md text-on-surface font-medium">
+                  Biologie 7b
+                </span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary" style="font-variation-settings: 'FILL' 1;">star</span>
+                +4 Bonus-Punkte erreichbar
+              </span>
+</div>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex flex-col gap-1 min-w-0">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold hover:text-primary transition-colors cursor-pointer">
+                  Ökosystem Wald — Teil 2: Der Stoffkreislauf
+                </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+                  Bestimme die Rolle der Destruenten und vervollständige das interaktive Nahrungsketten-Diagramm auf Folie 3.
+                </p>
+<div class="flex items-center gap-space-sm text-on-surface-variant font-label-md text-label-md mt-1">
+<span>Fr. Dr. Neumann</span>
+<span>·</span>
+<span>Lernstation A</span>
+<span>·</span>
+<span class="text-primary font-semibold">Interaktives Diagramm</span>
+</div>
+</div>
+<div class="w-full sm:w-36 h-24 rounded-lg overflow-hidden bg-surface-container flex-shrink-0 relative">
+<div class="w-full h-full bg-cover bg-center" data-alt="Close-up macro photography of moss and decomposing autumn leaves on a forest floor, soft natural lighting, emerald green and earthen tones, classroom nature exploration aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuALWXFzdTX1ReGZ0JNvGxzlTE6Wh8_W6J9hOJ2K61FM2LiKx7RCzaL27mSYpwRgg17FS9-Ltr1gwZhhpvhRyyEvkRAqRU6P1cnsUrlwEVQtuHJnc877JpuQWX8YaFyfX1qVnhqJO9EH-Z4BBZRWMTVkL3VeLQR4KgsXcek2jb4DVKVZYKK9ggDkXC4iRfpfsfXftYguUgihzeQUtMf_JFwP8L9T2f93q-IrUhSGWE')"></div>
+<div class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-surface/90 text-on-surface font-label-md text-label-md font-semibold">
+                  BioLab
+                </div>
+</div>
+</div>
+<!-- Task Progress Bar -->
+<div class="flex flex-col gap-1.5 pt-space-xs">
+<div class="flex items-center justify-between font-label-md text-label-md text-on-surface-variant">
+<span class="font-semibold text-primary">Fortschritt: 4 von 8 Aufgaben erledigt</span>
+<span class="font-bold">50%</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-primary rounded-full transition-all duration-300" style="width: 50%;"></div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-xs">
+<div class="flex items-center gap-space-sm">
+<span class="inline-flex items-center gap-1 font-label-md text-label-md text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+                  Zuletzt gestern bearbeitet
+                </span>
+</div>
+<button class="min-h-[44px] px-space-lg rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg font-semibold flex items-center gap-space-xs transition-colors active:scale-95" type="button">
+<span>Fortsetzen</span>
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Task Card 2: Math Linear Equations -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-md transition-shadow p-space-lg flex flex-col gap-space-md">
+<div class="flex flex-wrap items-center justify-between gap-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="px-space-sm py-1 rounded-md bg-surface-container-high text-primary font-label-md text-label-md font-bold">
+                Neu freigegeben
+              </span>
+<span class="px-space-sm py-1 rounded-md bg-surface-container font-label-md text-label-md text-on-surface font-medium">
+                Mathematik 7b
+              </span>
+<span class="px-space-sm py-1 rounded-md bg-surface-container-low font-label-md text-label-md text-on-surface-variant">
+                Fällig: Morgen, 10:00 Uhr
+              </span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">timer</span>
+              ca. 20 Min
+            </span>
+</div>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex flex-col gap-1 min-w-0">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold hover:text-primary transition-colors cursor-pointer">
+                Lineare Gleichungen im Alltag: Handytarife &amp; Weg-Zeit-Graphen
+              </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+                Nutze den integrierten Funktionsplotter, um den Schnittpunkt der beiden Tarife herauszufinden und die Gleichung nach x aufzulösen.
+              </p>
+<div class="flex items-center gap-space-sm text-on-surface-variant font-label-md text-label-md mt-1">
+<span>Hr. Weber</span>
+<span>·</span>
+<span>6 Widgets</span>
+<span>·</span>
+<span class="inline-flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">calculate</span> Mit Taschenrechner-Widget
+                </span>
+</div>
+</div>
+<div class="w-full sm:w-36 h-24 rounded-lg overflow-hidden bg-surface-container flex-shrink-0 relative">
+<div class="w-full h-full bg-cover bg-center" data-alt="Close up view of clean geometric coordinate system graphs on graph paper with a compass and ruler, crisp clean academic style in mint and teal lighting." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAjmX63T4ihPzxn3j2WpmCp7D_BitBUR_7ID54X7fupfvZKqSdSko9_2CJ8ETyQ2BVcX-VV77UtEFv3a3yD0U4_PE70GaHD2sS31PheYOXvGnUU5LtrfvLwLgGyi3ClnlpFoL-8BPN2PcEocuTUEqHMGkif5kWRmFXMPE7tQFGzvClD5qmVIa57xXZNInzGHQdsq1CmJ69LncU5GEw5uI-4wApGmgJqDvBPXgLmsVg')"></div>
+<div class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-surface/90 text-on-surface font-label-md text-label-md font-semibold">
+                Plotter
+              </div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant">
+              Noch nicht begonnen (0/6 Einheiten)
+            </span>
+<button class="min-h-[44px] px-space-lg rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-primary font-label-lg text-label-lg font-semibold flex items-center gap-space-xs transition-colors" type="button">
+<span>Starten</span>
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Task Card 3: English Challenge (Partner Mode) -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-md transition-shadow p-space-lg flex flex-col gap-space-md">
+<div class="flex flex-wrap items-center justify-between gap-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="px-space-sm py-1 rounded-md bg-secondary-fixed/30 text-secondary font-label-md text-label-md font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">group</span>
+                Partner-Modus (mit Sarah K.)
+              </span>
+<span class="px-space-sm py-1 rounded-md bg-surface-container font-label-md text-label-md text-on-surface font-medium">
+                Englisch 7b
+              </span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">Fällig Freitag</span>
+</div>
+<div class="flex items-center justify-between gap-space-md">
+<div class="flex flex-col gap-1 min-w-0">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold hover:text-primary transition-colors cursor-pointer">
+                Present Perfect vs. Past Simple Challenge
+              </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Interaktives Quiz-Duell und Satzbau im Tandem. Beide Bildschirme synchronisieren automatisch bei jeder gelösten Station.
+              </p>
+<div class="flex items-center gap-space-sm text-on-surface-variant font-label-md text-label-md mt-1">
+<span>Fr. Baxter</span>
+<span>·</span>
+<span>Lernstation 4</span>
+<span>·</span>
+<span class="text-secondary font-semibold">12 Tandem-Karten</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+              Sarah K. ist online im Lernraum
+            </span>
+<button class="min-h-[44px] px-space-lg rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-primary font-label-lg text-label-lg font-semibold flex items-center gap-space-xs transition-colors" type="button">
+<span>Öffnen</span>
+<span class="material-symbols-outlined text-[18px]">launch</span>
+</button>
+</div>
+</div>
+<!-- Weekly Plan & Deadlines Timeline Strip -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md mt-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Wochenplan &amp; Abgabefristen</h3>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">KW 43 · 21. - 25. Okt.</span>
+</div>
+<div class="grid grid-cols-5 gap-space-xs sm:gap-space-sm pt-space-xs">
+<!-- Mo -->
+<div class="flex flex-col items-center bg-surface-container-low rounded-lg p-space-sm text-center">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Mo 21</span>
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center my-space-xs">
+<span class="material-symbols-outlined text-[14px]">done</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant truncate w-full">Deu (Aufsatz)</span>
+<span class="text-[10px] text-primary font-bold">Erledigt</span>
+</div>
+<!-- Di -->
+<div class="flex flex-col items-center bg-surface-container-low rounded-lg p-space-sm text-center">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Di 22</span>
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center my-space-xs">
+<span class="material-symbols-outlined text-[14px]">done</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant truncate w-full">Mathe Terme</span>
+<span class="text-[10px] text-primary font-bold">Erledigt</span>
+</div>
+<!-- Mi -->
+<div class="flex flex-col items-center bg-surface-container-low rounded-lg p-space-sm text-center">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Mi 23</span>
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center my-space-xs">
+<span class="material-symbols-outlined text-[14px]">done</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant truncate w-full">Geo Quiz</span>
+<span class="text-[10px] text-primary font-bold">Erledigt</span>
+</div>
+<!-- Do (Today) -->
+<div class="flex flex-col items-center bg-surface-container-high rounded-lg p-space-sm text-center shadow-xs">
+<span class="font-label-md text-label-md text-primary font-bold">Heute (Do)</span>
+<div class="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center my-space-xs animate-pulse">
+<span class="material-symbols-outlined text-[14px]">hourglass_top</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate w-full">Bio Wald</span>
+<span class="text-[10px] text-secondary font-bold">13:15 Uhr!</span>
+</div>
+<!-- Fr -->
+<div class="flex flex-col items-center bg-surface-container-low rounded-lg p-space-sm text-center">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Fr 25</span>
+<div class="w-6 h-6 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center my-space-xs">
+<span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant truncate w-full">Eng Tandem</span>
+<span class="text-[10px] text-on-surface-variant">14:00 Uhr</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Instructional Side Panel (Col 4) -->
+<div class="lg:col-span-4 flex flex-col gap-space-lg">
+<!-- Teacher Feedback & Audio Memo -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">rate_review</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Lehrer-Rückmeldung</h3>
+</div>
+<span class="px-space-xs py-0.5 rounded text-primary font-label-md text-label-md bg-surface-container font-semibold">Neu</span>
+</div>
+<!-- Feedback Item 1 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-sm">
+<div class="flex items-start justify-between gap-space-xs">
+<div>
+<span class="font-label-md text-label-md text-primary font-semibold block">Biologie 7b</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold">Fotosynthese &amp; Zellatmung</span>
+</div>
+<div class="text-right">
+<span class="font-headline-sm text-headline-sm text-primary font-bold block">28 / 30</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Note: 1-</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface italic bg-surface-container-lowest p-space-sm rounded-lg">
+              „Ausgezeichnete Herleitung des Gasaustauschs, Lukas! Schau dir Aufgabe 3 noch einmal an – da war ein kleiner Zahlendreher bei der Glucose.“
+            </p>
+<!-- Audio Memo Mini Player -->
+<div class="flex items-center justify-between p-space-xs bg-surface-container-high rounded-lg">
+<div class="flex items-center gap-space-xs min-w-0">
+<button class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0 shadow-xs" title="Sprachnotiz abspielen" type="button">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+</button>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate">Sprachmemo von Fr. Dr. Neumann</span>
+<span class="text-[10px] text-on-surface-variant font-medium">Dauer: 0:45 min</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary text-[18px] mr-1">mic</span>
+</div>
+<div class="flex items-center justify-end pt-1">
+<button class="text-primary hover:text-primary-container font-label-md text-label-md font-semibold flex items-center gap-1 transition-colors" type="button">
+<span>Detaillierte Korrektur ansehen</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Feedback Item 2 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-label-md text-label-md text-on-surface-variant font-semibold block">Geografie</span>
+<span class="font-label-lg text-label-lg text-on-surface font-bold">Klimazonen der Erde</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-secondary-fixed text-secondary font-label-md text-label-md font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">star</span> +2 Sterne
+              </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+              100% vollständig abgeschlossen. Hervorragende Zuordnung der Vegetationszonen!
+            </p>
+</div>
+</div>
+<!-- Student Personal Goal Widget -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Mein Wochenziel</span>
+<span class="material-symbols-outlined text-secondary text-[20px]" style="font-variation-settings: 'FILL' 1;">emoji_events</span>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="font-headline-sm text-headline-sm text-on-surface font-bold">
+              3 Mathe-Aufgaben am Stück fehlerfrei
+            </h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+              Du hast 2 von 3 Aufgaben im ersten Anlauf geschafft. Noch 1 richtige Lösung bis zum Bonus!
+            </p>
+</div>
+<div class="flex gap-2">
+<div class="flex-1 h-3 rounded-full bg-primary flex items-center justify-center text-[10px] text-on-primary font-bold">✓</div>
+<div class="flex-1 h-3 rounded-full bg-primary flex items-center justify-center text-[10px] text-on-primary font-bold">✓</div>
+<div class="flex-1 h-3 rounded-full bg-surface-container flex items-center justify-center text-[10px] text-on-surface-variant font-bold">3</div>
+</div>
+</div>
+<!-- Classroom Helper / Teacher Contact Strip -->
+<div class="bg-surface-container-low rounded-xl p-space-md flex items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary flex-shrink-0 font-bold">
+              DN
+            </div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-bold truncate">Fragen zu Aufgaben?</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Fr. Dr. Neumann ist im Klassenraum</span>
+</div>
+</div>
+<button class="min-h-[44px] px-space-md rounded-lg bg-surface-container-highest hover:bg-surface-variant text-primary font-label-md text-label-md font-semibold flex items-center gap-1 transition-colors flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-[16px]">waving_hand</span>
+<span>Melden</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Quick Tools & Accessibility Grid (Bottom Bar) -->
+<div class="flex flex-col gap-space-sm pt-space-xs">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">
+          Schnelle Hilfsmittel &amp; Werkzeuge
+        </h3>
+<span class="font-label-md text-label-md text-on-surface-variant">Für Tablets &amp; Laptops optimiert</span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-space-md">
+<!-- Tool 1: Formelsammlung -->
+<button class="bg-surface-container-lowest hover:bg-surface-container-low p-space-md rounded-xl shadow-sm text-left transition-colors flex flex-col gap-space-xs group" type="button">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">functions</span>
+</div>
+<span class="font-label-lg text-label-lg text-on-surface font-bold mt-1">Formelsammlung</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Mathe, Bio &amp; Physik Formeln</span>
+</button>
+<!-- Tool 2: Vorlese-Assistent -->
+<button class="bg-surface-container-lowest hover:bg-surface-container-low p-space-md rounded-xl shadow-sm text-left transition-colors flex flex-col gap-space-xs group" type="button">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">record_voice_over</span>
+</div>
+<span class="font-label-lg text-label-lg text-on-surface font-bold mt-1">Vorlese-Assistent</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Texte flüssig anhören (TTS)</span>
+</button>
+<!-- Tool 3: Fragen / Lehrer-Chat -->
+<button class="bg-surface-container-lowest hover:bg-surface-container-low p-space-md rounded-xl shadow-sm text-left transition-colors flex flex-col gap-space-xs group" type="button">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">help_center</span>
+</div>
+<span class="font-label-lg text-label-lg text-on-surface font-bold mt-1">Lern-Tipps</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Schritt-für-Schritt Hilfen</span>
+</button>
+<!-- Tool 4: Offline PDF Druck -->
+<button class="bg-surface-container-lowest hover:bg-surface-container-low p-space-md rounded-xl shadow-sm text-left transition-colors flex flex-col gap-space-xs group" type="button">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">print</span>
+</div>
+<span class="font-label-lg text-label-lg text-on-surface font-bold mt-1">Arbeitsblatt (PDF)</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Druckversion für Notizen</span>
+</button>
+</div>
+</div>
+</div>
+</div></main><footer class="w-full bg-surface-container py-space-lg"><div class="w-full px-gutter flex flex-col sm:flex-row items-center justify-between gap-space-md text-on-surface-variant font-body-sm text-body-sm"><div class="flex items-center gap-space-sm"><span class="w-2.5 h-2.5 rounded-full bg-primary-container inline-block"></span><span>Schulserver-Status: <strong>Online &amp; Verbunden</strong> (St. Antonius Realschule)</span></div><div class="flex items-center gap-space-lg font-label-md text-label-md"><span>DSGVO-konforme Lernumgebung</span><span>Keine Cookies von Drittanbietern</span><span>v2.4 Schüler-Hub</span></div></div></footer></body></html>

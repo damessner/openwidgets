@@ -1,0 +1,514 @@
+<!-- OpenWidgets — Landing & Join (redesign mockup v2.4, pasted 2026-11-28).
+     STATIC MOCKUP for review — uses Tailwind CDN + Google Fonts + external
+     images, which violate the production CSP (font-src 'self', no third-party
+     CDNs). Do NOT wire into public/ without porting to app.css tokens,
+     public/fonts/ and local SVG icons. See design-system/mockups/README.md -->
+<!DOCTYPE html>
+
+<html class="scroll-pt-[76px]" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-primary-fixed-variant":"#00504a","on-error":"#ffffff","on-surface":"#0f1e1c","inverse-on-surface":"#e2f5f0","on-tertiary":"#ffffff","on-secondary":"#ffffff","on-error-container":"#93000a","on-surface-variant":"#3e4947","on-tertiary-fixed-variant":"#72361b","on-primary":"#ffffff","on-tertiary-container":"#ffe5db","on-secondary-fixed":"#2f1500","surface-container-highest":"#d4e6e2","surface-variant":"#d4e6e2","surface-container":"#e0f2ed","surface-container-low":"#e5f8f3","inverse-surface":"#243331","secondary-container":"#fe932c","background":"#ebfdf9","surface-tint":"#006a63","primary-fixed":"#9cf2e8","tertiary-fixed":"#ffdbce","secondary-fixed-dim":"#ffb77d","on-primary-container":"#a3faef","on-secondary-fixed-variant":"#6e3900","on-primary-fixed":"#00201d","error":"#ba1a1a","on-secondary-container":"#663500","primary":"#005c55","secondary":"#904d00","tertiary-fixed-dim":"#ffb598","inverse-primary":"#80d5cb","surface-container-lowest":"#ffffff","primary-fixed-dim":"#80d5cb","on-background":"#0f1e1c","error-container":"#ffdad6","secondary-fixed":"#ffdcc3","outline":"#6e7977","on-tertiary-fixed":"#370e00","surface-bright":"#ebfdf9","surface-dim":"#ccded9","primary-container":"#0f766e","outline-variant":"#bdc9c6","surface":"#ebfdf9","surface-container-high":"#daece7","tertiary":"#7f4025","tertiary-container":"#9c573a"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"margin":"2rem","space-lg":"1.5rem","space-xs":"0.25rem","margin-mobile":"1rem","gutter":"1.5rem","gutter-mobile":"1rem","space-xl":"2.5rem","space-md":"1rem","space-sm":"0.5rem"},fontFamily:{"label-lg":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"],"body-lg":["Plus Jakarta Sans"],"display-lg-mobile":["Plus Jakarta Sans"],"headline-sm":["Plus Jakarta Sans"],"code-tabular":["Plus Jakarta Sans"],"body-sm":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"headline-lg-mobile":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"],"headline-lg":["Plus Jakarta Sans"]},fontSize:{"label-lg":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"0.01em",fontWeight:"600"}],"body-md":["1rem",{lineHeight:"1.5rem",fontWeight:"400"}],"body-lg":["1.125rem",{lineHeight:"1.75rem",fontWeight:"400"}],"display-lg-mobile":["2.25rem",{lineHeight:"2.75rem",letterSpacing:"-0.02em",fontWeight:"800"}],"headline-sm":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.01em",fontWeight:"600"}],"code-tabular":["1.25rem",{lineHeight:"1.5rem",letterSpacing:"0.08em",fontWeight:"700"}],"body-sm":["0.875rem",{lineHeight:"1.375rem",fontWeight:"400"}],"label-md":["0.75rem",{lineHeight:"1rem",letterSpacing:"0.02em",fontWeight:"600"}],"headline-lg-mobile":["1.625rem",{lineHeight:"2.125rem",letterSpacing:"-0.015em",fontWeight:"700"}],"display-lg":["3rem",{lineHeight:"3.5rem",letterSpacing:"-0.025em",fontWeight:"800"}],"headline-md":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.015em",fontWeight:"600"}],"headline-lg":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.02em",fontWeight:"700"}]}}}};</script></head><body class="bg-surface font-body-md text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><div class="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(15,118,110,0.08),transparent_70%)] z-0"></div><header class="fixed top-0 inset-x-0 z-50 h-[76px] bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-b border-outline-variant/50"><div class="max-w-[1180px] h-full mx-auto px-margin flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-lg shrink-0"><div class="flex items-center gap-space-sm"><img alt="OpenWidgets Brand Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/ALJJyrCrQ6HaN74r8OFZ90VttTDnRvKnRTJn0-nd3ZecGC7cU7wTkGvbN4ZR6HiiolaeQHFd_9Mr-igpDDEbWm8ebBI3rJmgpGbpEQnArMemj26Tnyu0N3vcKjnPmy6Lz6DNr1NZVxeG5IsvlcgLxlOcZ6GJNJMQI4bYxdxfc4n-Wus8yNdKZagUons1mrtCfA4KMwFm92ravS-YJbK1gyeSf8HrrAFQC6hxqShNixqlM1Lb"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary font-bold tracking-tight leading-none">OpenWidgets</span><span class="font-label-md text-label-md text-on-surface-variant font-medium mt-0.5">Classroom Editorial</span></div></div><div class="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-primary font-label-md text-label-md"><span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span><span>v2.4 Live · LMS Production</span></div></div><nav class="hidden md:flex items-center gap-1 bg-surface-container-low p-1 rounded-xl" data-active-classes="bg-primary-container text-on-primary font-label-lg shadow-sm"><a class="px-3.5 py-2 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all duration-150" data-path="landing-and-join" href="#">Landing &amp; Join</a><a class="px-3.5 py-2 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all duration-150" data-path="teacher-studio" href="#">Teacher Studio (Dashboard &amp; Grading)</a><a class="px-3.5 py-2 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all duration-150" data-path="student-interactive-player" href="#">Student Interactive Player</a></nav><div class="flex items-center gap-space-sm shrink-0"><button class="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors" type="button"><span class="material-symbols-outlined text-[16px]">translate</span><span>EN</span></button><button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">light_mode</span></button><div class="h-5 w-px bg-outline-variant/60 hidden sm:block"></div><button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-container hover:opacity-90 font-label-md text-label-md shadow-sm transition-transform active:scale-95" type="button"><span class="material-symbols-outlined text-[18px]">pin</span><span class="hidden lg:inline">Join PIN</span></button><div class="relative flex items-center pl-1"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-primary-container/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3UVzo9di0U3NcrWAdWewURZwBALE2SJqNBBw8u81tet6nEoe3Qm-gYjQeGibhaT3NfOMtAjt_w291mU1fJYHsX3LEGrnp6KoTAu3kzi-OumG4uEkHn9AFEuF3J-XHfotVYACGyvKYjP1D2ghUdsGzHQAem5CTZ5QYhiRU6XhdSsn7_x7n_jgqwVR1eXEP3BWpJJZHJh1YpAT06eZY14r_3q1iHS4jZ7hxw7eA-3A"/></div></div></div></header><main class="relative z-10 w-full pt-[76px] min-h-screen bg-transparent"><div class="max-w-[1180px] mx-auto px-margin py-space-xl"><div class="flex flex-col w-full">
+<!-- Top Ambient Halo (Subtle Teal & Warm Amber Glow) -->
+<div class="relative w-full overflow-hidden">
+<div class="absolute -top-24 left-1/4 w-96 h-96 bg-primary-fixed/20 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<div class="absolute top-12 right-1/4 w-80 h-80 bg-secondary-fixed/25 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<!-- Editorial System Trust Bar -->
+<div class="w-full flex items-center justify-between pb-space-md mb-space-lg">
+<div class="flex items-center gap-space-sm">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container text-primary font-label-md text-label-md">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+<span>DSGVO-Konform · Serverstandort Frankfurt</span>
+</span>
+<span class="hidden md:inline-flex items-center gap-1 text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px] text-primary">verified_user</span>
+<span>Ohne Tracking-Cookies</span>
+</span>
+</div>
+<div class="flex items-center gap-space-md text-on-surface-variant font-label-md text-label-md">
+<span class="hidden sm:inline-block">Klassenstufe 1–13 &amp; Berufsschule</span>
+<span class="inline-flex items-center gap-1 font-semibold text-primary">
+<span class="material-symbols-outlined text-[16px]">school</span>
+<span>1.840+ Schulen online</span>
+</span>
+</div>
+</div>
+<!-- Hero Asymmetric Bento Canvas -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+<!-- Left Column (7 cols): Editorial Proposition & Direct Access -->
+<div class="lg:col-span-7 flex flex-col pt-space-xs">
+<!-- Category & Focus Marker -->
+<div class="flex items-center gap-2 mb-space-sm">
+<span class="px-2.5 py-1 rounded bg-surface-container-high text-primary font-label-md text-label-md tracking-wider uppercase">
+            Plattform für Digitale Pädagogik
+          </span>
+<span class="text-on-surface-variant font-label-md text-label-md">· Schuljahr 2024/25</span>
+</div>
+<!-- Main Balance Headline -->
+<h1 class="font-display-lg text-display-lg text-on-surface font-extrabold tracking-tight [text-wrap:balance] mb-space-md">
+          Interaktive Unterrichts-Widgets, die Schüler begeistern &amp; Lehrkräfte entlasten.
+        </h1>
+<!-- High-density Editorial Sub-copy -->
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mb-space-lg leading-relaxed">
+          Strukturierte Aufgabenkarten, unmittelbare visuelle Rückmeldung und gamifizierte Stern-Meilensteine ohne sensorische Reizüberflutung. Vollständig DSGVO-konform mit selbst gehosteten Fonts, barrierefreier Lesbarkeit und sofort einsatzbereiten Vorlagen.
+        </p>
+<!-- Primary Dual Action CTAs -->
+<div class="flex flex-wrap items-center gap-space-sm mb-space-xl">
+<button class="inline-flex items-center justify-center gap-2 px-6 h-12 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]" type="button">
+<span class="material-symbols-outlined text-[20px]">magic_button</span>
+<span>Kostenlos als Lehrkraft starten</span>
+</button>
+<button class="inline-flex items-center justify-center gap-2 px-5 h-12 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-primary font-label-lg text-label-lg transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+<span>Live-Demo ansehen</span>
+</button>
+</div>
+<!-- Student Join Highlight Card (Prominent Callout) -->
+<div class="w-full bg-surface-container-lowest rounded-xl shadow-md p-6 relative overflow-hidden">
+<div class="absolute top-0 inset-x-0 h-1 bg-primary"></div>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm mb-space-md">
+<div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">lock_open</span>
+<span class="font-label-lg text-label-lg text-primary tracking-wider uppercase font-bold">MIT PIN BEITRETEN</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Kein Account erforderlich. Code vom Whiteboard eingeben.</p>
+</div>
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-md text-label-md shrink-0">
+<span class="material-symbols-outlined text-[16px] text-secondary">star</span>
+<span>Direkt loslegen</span>
+</span>
+</div>
+<!-- Join Input Form Grid -->
+<form class="flex flex-col sm:flex-row gap-space-sm" id="joinForm" onsubmit="event.preventDefault(); triggerJoin();">
+<div class="relative flex-1">
+<input class="w-full h-14 px-4 bg-surface-container-low focus:bg-surface-container-lowest text-on-surface font-code-tabular text-code-tabular uppercase tracking-[0.2em] rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-outline-variant font-bold text-center sm:text-left" id="pinInput" maxlength="6" placeholder="QSZWAD" type="text" value="QSZWAD"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-surface-container text-on-surface-variant hover:text-primary font-label-md text-label-md transition-colors" onclick="document.getElementById('pinInput').value='M7K9PX'" title="Beispiel-PIN einsetzen" type="button">
+                Sample
+              </button>
+</div>
+<button class="h-14 px-7 rounded-lg bg-secondary-container text-on-secondary-container hover:opacity-95 font-label-lg text-label-lg shadow-sm flex items-center justify-center gap-2 shrink-0 transition-all active:scale-[0.98]" type="submit">
+<span>Beitreten</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</form>
+<!-- Quick Feedback Strip -->
+<div class="flex items-center gap-space-md mt-space-sm text-on-surface-variant font-body-sm text-body-sm">
+<span class="inline-flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span>Raum aktiv: Fr. Dr. Neumann (Bio-7B)</span>
+</span>
+<span class="hidden sm:inline-block">·</span>
+<span class="hidden sm:inline-block">24/28 Schüler verbunden</span>
+</div>
+</div>
+</div>
+<!-- Right Column (5 cols): Upright Crisp Interactive Player Card Preview -->
+<div class="lg:col-span-5 flex flex-col">
+<div class="bg-surface-container-lowest rounded-xl shadow-lg p-6 relative">
+<!-- Mockup Header / Workspace Status -->
+<div class="flex items-center justify-between pb-space-sm mb-space-sm">
+<div class="flex items-center gap-2">
+<span class="px-2.5 py-1 rounded bg-surface-container text-primary font-label-md text-label-md font-semibold">
+                Aufgabe 1 von 6
+              </span>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container-low text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined text-[15px] text-primary">timer</span>
+<span>08:45</span>
+</span>
+</div>
+<!-- Gamification Amber Star Reward Chip -->
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px] text-secondary" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="font-bold">+1 Stern gesammelt</span>
+</div>
+</div>
+<!-- Lesson Title & Pedagogy Prompt -->
+<div class="mb-space-md">
+<span class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wide">Biologie Kl. 7 · Einheit 3</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold mt-0.5">
+              Ökosystem Wald: Trophieebenen zuordnen
+            </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+              Ziehe die passenden Organismen in die korrekte Ebene der Nahrungspyramide. Achte auf Primärproduzenten und Destruenten.
+            </p>
+</div>
+<!-- Rich Visual Graphic: Interactive Diagram Component -->
+<div class="relative w-full rounded-lg overflow-hidden mb-space-md bg-surface-container-low p-4">
+<div class="flex items-center justify-between mb-3 text-on-surface-variant font-label-md text-label-md">
+<span class="font-semibold text-primary">Nahrungsnetz-Schema</span>
+<span class="text-on-surface-variant">Live-Prüfung aktiv</span>
+</div>
+<!-- Inline SVG Diagram (Pyramid Structure) -->
+<div class="relative w-full h-36 flex items-center justify-center">
+<svg class="w-full h-full text-primary" fill="none" viewbox="0 0 320 130" xmlns="http://www.w3.org/2000/svg">
+<!-- Top Tier: Tertiärkonsument -->
+<polygon fill="currentColor" fill-opacity="0.12" points="160,10 205,45 115,45"></polygon>
+<text class="font-label-md fill-current font-bold" font-size="9" text-anchor="middle" x="160" y="32">3. Endkonsumenten (Habicht)</text>
+<!-- Mid Tier: Sekundärkonsumenten -->
+<polygon fill="currentColor" fill-opacity="0.20" points="112,48 208,48 240,85 80,85"></polygon>
+<text class="font-label-md fill-current font-bold" font-size="9" text-anchor="middle" x="160" y="70">2. Sekundärkonsumenten (Waldkauz, Fuchs)</text>
+<!-- Bottom Tier: Primärproduzenten -->
+<polygon fill="currentColor" fill-opacity="0.32" points="77,88 243,88 280,126 40,126"></polygon>
+<text class="font-label-md fill-current font-bold" font-size="10" text-anchor="middle" x="160" y="112">1. Primärproduzenten (Eiche, Moos, Farne)</text>
+</svg>
+</div>
+</div>
+<!-- Interactive Micro-Widget: Student Choice Options -->
+<div class="space-y-2 mb-space-md" id="mockQuiz">
+<button class="w-full p-3 rounded-lg bg-surface-container text-left flex items-center justify-between group transition-colors hover:bg-surface-container-high" onclick="toggleAnswer(this)" type="button">
+<div class="flex items-center gap-3">
+<span class="w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-label-md text-label-md">A</span>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Borkenkäfer &amp; Baumpilze als Destruenten</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-primary">check_circle</span>
+</button>
+<button class="w-full p-3 rounded-lg bg-surface-container-low text-left flex items-center justify-between group transition-colors hover:bg-surface-container" onclick="toggleAnswer(this)" type="button">
+<div class="flex items-center gap-3">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-label-md text-label-md">B</span>
+<span class="font-body-sm text-body-sm text-on-surface">Sonnenlicht als Primärkonsument</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-outline-variant opacity-0 group-hover:opacity-100">circle</span>
+</button>
+<button class="w-full p-3 rounded-lg bg-surface-container-low text-left flex items-center justify-between group transition-colors hover:bg-surface-container" onclick="toggleAnswer(this)" type="button">
+<div class="flex items-center gap-3">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-label-md text-label-md">C</span>
+<span class="font-body-sm text-body-sm text-on-surface">Rotfuchs als Primärproduzent</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-outline-variant opacity-0 group-hover:opacity-100">circle</span>
+</button>
+</div>
+<!-- Bottom Micro-Bar: Audio Read-aloud & Instant Feedback -->
+<div class="flex items-center justify-between pt-space-xs text-on-surface-variant font-label-md text-label-md">
+<button class="inline-flex items-center gap-1.5 text-primary hover:underline" type="button">
+<span class="material-symbols-outlined text-[16px]">volume_up</span>
+<span>Aufgabe vorlesen (TTS)</span>
+</button>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span>Automatische Zwischenspeicherung</span>
+<span class="material-symbols-outlined text-[16px] text-primary">cloud_done</span>
+</div>
+</div>
+</div>
+<!-- Accompanying Editorial Meta Footnote -->
+<div class="flex items-center justify-between px-2 py-3 mt-1 text-on-surface-variant font-label-md text-label-md">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-secondary">verified</span>
+<span>Widget: Biologie Sek I (LehrplanPlus)</span>
+</span>
+<span>Interaktivität: 100% barrierefrei</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Role Experience Toggle Preview (Teacher Orchestration vs Student Canvas) -->
+<div class="w-full my-space-xl p-space-lg rounded-xl bg-surface-container-low">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-lg">
+<div>
+<span class="font-label-md text-label-md text-primary uppercase font-bold tracking-wider">Perspektiven-Wechsel</span>
+<h2 class="font-headline-md text-headline-md text-on-surface font-bold mt-1">
+          Zwei Workflows. Eine harmonische Plattform.
+        </h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">
+          Schalten Sie zwischen der Lehrkraft-Steuerzentrale und der ablenkungsfreien Lernansicht für Schüler um.
+        </p>
+</div>
+<!-- Segmented Pill Switcher -->
+<div class="inline-flex p-1 rounded-xl bg-surface-container-highest shrink-0 self-start md:self-auto">
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg font-label-lg text-label-lg bg-surface-container-lowest text-primary shadow-sm transition-all" id="btnTeacherMode" onclick="setPreviewMode('teacher')" type="button">
+<span class="material-symbols-outlined text-[18px]">co_present</span>
+<span>Lehrkraft-Studio</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-all" id="btnStudentMode" onclick="setPreviewMode('student')" type="button">
+<span class="material-symbols-outlined text-[18px]">person_play</span>
+<span>Schüler-Player</span>
+</button>
+</div>
+</div>
+<!-- Dynamic Mode Workspace Presentation -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter" id="teacherModeView">
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-on-primary-fixed mb-space-sm">
+<span class="material-symbols-outlined text-[22px]">dashboard_customize</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface font-bold">1-Klick Differenzierung</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2">
+            Verteilen Sie visualisierte Hilfestellungen oder erweiterte Aufgabenpakete mit einem Klick an individuelle Lerngruppen.
+          </p>
+</div>
+<div class="mt-4 pt-3 flex items-center justify-between text-on-surface-variant font-label-md text-label-md">
+<span class="text-primary font-semibold">Förder- &amp; Forder-Modus</span>
+<span class="material-symbols-outlined text-[18px]">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary mb-space-sm">
+<span class="material-symbols-outlined text-[22px]">speed</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface font-bold">Echtzeit-Verständnis</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2">
+            Erkennen Sie sofort, bei welcher Frage die Klasse stockt. Heatmaps zeigen Fehlkonzepte ohne manuelle Korrekturhektik.
+          </p>
+</div>
+<div class="mt-4 pt-3 flex items-center justify-between text-on-surface-variant font-label-md text-label-md">
+<span class="text-primary font-semibold">Live-Heatmap &amp; Notizen</span>
+<span class="material-symbols-outlined text-[18px]">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-secondary-fixed flex items-center justify-center text-secondary mb-space-sm">
+<span class="material-symbols-outlined text-[22px]">fact_check</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface font-bold">DSGVO-Export &amp; Noten</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2">
+            Übertragen Sie Ergebnisse direkt in Notenprogramme oder exportieren Sie anonymisierte PDFs für Elterngespräche.
+          </p>
+</div>
+<div class="mt-4 pt-3 flex items-center justify-between text-on-surface-variant font-label-md text-label-md">
+<span class="text-secondary font-semibold">CSV, PDF &amp; LMS-Sync</span>
+<span class="material-symbols-outlined text-[18px]">arrow_right_alt</span>
+</div>
+</div>
+</div>
+<!-- Student View (Hidden by default, switched via inline JS) -->
+<div class="hidden grid-cols-1 md:grid-cols-3 gap-gutter" id="studentModeView">
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-secondary-fixed flex items-center justify-center text-secondary mb-space-sm">
+<span class="material-symbols-outlined text-[22px]">trophy</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface font-bold">Positive Bestätigung</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2">
+            Kleine Stern-Belohnungen und visuelles Feedback statt roter Minus-Striche schaffen nachhaltige Lernfreude.
+          </p>
+</div>
+<div class="mt-4 pt-3 flex items-center justify-between text-on-surface-variant font-label-md text-label-md">
+<span class="text-secondary font-semibold">Eigenes Lerntempo</span>
+<span class="material-symbols-outlined text-[18px]">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary mb-space-sm">
+<span class="material-symbols-outlined text-[22px]">visibility_off</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface font-bold">Fokus ohne Ablenkung</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2">
+            Keine Popups, keine Tracker, keine sozialen Vergleiche. Volle Konzentration auf Inhalt und eigene Lösungswege.
+          </p>
+</div>
+<div class="mt-4 pt-3 flex items-center justify-between text-on-surface-variant font-label-md text-label-md">
+<span class="text-primary font-semibold">Sanfte Farben, klares Schriftbild</span>
+<span class="material-symbols-outlined text-[18px]">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-on-primary-fixed mb-space-sm">
+<span class="material-symbols-outlined text-[22px]">touch_app</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface font-bold">Haptische Widgets</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2">
+            Ob Drag-and-Drop, Zuordnungs-Karten oder Schieberegler: Wissen wird durch aktives Anfassen begriffen.
+          </p>
+</div>
+<div class="mt-4 pt-3 flex items-center justify-between text-on-surface-variant font-label-md text-label-md">
+<span class="text-primary font-semibold">Für Tablet &amp; Touchscreens</span>
+<span class="material-symbols-outlined text-[18px]">arrow_right_alt</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Editorial Four Pillars Feature Grid -->
+<div class="w-full my-space-lg">
+<div class="flex items-center justify-between mb-space-md">
+<div>
+<span class="text-primary font-label-md text-label-md uppercase font-bold tracking-wider">Kernfunktionen</span>
+<h2 class="font-headline-md text-headline-md text-on-surface font-bold mt-0.5">
+          Didaktisch fundierte Bausteine für jeden Lehrplan
+        </h2>
+</div>
+<a class="hidden sm:inline-flex items-center gap-1 text-primary font-label-lg text-label-lg hover:underline" href="#">
+<span>Alle 34 Widget-Typen erkunden</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<!-- Feature Card 1: Deep Teal (Interactive Widgets) -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-primary mb-space-md">
+<span class="material-symbols-outlined text-[26px]">widgets</span>
+</div>
+<span class="font-label-md text-label-md text-primary font-semibold uppercase tracking-wider">Interaktivität</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold mt-1">
+            Vielfältige Widget-Typen
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2 leading-relaxed">
+            Von Lückentexten und Paare-Finden über Beschriftungsgrafiken bis hin zu mathematischen Formel-Tastern.
+          </p>
+</div>
+<div class="mt-space-md pt-space-xs text-primary font-label-md text-label-md font-semibold flex items-center gap-1">
+<span>Inklusive Geometrie &amp; Audio</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</div>
+</div>
+<!-- Feature Card 2: Emerald (Auto-grading & Time Relief) -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-primary-fixed/40 flex items-center justify-center text-primary mb-space-md">
+<span class="material-symbols-outlined text-[26px]">auto_read_pause</span>
+</div>
+<span class="font-label-md text-label-md text-primary font-semibold uppercase tracking-wider">Entlastung</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold mt-1">
+            Automatische Auswertung
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2 leading-relaxed">
+            Sparen Sie bis zu 4 Stunden Korrekturzeit wöchentlich. Intelligente Teilschritte werden differenziert bewertet.
+          </p>
+</div>
+<div class="mt-space-md pt-space-xs text-primary font-label-md text-label-md font-semibold flex items-center gap-1">
+<span>Flexible Punkteschlüssel</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</div>
+</div>
+<!-- Feature Card 3: Warm Amber (Reward Motivation) -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-secondary-fixed flex items-center justify-center text-secondary mb-space-md">
+<span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+</div>
+<span class="font-label-md text-label-md text-secondary font-semibold uppercase tracking-wider">Motivation</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold mt-1">
+            Pädagogische Stern-Streaks
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2 leading-relaxed">
+            Behutsame Verstärkung ohne Frustration. Schüler sammeln Sterne für Ausdauer, Wiederholungen und Genauigkeit.
+          </p>
+</div>
+<div class="mt-space-md pt-space-xs text-secondary font-label-md text-label-md font-semibold flex items-center gap-1">
+<span>Konfigurierbare Belohnungen</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</div>
+</div>
+<!-- Feature Card 4: Sky Blue/Teal (DSGVO Privacy & Security) -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center text-primary mb-space-md">
+<span class="material-symbols-outlined text-[26px]">security</span>
+</div>
+<span class="font-label-md text-label-md text-primary font-semibold uppercase tracking-wider">Datenschutz</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold mt-1">
+            DSGVO &amp; Schulgesetz konform
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2 leading-relaxed">
+            Zero Tracking, keine Drittanbieter-CDNs, selbst gehostete Schriften und vollständige Datenlöschung auf Knopfdruck.
+          </p>
+</div>
+<div class="mt-space-md pt-space-xs text-primary font-label-md text-label-md font-semibold flex items-center gap-1">
+<span>AVV-Vertrag sofort bereit</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Classroom Integration Banner & Trust Quote -->
+<div class="w-full my-space-xl p-space-xl rounded-xl bg-surface-container-lowest shadow-sm flex flex-col md:flex-row items-center justify-between gap-space-lg">
+<div class="max-w-xl">
+<div class="flex items-center gap-1 text-secondary mb-2">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface italic">
+        „OpenWidgets hat unsere wöchentlichen Übungsstunden im Fachbereich Naturwissenschaften komplett transformiert. Die Schüler scannen einfach den Code vom Smartboard und arbeiten sofort fokussiert los.“
+      </p>
+<div class="mt-space-md flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold">
+          MK
+        </div>
+<div>
+<span class="font-label-lg text-label-lg text-on-surface block leading-tight">Markus Kleeberg</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Studiendirektor, Heinrich-Heine-Gymnasium Dortmund</span>
+</div>
+</div>
+</div>
+<!-- Quick Stats Metric Stack -->
+<div class="flex flex-row md:flex-col gap-6 shrink-0 border-l border-outline-variant/40 pl-space-lg">
+<div>
+<span class="font-display-lg text-display-lg font-extrabold text-primary block leading-none">99.8%</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1 block">Schulserver-Verfügbarkeit</span>
+</div>
+<div>
+<span class="font-display-lg text-display-lg font-extrabold text-secondary block leading-none">4.2 Mio</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1 block">Gelöste Schüleraufgaben</span>
+</div>
+</div>
+</div>
+<!-- Interactive Client Script -->
+<script>
+    function triggerJoin() {
+      const pin = document.getElementById('pinInput').value.trim().toUpperCase();
+      if (!pin) {
+        alert('Bitte geben Sie einen 6-stelligen Raum-Code ein.');
+        return;
+      }
+      const btn = document.querySelector('#joinForm button[type="submit"]');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[20px]">sync</span><span>Verbinde...</span>`;
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        alert(`Erfolgreich mit Raum "${pin}" verbunden! Weiterleitung in den Schüler-Player...`);
+      }, 700);
+    }
+
+    function toggleAnswer(el) {
+      const parent = document.getElementById('mockQuiz');
+      const buttons = parent.querySelectorAll('button');
+      buttons.forEach(b => {
+        b.classList.remove('bg-surface-container');
+        b.classList.add('bg-surface-container-low');
+        const icon = b.querySelector('.material-symbols-outlined');
+        if (icon) {
+          icon.textContent = 'circle';
+          icon.classList.add('opacity-0');
+        }
+      });
+      el.classList.remove('bg-surface-container-low');
+      el.classList.add('bg-surface-container');
+      const activeIcon = el.querySelector('.material-symbols-outlined');
+      if (activeIcon) {
+        activeIcon.textContent = 'check_circle';
+        activeIcon.classList.remove('opacity-0');
+      }
+    }
+
+    function setPreviewMode(mode) {
+      const teacherView = document.getElementById('teacherModeView');
+      const studentView = document.getElementById('studentModeView');
+      const btnTeacher = document.getElementById('btnTeacherMode');
+      const btnStudent = document.getElementById('btnStudentMode');
+
+      if (mode === 'teacher') {
+        teacherView.classList.remove('hidden');
+        teacherView.classList.add('grid');
+        studentView.classList.remove('grid');
+        studentView.classList.add('hidden');
+
+        btnTeacher.className = "flex items-center gap-2 px-4 py-2 rounded-lg font-label-lg text-label-lg bg-surface-container-lowest text-primary shadow-sm transition-all";
+        btnStudent.className = "flex items-center gap-2 px-4 py-2 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-all";
+      } else {
+        studentView.classList.remove('hidden');
+        studentView.classList.add('grid');
+        teacherView.classList.remove('grid');
+        teacherView.classList.add('hidden');
+
+        btnStudent.className = "flex items-center gap-2 px-4 py-2 rounded-lg font-label-lg text-label-lg bg-surface-container-lowest text-primary shadow-sm transition-all";
+        btnTeacher.className = "flex items-center gap-2 px-4 py-2 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-all";
+      }
+    }
+  </script>
+</div></div></main><footer class="relative z-10 w-full bg-surface-container-low/70 border-t border-outline-variant/40 mt-space-xl"><div class="max-w-[1180px] mx-auto px-margin py-space-lg flex flex-col sm:flex-row items-center justify-between gap-space-md font-body-sm text-body-sm text-on-surface-variant"><div class="flex items-center gap-2"><span class="font-label-lg text-label-lg text-primary font-bold">OpenWidgets</span><span>© 2024 OpenWidgets LMS Editorial Framework. All rights reserved.</span></div><div class="flex items-center gap-space-md font-label-md text-label-md"><a class="hover:text-primary transition-colors" href="#">Pedagogy Guidelines</a><a class="hover:text-primary transition-colors" href="#">Student Privacy &amp; FERPA</a><a class="hover:text-primary transition-colors" href="#">System Status</a></div></div></footer></body></html>

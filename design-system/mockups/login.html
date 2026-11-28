@@ -1,0 +1,252 @@
+<!-- OpenWidgets — Classroom Authentication / Login (redesign mockup v2.4, pasted 2026-11-28).
+     STATIC MOCKUP for review — uses Tailwind CDN + Google Fonts + external
+     images, which violate the production CSP (font-src 'self', no third-party
+     CDNs). Do NOT wire into public/ without porting to app.css tokens,
+     public/fonts/ and local SVG icons. See design-system/mockups/README.md -->
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_blank" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-primary-fixed-variant":"#00504a","on-error":"#ffffff","on-surface":"#0f1e1c","inverse-on-surface":"#e2f5f0","on-tertiary":"#ffffff","on-secondary":"#ffffff","on-error-container":"#93000a","on-surface-variant":"#3e4947","on-tertiary-fixed-variant":"#72361b","on-primary":"#ffffff","on-tertiary-container":"#ffe5db","on-secondary-fixed":"#2f1500","surface-container-highest":"#d4e6e2","surface-variant":"#d4e6e2","surface-container":"#e0f2ed","surface-container-low":"#e5f8f3","inverse-surface":"#243331","secondary-container":"#fe932c","background":"#ebfdf9","surface-tint":"#006a63","primary-fixed":"#9cf2e8","tertiary-fixed":"#ffdbce","secondary-fixed-dim":"#ffb77d","on-primary-container":"#a3faef","on-secondary-fixed-variant":"#6e3900","on-primary-fixed":"#00201d","error":"#ba1a1a","on-secondary-container":"#663500","primary":"#005c55","secondary":"#904d00","tertiary-fixed-dim":"#ffb598","inverse-primary":"#80d5cb","surface-container-lowest":"#ffffff","primary-fixed-dim":"#80d5cb","on-background":"#0f1e1c","error-container":"#ffdad6","secondary-fixed":"#ffdcc3","outline":"#6e7977","on-tertiary-fixed":"#370e00","surface-bright":"#ebfdf9","surface-dim":"#ccded9","primary-container":"#0f766e","outline-variant":"#bdc9c6","surface":"#ebfdf9","surface-container-high":"#daece7","tertiary":"#7f4025","tertiary-container":"#9c573a"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"margin":"2rem","space-lg":"1.5rem","space-xs":"0.25rem","margin-mobile":"1rem","gutter":"1.5rem","gutter-mobile":"1rem","space-xl":"2.5rem","space-md":"1rem","space-sm":"0.5rem"},fontFamily:{"label-lg":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"],"body-lg":["Plus Jakarta Sans"],"display-lg-mobile":["Plus Jakarta Sans"],"headline-sm":["Plus Jakarta Sans"],"code-tabular":["Plus Jakarta Sans"],"body-sm":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"headline-lg-mobile":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"],"headline-lg":["Plus Jakarta Sans"]},fontSize:{"label-lg":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"0.01em",fontWeight:"600"}],"body-md":["1rem",{lineHeight:"1.5rem",fontWeight:"400"}],"body-lg":["1.125rem",{lineHeight:"1.75rem",fontWeight:"400"}],"display-lg-mobile":["2.25rem",{lineHeight:"2.75rem",letterSpacing:"-0.02em",fontWeight:"800"}],"headline-sm":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.01em",fontWeight:"600"}],"code-tabular":["1.25rem",{lineHeight:"1.5rem",letterSpacing:"0.08em",fontWeight:"700"}],"body-sm":["0.875rem",{lineHeight:"1.375rem",fontWeight:"400"}],"label-md":["0.75rem",{lineHeight:"1rem",letterSpacing:"0.02em",fontWeight:"600"}],"headline-lg-mobile":["1.625rem",{lineHeight:"2.125rem",letterSpacing:"-0.015em",fontWeight:"700"}],"display-lg":["3rem",{lineHeight:"3.5rem",letterSpacing:"-0.025em",fontWeight:"800"}],"headline-md":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.015em",fontWeight:"600"}],"headline-lg":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.02em",fontWeight:"700"}]}}}};</script></head><body class="bg-surface font-body-md text-on-surface antialiased min-h-screen flex items-center justify-center p-margin"><main class="w-full max-w-md"><div class="flex flex-col w-full">
+<div class="relative w-full max-w-[460px] mx-auto">
+<!-- Ambient Teal Glow Behind Main Card -->
+<div class="absolute -top-12 left-1/2 -translate-x-1/2 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<div class="absolute -bottom-8 -right-8 w-48 h-48 bg-secondary-container/10 rounded-full blur-2xl pointer-events-none -z-10"></div>
+<!-- Main Container Card -->
+<div class="bg-surface-container-lowest rounded-xl shadow-xl p-space-lg md:p-space-xl relative overflow-hidden transition-all duration-300">
+<!-- Top Brand Header -->
+<div class="flex flex-col items-center text-center mb-space-lg">
+<div class="relative mb-space-sm group">
+<div class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center overflow-hidden shadow-sm transition-transform duration-200 group-hover:scale-105">
+<img alt="OpenWidgets Brand Logo" class="w-12 h-12 object-contain" src="https://lh3.googleusercontent.com/aida/ALJJyrCrQ6HaN74r8OFZ90VttTDnRvKnRTJn0-nd3ZecGC7cU7wTkGvbN4ZR6HiiolaeQHFd_9Mr-igpDDEbWm8ebBI3rJmgpGbpEQnArMemj26Tnyu0N3vcKjnPmy6Lz6DNr1NZVxeG5IsvlcgLxlOcZ6GJNJMQI4bYxdxfc4n-Wus8yNdKZagUons1mrtCfA4KMwFm92ravS-YJbK1gyeSf8HrrAFQC6hxqShNixqlM1Lb"/>
+</div>
+<span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-primary-container rounded-full flex items-center justify-center ring-2 ring-surface-container-lowest text-on-primary">
+<span class="material-symbols-outlined text-[10px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+</span>
+</div>
+<h1 class="font-headline-sm text-headline-sm text-on-surface tracking-tight">OpenWidgets</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1 max-w-[320px]">
+          Die vertrauenswürdige Lernplattform für Schulen
+        </p>
+</div>
+<!-- Segmented Mode Switcher -->
+<div class="grid grid-cols-2 p-1 bg-surface-container-high rounded-lg mb-space-lg relative gap-1 select-none">
+<button class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-md font-label-lg text-label-lg transition-all duration-200 bg-surface-container-lowest text-primary shadow-sm" id="tab-teacher" onclick="switchMode('teacher')" type="button">
+<span class="material-symbols-outlined text-base">school</span>
+<span>Lehrkraft</span>
+</button>
+<button class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-md font-label-lg text-label-lg transition-all duration-200 text-on-surface-variant hover:text-on-surface" id="tab-student" onclick="switchMode('student')" type="button">
+<span class="material-symbols-outlined text-base">backpack</span>
+<span>Schüler:in</span>
+</button>
+</div>
+<!-- TEACHER AUTH SECTION -->
+<div class="flex flex-col space-y-space-md transition-opacity duration-200" id="section-teacher">
+<!-- Direct Form -->
+<form class="space-y-3.5" onsubmit="event.preventDefault();">
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-1" for="teacher-email">
+              Schul-E-Mail-Adresse
+            </label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">mail</span>
+<input class="w-full h-11 pl-10 pr-3.5 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md placeholder:text-outline/70 focus:outline-none focus:bg-surface-container-lowest transition-colors" id="teacher-email" placeholder="name@schule-hessen.de" required="" type="email"/>
+</div>
+</div>
+<div>
+<div class="flex items-center justify-between mb-1">
+<label class="font-label-md text-label-md text-on-surface-variant" for="teacher-password">
+                Passwort
+              </label>
+<a class="font-label-md text-label-md text-primary hover:underline" href="javascript:void(0)">
+                Vergessen?
+              </a>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">lock</span>
+<input class="w-full h-11 pl-10 pr-10 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md placeholder:text-outline/70 focus:outline-none focus:bg-surface-container-lowest transition-colors" id="teacher-password" placeholder="••••••••••••" required="" type="password"/>
+<button aria-label="Passwort anzeigen" class="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors flex items-center justify-center p-0.5" onclick="togglePasswordVisibility()" type="button">
+<span class="material-symbols-outlined text-[18px]" id="eye-icon">visibility</span>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between pt-0.5">
+<label class="flex items-center gap-2 cursor-pointer select-none">
+<input checked="" class="w-4 h-4 rounded text-primary focus:ring-0 accent-primary cursor-pointer" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Auf diesem Dienstgerät merken</span>
+</label>
+</div>
+<button class="w-full h-11 bg-primary text-on-primary font-label-lg text-label-lg rounded-lg shadow-sm hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2" type="submit">
+<span>Im Lehrer-Studio anmelden</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</form>
+<!-- Divider with clean text -->
+<div class="relative flex items-center justify-center my-2">
+<div class="w-full h-px bg-surface-container-high"></div>
+<span class="absolute px-3 bg-surface-container-lowest font-label-md text-label-md text-outline">
+            oder via Landesportal
+          </span>
+</div>
+<!-- SSO Integrations Grid -->
+<div class="grid grid-cols-3 gap-2">
+<button class="flex flex-col items-center justify-center py-2 px-1 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors group" type="button">
+<span class="material-symbols-outlined text-primary text-[20px] mb-0.5 group-hover:scale-110 transition-transform">account_balance</span>
+<span class="font-label-md text-[11px] font-semibold text-on-surface">Schulportal</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2 px-1 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors group" type="button">
+<span class="material-symbols-outlined text-primary text-[20px] mb-0.5 group-hover:scale-110 transition-transform">hub</span>
+<span class="font-label-md text-[11px] font-semibold text-on-surface">IServ</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2 px-1 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors group" type="button">
+<span class="material-symbols-outlined text-primary text-[20px] mb-0.5 group-hover:scale-110 transition-transform">calendar_month</span>
+<span class="font-label-md text-[11px] font-semibold text-on-surface">WebUntis</span>
+</button>
+</div>
+<div class="bg-surface-container-low rounded-lg p-3 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">info</span>
+<p class="font-body-sm text-[12px] text-on-surface-variant leading-relaxed">
+            Neu an der Schule? Wenden Sie sich an Ihre Administrator:innen für eine Einladung in den OpenWidgets-Schulworkspace.
+          </p>
+</div>
+</div>
+<!-- STUDENT AUTH SECTION (ZERO-BARRIER JOIN CODE) -->
+<div class="hidden flex-col space-y-space-md transition-opacity duration-200" id="section-student">
+<div class="text-center">
+<div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-secondary-container/20 text-secondary mb-2">
+<span class="material-symbols-outlined text-[22px]">pin</span>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Raumcode eingeben</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+            Der 6-stellige Code von deiner Lehrkraft an der Tafel.
+          </p>
+</div>
+<!-- 6-digit Join Code Input Container -->
+<div class="space-y-3">
+<div class="flex items-center justify-between gap-1.5 px-1" id="pin-container">
+<input autofocus="" class="pin-input w-11 h-14 text-center font-code-tabular text-headline-sm font-bold bg-surface-container-low text-primary rounded-lg focus:outline-none focus:bg-surface-container focus:scale-105 transition-all uppercase" inputmode="numeric" maxlength="1" type="text"/>
+<input class="pin-input w-11 h-14 text-center font-code-tabular text-headline-sm font-bold bg-surface-container-low text-primary rounded-lg focus:outline-none focus:bg-surface-container focus:scale-105 transition-all uppercase" inputmode="numeric" maxlength="1" type="text"/>
+<input class="pin-input w-11 h-14 text-center font-code-tabular text-headline-sm font-bold bg-surface-container-low text-primary rounded-lg focus:outline-none focus:bg-surface-container focus:scale-105 transition-all uppercase" inputmode="numeric" maxlength="1" type="text"/>
+<span class="text-outline text-lg font-bold select-none">-</span>
+<input class="pin-input w-11 h-14 text-center font-code-tabular text-headline-sm font-bold bg-surface-container-low text-primary rounded-lg focus:outline-none focus:bg-surface-container focus:scale-105 transition-all uppercase" inputmode="numeric" maxlength="1" type="text"/>
+<input class="pin-input w-11 h-14 text-center font-code-tabular text-headline-sm font-bold bg-surface-container-low text-primary rounded-lg focus:outline-none focus:bg-surface-container focus:scale-105 transition-all uppercase" inputmode="numeric" maxlength="1" type="text"/>
+<input class="pin-input w-11 h-14 text-center font-code-tabular text-headline-sm font-bold bg-surface-container-low text-primary rounded-lg focus:outline-none focus:bg-surface-container focus:scale-105 transition-all uppercase" inputmode="numeric" maxlength="1" type="text"/>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">badge</span>
+<input class="w-full h-11 pl-10 pr-3.5 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md placeholder:text-outline/70 focus:outline-none focus:bg-surface-container-lowest transition-colors" id="student-name" placeholder="Dein Vorname oder Pseudonym (z.B. Alex)" type="text"/>
+</div>
+<button class="w-full h-12 bg-secondary text-on-secondary font-label-lg text-label-lg rounded-lg shadow-sm hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2" type="button">
+<span class="material-symbols-outlined text-[20px]">rocket_launch</span>
+<span>Direkt beitreten</span>
+</button>
+</div>
+<!-- Zero Barrier Notice -->
+<div class="p-3 bg-surface-container-low rounded-lg flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 text-primary">
+<span class="material-symbols-outlined text-[18px]">no_accounts</span>
+</div>
+<div class="text-left">
+<div class="font-label-md text-label-md text-on-surface">Kein Account erforderlich</div>
+<div class="font-body-sm text-[11px] text-on-surface-variant">Schülerdaten werden nach der Sitzung automatisch verworfen.</div>
+</div>
+</div>
+<!-- Quick Scan Alternative -->
+<button class="w-full py-2.5 px-3 rounded-lg bg-surface-container-high text-primary font-label-md text-label-md flex items-center justify-center gap-2 hover:bg-surface-variant transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">qr_code_scanner</span>
+<span>QR-Code der Tafel scannen</span>
+</button>
+</div>
+</div>
+<!-- Security, Compliance & Locale Footer -->
+<div class="mt-space-lg flex flex-col items-center text-center space-y-3 px-2">
+<!-- Compliance badges -->
+<div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-on-surface-variant font-label-md text-[11px]">
+<span class="inline-flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">shield</span>
+          DSGVO-konform
+        </span>
+<span class="text-outline/40">·</span>
+<span class="inline-flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">cookie_off</span>
+          Keine Werbe-Tracker
+        </span>
+<span class="text-outline/40">·</span>
+<span class="inline-flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">cloud_done</span>
+          Server in Frankfurt (EU)
+        </span>
+</div>
+<!-- Language switch & helper links -->
+<div class="flex items-center justify-center gap-4 text-on-surface-variant font-label-md text-label-md">
+<div class="inline-flex items-center p-0.5 rounded-full bg-surface-container">
+<button class="px-2.5 py-0.5 rounded-full bg-surface-container-lowest text-primary font-bold text-[11px] shadow-sm" type="button">DE</button>
+<button class="px-2.5 py-0.5 rounded-full text-on-surface-variant hover:text-on-surface text-[11px]" type="button">EN</button>
+</div>
+<span class="text-outline/40">|</span>
+<a class="hover:text-primary transition-colors text-[12px]" href="javascript:void(0)">Hilfe &amp; IT-Support</a>
+<span class="text-outline/40">·</span>
+<a class="hover:text-primary transition-colors text-[12px]" href="javascript:void(0)">Datenschutz</a>
+</div>
+</div>
+</div>
+</div>
+<script>
+  function switchMode(mode) {
+    const teacherTab = document.getElementById('tab-teacher');
+    const studentTab = document.getElementById('tab-student');
+    const teacherSection = document.getElementById('section-teacher');
+    const studentSection = document.getElementById('section-student');
+
+    if (mode === 'teacher') {
+      teacherTab.className = "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-md font-label-lg text-label-lg transition-all duration-200 bg-surface-container-lowest text-primary shadow-sm";
+      studentTab.className = "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-md font-label-lg text-label-lg transition-all duration-200 text-on-surface-variant hover:text-on-surface";
+      teacherSection.classList.remove('hidden');
+      teacherSection.classList.add('flex');
+      studentSection.classList.add('hidden');
+      studentSection.classList.remove('flex');
+    } else {
+      studentTab.className = "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-md font-label-lg text-label-lg transition-all duration-200 bg-surface-container-lowest text-secondary shadow-sm";
+      teacherTab.className = "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-md font-label-lg text-label-lg transition-all duration-200 text-on-surface-variant hover:text-on-surface";
+      studentSection.classList.remove('hidden');
+      studentSection.classList.add('flex');
+      teacherSection.classList.add('hidden');
+      teacherSection.classList.remove('flex');
+      
+      const firstPin = document.querySelector('.pin-input');
+      if (firstPin) firstPin.focus();
+    }
+  }
+
+  function togglePasswordVisibility() {
+    const pwd = document.getElementById('teacher-password');
+    const icon = document.getElementById('eye-icon');
+    if (!pwd || !icon) return;
+    if (pwd.type === 'password') {
+      pwd.type = 'text';
+      icon.textContent = 'visibility_off';
+    } else {
+      pwd.type = 'password';
+      icon.textContent = 'visibility';
+    }
+  }
+
+  // Handle auto-advancing 6-character PIN
+  document.addEventListener('DOMContentLoaded', () => {
+    const pinInputs = document.querySelectorAll('.pin-input');
+    pinInputs.forEach((input, index) => {
+      input.addEventListener('input', (e) => {
+        if (e.target.value.length >= 1) {
+          e.target.value = e.target.value.slice(-1).toUpperCase();
+          if (index < pinInputs.length - 1) {
+            pinInputs[index + 1].focus();
+          }
+        }
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && index > 0) {
+          pinInputs[index - 1].focus();
+        }
+      });
+    });
+  });
+</script></main></body></html>
