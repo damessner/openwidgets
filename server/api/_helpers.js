@@ -180,6 +180,7 @@ export function assignmentListItem(row, activityRow, definition, participantCoun
     activityTitle: activityRow ? activityRow.title : '',
     template: activityRow ? activityRow.template : definition.template,
     participantCount: Number(participantCount) || 0,
+    submittedCount: Number(row.submitted_count) || 0,
     createdAt: row.created_at,
     dueAt: row.due_at || null,
     maxScore: roundScore(stats.maxScore),

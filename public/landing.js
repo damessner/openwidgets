@@ -58,6 +58,11 @@ registerMessages({
     'landing.unreachable': 'Server nicht erreichbar',
     'landing.reachable': 'Server erreichbar',
     'landing.student_title': 'Deine Aufgaben',
+    'landing.greeting': 'Hallo, {name}! 👋',
+    'landing.metric_done': 'Erledigt',
+    'landing.metric_avg': 'Ø Punkte',
+    'landing.metric_open': 'Offen',
+    'landing.metric_classes': 'Klassen',
     'landing.student_hint': 'Angemeldet als {name} ({username}).',
     'landing.student_logout': 'Abmelden',
     'landing.student_empty': 'Dir wurden noch keine Klassen-Aufgaben zugewiesen.',
@@ -124,6 +129,11 @@ registerMessages({
     'landing.unreachable': 'Server unreachable',
     'landing.reachable': 'Server reachable',
     'landing.student_title': 'Your assignments',
+    'landing.greeting': 'Hello, {name}! 👋',
+    'landing.metric_done': 'Done',
+    'landing.metric_avg': 'Avg. score',
+    'landing.metric_open': 'Open',
+    'landing.metric_classes': 'Classes',
     'landing.student_hint': 'Signed in as {name} ({username}).',
     'landing.student_logout': 'Sign out',
     'landing.student_empty': 'No class assignments for you yet.',
@@ -193,7 +203,52 @@ applyI18n(document);
   }
   const student = me.student || {};
   const classes = Array.isArray(me.classes) ? me.classes : [];
-  const card = h('section.card.landing-join',
+
+  // aggregate metrics across all classes (pupil dashboard mockup)
+  let totalItems = 0, doneItems = 0, openItems = 0, scoreSum = 0, maxSum = 0;
+  for (const cls of classes) {
+    for (const item of Array.isArray(cls.items) ? cls.items : []) {
+      totalItems += 1;
+      if (item.state === 'done') {
+        doneItems += 1;
+        scoreSum += Number(item.score) || 0;
+        maxSum += Number(item.maxScore) || 0;
+      } else if (item.state === 'open') openItems += 1;
+    }
+  }
+  const donePct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
+  const avgPct = maxSum > 0 ? Math.round((scoreSum / maxSum) * 100) : doneItems > 0 ? 100 : 0;
+  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+
+  const dash = h('section.landing-student-dashboard');
+
+  // greeting card (redesign v2.4 pupil dashboard)
+  dash.appendChild(
+    h('div.card.accent-top.landing-greet.mb-4',
+      h('div.row.gap-2.wrap.mb-2',
+        ...classes.slice(0, 3).map((cls) => h('span.badge.badge-primary', cls.name || cls.code || '')),
+        h('span.badge', today),
+      ),
+      h('h1.landing-greet-title', t('landing.greeting', { name: student.name || student.username || '' })),
+      h('p.small.muted.mb-0', t('landing.student_hint', { name: student.name || '', username: student.username || '' })),
+    ),
+  );
+
+  // KPI metric cards, first with progress ring
+  const ring = h('span.stat-ring',
+    { html: `<svg viewBox="0 0 48 48"><circle class="ring-track" cx="24" cy="24" r="20"></circle><circle class="ring-fill" cx="24" cy="24" r="20" stroke-dasharray="125.6" stroke-dashoffset="${(125.6 * (1 - donePct / 100)).toFixed(2)}"></circle></svg>` },
+    h('span.ring-icon', { text: `${donePct}%` }),
+  );
+  dash.appendChild(
+    h('div.kpi-grid.landing-metrics',
+      h('div.kpi-card', h('div', h('span.kpi-label', t('landing.metric_done')), h('div.kpi-value', `${doneItems}/${totalItems}`)), ring),
+      h('div.kpi-card', h('div', h('span.kpi-label', t('landing.metric_avg')), h('div.kpi-value', `${avgPct}%`))),
+      h('div.kpi-card', h('div', h('span.kpi-label', t('landing.metric_open')), h('div.kpi-value', String(openItems)))),
+      h('div.kpi-card', h('div', h('span.kpi-label', t('landing.metric_classes')), h('div.kpi-value', String(classes.length)))),
+    ),
+  );
+
+  const card = h('section.card.landing-join.accent-top',
     h('div.row.between.wrap.gap-2',
       h('div',
         h('h2.landing-join-title', t('landing.student_title')),
@@ -281,7 +336,8 @@ applyI18n(document);
     box.appendChild(list);
     card.appendChild(box);
   }
-  panel.appendChild(card);
+  dash.appendChild(card);
+  panel.appendChild(dash);
 })();
 
 window.addEventListener('unhandledrejection', () => {

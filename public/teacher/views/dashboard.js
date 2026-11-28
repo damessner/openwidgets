@@ -246,12 +246,12 @@ export async function mount(root, ctx) {
       { label: t('teacher.stat_participants'), value: participants, iconName: 'users' },
     ];
     return h(
-      'div.grid.grid-4.mb-4',
+      'div.grid.grid-4.mb-4.kpi-grid',
       cards.map((card) =>
         h(
-          'div.card.compact.stat-card',
-          h('span.stat-icon', { html: icon(card.iconName, { size: 20 }) }),
-          h('div.stat', h('span.stat-value', String(card.value)), h('span.stat-label', card.label)),
+          'div.card.compact.stat-card.kpi-card',
+          h('div.stat', h('span.stat-label.kpi-label', card.label), h('span.stat-value.kpi-value', String(card.value))),
+          h('span.stat-icon.icon-tile', { html: icon(card.iconName, { size: 20 }) }),
         ),
       ),
     );
@@ -288,6 +288,9 @@ export async function mount(root, ctx) {
   }
 
   function assignmentRow(assignment) {
+    const pc = Number(assignment.participantCount) || 0;
+    const sc = Number(assignment.submittedCount) || 0;
+    const pct = pc > 0 ? Math.round((sc / pc) * 100) : 0;
     return h(
       'tr',
       h(
@@ -298,11 +301,24 @@ export async function mount(root, ctx) {
       h(
         'td',
         h(
-          'button.code-chip',
+          'button.code-chip.pin-chip',
           { type: 'button', title: t('teacher.copy_join_link'), on: { click: () => copyJoinLink(assignment) } },
           h('span.mono', assignment.code || '—'),
           h('span', { html: icon('copy', { size: 13 }) }),
         ),
+      ),
+      h('td', { style: 'min-width: 180px' },
+        h('div.row.gap-2', { style: 'align-items: center' },
+          h('div.progress.sm', {
+            role: 'progressbar',
+            'aria-valuemin': '0',
+            'aria-valuemax': '100',
+            'aria-valuenow': String(pct),
+            style: 'flex: 1 1 auto',
+          }, h('span', { style: `width:${pct}%` })),
+          h('span.small.muted', { style: 'font-variant-numeric: tabular-nums; white-space: nowrap' }, `${pct}%`),
+        ),
+        h('div.small.muted', t('teacher.submitted_of', { submitted: sc, total: pc })),
       ),
       h(
         'td',
@@ -391,13 +407,14 @@ export async function mount(root, ctx) {
         h(
           'div.table-wrap',
           h(
-            'table.table',
+            'table.table.data-table',
             h(
               'thead',
               h(
                 'tr',
                 h('th', t('teacher.col_assignment')),
                 h('th', t('teacher.code')),
+                h('th', t('teacher.col_progress')),
                 h('th', t('common.status')),
                 h('th.num', t('common.students')),
                 h('th', t('teacher.col_created')),

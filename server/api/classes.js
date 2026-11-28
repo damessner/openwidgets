@@ -284,7 +284,13 @@ export function classLinkForParticipant(participantRow) {
   if (!cp) return null;
   const cls = one('SELECT * FROM classes WHERE id = ?', cp.class_id);
   if (!cls) return null;
-  return { id: cls.id, code: cls.code, name: cls.name, orderMode: cls.order_mode };
+  // bonus flag of this assignment within the class (⭐ chip in the student player)
+  const bonusRow = one(
+    'SELECT ci.bonus AS bonus FROM class_items ci JOIN assignments s ON s.id = ci.assignment_id WHERE ci.class_id = ? AND s.code = ?',
+    cls.id,
+    participantRow.code,
+  );
+  return { id: cls.id, code: cls.code, name: cls.name, orderMode: cls.order_mode, bonus: !!(bonusRow && bonusRow.bonus) };
 }
 
 // ---------------------------------------------------------------------------

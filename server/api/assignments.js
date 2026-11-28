@@ -60,7 +60,8 @@ function csvNumber(value) {
 function assignmentRowsFor(user) {
   const base = `SELECT s.*, a.title AS activity_title, a.template AS activity_template, a.locale AS activity_locale,
       a.definition AS activity_definition,
-      (SELECT COUNT(*) FROM participants p WHERE p.assignment_id = s.id) AS participant_count
+      (SELECT COUNT(*) FROM participants p WHERE p.assignment_id = s.id) AS participant_count,
+      (SELECT COUNT(*) FROM participants p WHERE p.assignment_id = s.id AND p.status IN ('submitted','graded')) AS submitted_count
     FROM assignments s LEFT JOIN activities a ON a.id = s.activity_id`;
   if (user.role === 'admin') return all(`${base} ORDER BY s.created_at DESC`);
   return all(`${base} WHERE s.owner_id = ? ORDER BY s.created_at DESC`, user.id);

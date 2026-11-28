@@ -378,3 +378,11 @@
 /* student panel: dashboard-style cards */
 .landing-class { border: 1px solid var(--outline-variant); border-radius: var(--radius); padding: 12px; background: var(--surface-container-low); }
 .landing-student-item { border-radius: 10px; background: var(--surface-container-lowest); border-color: var(--outline-variant); }
+
+/* pupil dashboard (redesign v2.4): greeting + metrics */
+.landing-student-dashboard { margin-top: var(--space-6); }
+.landing-greet-title { margin: 0 0 4px; font-size: 1.6rem; letter-spacing: -0.02em; }
+.landing-metrics { margin-bottom: var(--space-4); }
+.landing-metrics .kpi-value { font-size: 1.35rem; }
+.stat-ring .ring-icon { font-size: 0.72rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
+.landing-student-dashboard .landing-join { margin-top: 0; max-width: none; }

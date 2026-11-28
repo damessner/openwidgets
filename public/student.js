@@ -1526,6 +1526,10 @@ function createItemCard(item, index, options = {}) {
       }),
     );
   }
+  // redesign v2.4: ⭐ bonus chip on the item head when the class flags it as bonus
+  if (state.classInfo && state.classInfo.bonus) {
+    head.appendChild(h('span.badge.badge-warning.student-item-bonus', { text: t('student.class_item_bonus') }));
+  }
 
   const tools = h('div.student-item-tools');
   let starBtn = null;
