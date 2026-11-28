@@ -1,7 +1,10 @@
 # Current Design — OpenWidgets (as deployed)
 
-**Status:** live on prod since commit `88eda8d` (2026-11-28) —
+**Status:** live on prod since commit `7efbb57` (2026-11-28) —
 https://openwidgets.smiletelfs.dpdns.org
+**v2.4 redesign ported:** the mockups in `design-system/mockups/` are now in the
+real app (token-based, CSP-safe — sections marked „redesign v2.4" in
+`public/app.css`, `student.css`, `landing.css`, `teacher.css`, `render/render.css`).
 **Sources of truth:** `public/app.css` (tokens + shared components),
 `public/landing.css`, `public/student.css`, `public/teacher/teacher.css`,
 `public/render/render.css`; rules documented in `design-system/MASTER.md` +
@@ -100,17 +103,19 @@ color alone.
   (teal/emerald/amber/sky semantic KPI tiles on teacher dashboard).
 - **Progress bars**: `--surface-3` track, `--primary`/`--gradient-primary` fill.
 
-## 5. Per-surface notes (page overrides)
+## 5. Per-surface notes (page overrides + v2.4 port)
 
-- **Landing/Login** (`landing.md`): hero with upright worksheet preview mock
-  (no tilt/bounce), 4px teal top accent bar, amber `+1` reward chip; student
-  join-code card with teal-tinted 1.5px border and 52px uppercase mono code
-  input + CTA; login has a full-width Teacher/Student segmented toggle.
-- **Student player** (`student.md`): distraction-free reading
-  (`line-height: 1.6`, measure ≤ 68ch), 44–46px choice rows, 42px icon
-  buttons, teal item-number pills, 4px teal accent bar on join/result heroes,
-  tap-to-place + keyboard alternatives next to drag&drop, audio player with
-  ▶ Normal / 🐢 Langsam toggle, VORLESETEXT as collapsed „📖 Text zum Mitlesen".
+- **Landing/Login** (`landing.md`): trust bar (DSGVO/OSS/no-CDN), asymmetric
+  7/5 hero with upright worksheet preview (letter-chip mock choices), prominent
+  join card with accent top bar + 56px mono code input, 4-across feature grid;
+  login card with segmented teacher/student toggle + compliance strip.
+- **Student player** (`student.md`): 72px header with Beenden button, progress %,
+  PIN chip, countdown, A−/A/A+; **task-navigator pills** over all items
+  (worksheet scrolls / quiz jumps, done = ✓ pill); item cards with 4px gradient
+  top accent, number pill, points chip; MC choices = 52px rows with A/B/C letter
+  chips and primary-fixed selected state; **fixed bottom action rail** with
+  autosave status + submit; audio player with ▶ Normal / 🐢 Langsam toggle,
+  VORLESETEXT as collapsed „📖 Text zum Mitlesen".
 - **Teacher studio** (`teacher.md`): compact dense workspace (tables, editor,
   grading grid), `tabular-nums` on numbers, KPI cards with semantic icon
   tiles, 40×3px primary underline on page titles, editor canvas uses
